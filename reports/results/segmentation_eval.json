@@ -1,0 +1,19 @@
+{
+  "model": "yolo_damage_seg_v2.pt (YOLOv8n-seg)",
+  "trained_on": "real_composite_seg — photorealistic damage + hard negatives on real SOLAQUA backgrounds",
+  "epochs": "14 (stopped early; in-distribution val mask mAP50 plateaued ~0.96)",
+  "test_set": "real_composite_seg/test (held-out real backgrounds)",
+  "box_detection_in_distribution": {"precision": 0.950, "recall": 0.950, "f1": 0.950, "ap": 0.940},
+  "mask_iou_mean_matched": 0.662,
+  "adversarial_finding": {
+    "fp_frame_rate_undamaged": {"bag1": 0.05, "bag2": 0.03, "different_day": 0.31},
+    "recall_f1_by_distance": {"in_clip": 0.889, "cross_clip": 0.911, "different_day": 0.77},
+    "interpretation": "The adversarial suite CAUGHT A REGRESSION: the seg/v2 model, trained on harder photorealistic damage (seamless-blended, subtler) but only 14 epochs, generalises WORSE to a different DAY than the simpler det v1 (which had 0-1% undamaged FP and flat F1 0.97). At conf 0.7 the seg model reaches 0 FP/frame on different-day but recall falls to 0.45. 'More realistic' did not mean 'more robust' here.",
+    "takeaways": [
+      "det yolo_damage_v1 remains the more robust DETECTOR (0% undamaged FP, F1 0.97 different-day).",
+      "yolo_damage_seg_v2 adds MASKS (mask IoU 0.66) but needs more epochs / more diverse damage appearance to match v1's out-of-distribution robustness.",
+      "This is honest evidence the evaluation works: it prevents overclaiming that the newer/fancier model is strictly better."
+    ]
+  },
+  "caveat": "All on synthetic damage composited on real backgrounds. Not validated on real damage."
+}

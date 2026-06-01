@@ -355,6 +355,19 @@ persisting over ≥3 frames removes **~70%** of transient false alarms on real
 undamaged video (30 → 9 detections over 120 contiguous frames), at a few frames'
 latency — exactly the post-processing an operator-facing tool needs.
 
+**Segmentation, and a finding the eval caught.** A YOLOv8n-**seg** model trained
+on the harder photorealistic data (masks; hard negatives) gets box F1 0.95 and
+mean mask IoU 0.66 in-distribution. But the adversarial suite **caught a
+regression**: this model fires on **31%** of *different-day* undamaged frames
+(vs **1%** for the simpler detector) and its different-day recall is lower
+(F1 0.77 vs 0.97). "More realistic + harder" did **not** mean "more robust" —
+the subtler, seamless-blended damage produced a fuzzier concept, and the model
+(trained for fewer epochs) generalises worse out-of-distribution. The honest
+conclusion: the simpler `yolo_damage_v1` remains the more robust *detector*; the
+seg model adds masks but needs more epochs / more diverse damage appearance to
+match it. This is the evaluation doing its job — preventing the overclaim that
+the newer, fancier model is strictly better.
+
 ---
 
 ## 6. Expected failure modes (on real data)
