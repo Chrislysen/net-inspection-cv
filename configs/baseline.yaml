@@ -1,0 +1,33 @@
+# Configuration for the classical (OpenCV) baseline and preprocessing.
+# These are starting points, not tuned values. Tune against REAL labelled data.
+
+classes: [damage, hole, tear, abnormal_region]
+
+preprocess:
+  resize: 768            # longest side, pixels (null to keep original)
+  clahe: true
+  clahe_clip: 3.0
+  clahe_grid: 8
+  denoise: false
+  color_normalize: true  # gray-world white balance (helps underwater casts)
+
+classical:
+  resize: 768
+  clahe_clip: 3.0
+  canny_low: 40
+  canny_high: 120
+  edge_density_kernel: 31
+  low_density_ratio: 0.35       # flag where edge density < ratio * median
+  dark_std_factor: 1.8          # flag where luminance < mean - factor*std (pre-CLAHE)
+  morph_kernel: 5
+  min_area_frac: 0.0006         # min region size as fraction of image area
+  max_area_frac: 0.25           # ignore regions larger than this (likely background)
+  min_solidity: 0.35
+  max_region_density_ratio: 0.9 # reject only clearly mesh-textured regions
+  dark_region_std_factor: 1.0   # regions this dark bypass the density gate
+  score_threshold: 0.30
+
+evaluation:
+  iou_threshold: 0.30    # lenient for a localisation-only prototype
+  conf_threshold: 0.25
+  class_agnostic: true   # score "found the damage", not "named it right"

@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.ultralytics/
+
+# Data & outputs (regenerable; keep the repo light)
+data/raw/
+data/processed/
+data/sample/
+outputs/
+runs/
+reports/assets/
+*.pt
+*.bag        # large SOLAQUA ROS bags (download via scripts/fetch_solaqua.py)
+*.npz        # trained anomaly models
+
+# Keep directory placeholders
+!**/.gitkeep
+
+# Curated result images for the README/report ARE tracked (small, illustrative)
+!docs/
+!docs/**
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

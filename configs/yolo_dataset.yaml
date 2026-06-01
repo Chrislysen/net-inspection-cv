@@ -1,0 +1,22 @@
+# Ultralytics YOLO dataset config (PLACEHOLDER).
+#
+# This points at the synthetic demo dataset so the training code path is
+# runnable. For a real project, replace `path` with a directory of REAL
+# labelled inspection images organised in the standard YOLO layout:
+#
+#   <path>/
+#     images/train/*.jpg   labels/train/*.txt
+#     images/val/*.jpg     labels/val/*.txt
+#
+# and (optionally) a held-out test split from DIFFERENT sites/conditions.
+
+path: ../data/processed/yolo   # dataset root (relative to this file)
+train: images/train
+val: images/val
+
+# Class names. Define these WITH domain experts and a labelling guideline.
+names:
+  0: damage
+  1: hole
+  2: tear
+  3: abnormal_region
