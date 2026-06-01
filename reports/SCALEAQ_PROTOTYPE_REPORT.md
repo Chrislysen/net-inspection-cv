@@ -44,6 +44,31 @@ vegetation, debris) under difficult underwater conditions.¹⁻⁴ Reported accu
 above 90% exist, but on *custom datasets under controlled-ish conditions* — which
 underlines that **the data, not the model, is the hard part**.
 
+### 1.1 Operational context & stakes (why honesty is the design driver)
+
+This is a **safety-relevant** application, and that shapes every design choice:
+
+- **The cost of errors is asymmetric.** A false negative (missed damage) can lead
+  to a **fish escape** — with financial loss, environmental impact, and regulatory
+  reporting obligations. A false positive wastes operator/ROV time. The operating
+  point must therefore be chosen *with stakeholders* from the FROC/PR curve, not
+  defaulted — almost certainly biased toward recall with **human-in-the-loop**
+  confirmation. (Norwegian marine fish-farm installations are governed by the
+  **NS 9415** standard; this prototype is decision *support* for inspection, not an
+  autonomous authority on net integrity.)
+- **Evaluation must be by site/condition, not random split.** Underwater
+  appearance varies with turbidity, light, depth, biofouling and camera. A random
+  split leaks near-duplicate frames and flatters the model; held-out *sites/days*
+  are the honest test. This repo already evaluates cross-clip and **different-day**
+  for exactly this reason (§5.5–5.7).
+- **Integration target matters.** ScaleAQ already runs camera systems and the
+  *Vision* platform with open APIs; a real capability would plug in there (offline
+  review first, then alerting), not as a standalone tool. The serving layer here
+  (`serve.py`, unified `inference.py`) is shaped for that hand-off, not as a product.
+- **Why this drives the whole project:** because a confidently-wrong "the net is
+  fine" is the most expensive failure mode, the work prioritises *not overclaiming*
+  and *adversarially testing its own outputs* over headline metrics.
+
 ---
 
 ## 2. Data assumptions

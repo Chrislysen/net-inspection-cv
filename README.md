@@ -41,7 +41,10 @@ tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
 [`scripts/`](scripts/), the full write-up in
 [`reports/SCALEAQ_PROTOTYPE_REPORT.md`](reports/SCALEAQ_PROTOTYPE_REPORT.md),
 result tables/figures in [`reports/results/`](reports/results/), models in
-[`models/`](models/), and the web UI in [`web/`](web/).
+[`models/`](models/), and the web UI in [`web/`](web/). For the reasoning trail:
+the [research decision log](reports/RESEARCH_SYNTHESIS.md) (what external research
+was adopted vs rejected and why) and a code-grounded
+[technical defense Q&A](reports/INTERVIEW_DEFENSE.md).
 
 > **Status: prototype.** The repository ships with a small *synthetic* dataset
 > so the full pipeline runs out of the box, **and** an integration with the real
