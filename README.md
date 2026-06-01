@@ -1,11 +1,41 @@
 # net-inspection-cv
 
-A prototype computer-vision toolkit for **detecting possible damage (holes,
-tears, abnormal regions) in aquaculture net imagery**. It is built as an
-*exploration framework*, not a finished product: it ingests images/video,
-preprocesses underwater footage, runs both a classical OpenCV baseline and a
-trainable YOLOv8 baseline, evaluates them honestly when labels exist, and
-visualises predictions and failure cases.
+A research-grade computer-vision toolkit for **detecting possible damage (holes,
+tears, abnormal regions) in aquaculture fish-farm net imagery**, built as an
+honest *exploration framework*. It ingests images / video / ROS bags, preprocesses
+underwater footage, and compares **four detection approaches** — a classical
+OpenCV heuristic, a hand-crafted anomaly model, a **foundation-model anomaly
+detector (PatchCore)**, and a **supervised YOLOv8** detector/segmenter — with a
+rigorous, adversarial evaluation, temporal video reasoning, an interactive web
+console, ONNX export, real-data (SINTEF **SOLAQUA**) ingestion, and CI. Its
+defining feature is **intellectual honesty**: it never claims real-world
+damage-detection performance it cannot prove.
+
+<!-- Keywords (for search/research): aquaculture, fish farm, net pen, net damage,
+hole/tear detection, underwater computer vision, ROV inspection, SOLAQUA, SINTEF,
+YOLOv8, YOLOv8-seg, PatchCore, anomaly detection, OpenCV baseline, ROS bag,
+rosbags, synthetic-to-real, domain gap, adversarial evaluation, FROC, temporal
+tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
+
+## At a glance
+
+| | |
+|---|---|
+| **Problem** | Flag holes/tears/abnormal regions in underwater fish-farm net footage to support (not replace) human inspection. |
+| **Methods compared** | Classical OpenCV heuristic · hand-crafted patch-Mahalanobis anomaly · **PatchCore** (pretrained-CNN anomaly, label-free) · **YOLOv8** detection + **YOLOv8-seg** (supervised). |
+| **Data** | Synthetic demo (pipeline test) · **SOLAQUA** real ROV footage of *undamaged* nets (SINTEF, CC BY-SA 4.0) · **synthetic damage composited onto real net frames** for trainable, labelled, comparable data. |
+| **Key result (proxy)** | Damage-localisation F1 on the composite test set: anomaly **0.12** → classical **0.50** → PatchCore **0.78** (label-free) → YOLOv8 **0.97**. |
+| **Honesty check** | The trained YOLO fires on **0%** of real *undamaged* frames (its own training backgrounds) and **1%** on a different day, holding F1≈0.97 — ruling out background/artifact "cheating". |
+| **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
+| **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **35 passing tests** · GitHub Actions CI · committed models. |
+| **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
+
+**Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
+[`scripts/`](scripts/), the full write-up in
+[`reports/SCALEAQ_PROTOTYPE_REPORT.md`](reports/SCALEAQ_PROTOTYPE_REPORT.md),
+result tables/figures in [`reports/results/`](reports/results/), models in
+[`models/`](models/), and the web UI in [`web/`](web/).
 
 > **Status: prototype.** The repository ships with a small *synthetic* dataset
 > so the full pipeline runs out of the box, **and** an integration with the real
@@ -21,10 +51,10 @@ visualises predictions and failure cases.
 
 ## Interactive console
 
-A localhost **ROV inspection console** (FastAPI + a custom web UI) ties it all
+A localhost **inspection console** (FastAPI + a custom web UI) ties it all
 together — browse real SOLAQUA frames, switch detector (classical / anomaly /
 PatchCore / YOLO), adjust confidence live, and compare methods, with a detection
-readout and latency. `python scripts/serve.py` then open `http://127.0.0.1:8000`.
+table and latency. `python scripts/serve.py` then open `http://127.0.0.1:8000`.
 
 ![web console](docs/images/webapp_console.png)
 
