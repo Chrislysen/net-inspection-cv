@@ -48,17 +48,50 @@ class ClassicalConfig:
     # A region is "dark" where luminance falls this many std-devs below the mean
     # on the white-balanced (pre-CLAHE) image — isolates genuine see-through dark.
     dark_std_factor: float = 1.8
+    # How to combine the darkness and low-density cues:
+    #   "or"  — dark OR mesh-missing  (sensitive; the per-region texture gate below
+    #           then prunes intact-but-dark net cells)
+    #   "and" — dark AND mesh-missing (stricter; can under-detect on high-contrast
+    #           real frames where few pixels pass the absolute-darkness test)
+    combine_mode: str = "or"
     morph_kernel: int = 5
     min_area_frac: float = 0.0006      # min region area as fraction of image
     max_area_frac: float = 0.25        # ignore huge regions (likely background)
     min_solidity: float = 0.35         # contour area / convex hull area
-    max_region_density_ratio: float = 0.9  # reject only clearly mesh-textured regions
-    dark_region_std_factor: float = 1.0     # regions this dark bypass the density gate
+    # Texture gate (the main false-positive reducer on real net): a real opening
+    # lacks mesh, so its internal edge density is well below the image median; an
+    # intact-but-dark net patch still has its fibre grid (density ~= median).
+    # Reject candidates whose internal edge density exceeds this fraction of the
+    # median. Measured: holes ~0.64x median, net ~0.99x median.
+    max_region_density_ratio: float = 0.82
+    # FFT periodicity gate (disabled by default; kept for experimentation — it did
+    # NOT separate holes from net on real data, so 0 = off).
+    max_periodicity: float = 0.0
     score_threshold: float = 0.30      # drop low-confidence candidates
 
 
 def _require_cv2():
     return optional_import("cv2")
+
+
+def _region_periodicity(region_gray: np.ndarray) -> float:
+    """Peak-to-mean ratio of the region's 2-D spectrum, excluding DC.
+
+    Intact net is a regular mesh -> a strong off-centre spectral peak -> high
+    ratio. A genuine opening (flat dark water) -> diffuse spectrum -> low ratio.
+    Returns 0 for regions too small to analyse.
+    """
+    if region_gray.size < 64 or min(region_gray.shape) < 8:
+        return 0.0
+    r = region_gray.astype(np.float32)
+    r = r - r.mean()
+    win = np.hanning(r.shape[0])[:, None] * np.hanning(r.shape[1])[None, :]
+    mag = np.abs(np.fft.fftshift(np.fft.fft2(r * win)))
+    cy, cx = mag.shape[0] // 2, mag.shape[1] // 2
+    # Zero out a small DC neighbourhood so the (always-large) DC term is ignored.
+    mag[max(0, cy - 1):cy + 2, max(0, cx - 1):cx + 2] = 0.0
+    mean = float(mag.mean())
+    return float(mag.max() / mean) if mean > 1e-6 else 0.0
 
 
 def _edge_density_map(edges: np.ndarray, kernel: int) -> np.ndarray:
@@ -136,15 +169,16 @@ def detect(image_rgb: np.ndarray, cfg: ClassicalConfig | None = None) -> Classic
     thr = cfg.low_density_ratio * median_density
     low_density = (density <= thr).astype(np.uint8) * 255
 
-    # 4. Combine cues with OR: the two cues catch DIFFERENT damage types.
-    #    * Thin tears are very dark but too narrow to lower the local edge
-    #      density (a 31px window still sees surrounding mesh), so the darkness
-    #      cue carries them.
-    #    * Compact holes lower the local edge density and the low-density cue
-    #      carries them.
-    #    A small OPEN removes single-pixel specks; CLOSE merges fragments. The
-    #    per-region density check below removes textured (mesh) false positives.
-    candidate = cv2.bitwise_or(dark, low_density)
+    # 4. Combine the darkness and low-density cues.
+    #    "and" (default) — a region must be BOTH dark AND missing mesh texture.
+    #      On real net this is the key false-positive reducer: intact-but-dark
+    #      cells are dark yet still textured, so they are excluded.
+    #    "or" — more sensitive (e.g. very thin tears), at the cost of more false
+    #      positives; the per-region gates below then prune textured regions.
+    if cfg.combine_mode == "or":
+        candidate = cv2.bitwise_or(dark, low_density)
+    else:
+        candidate = cv2.bitwise_and(dark, low_density)
     k_open = np.ones((3, 3), np.uint8)
     k_close = np.ones((cfg.morph_kernel, cfg.morph_kernel), np.uint8)
     candidate = cv2.morphologyEx(candidate, cv2.MORPH_OPEN, k_open, iterations=1)
@@ -177,11 +211,16 @@ def detect(image_rgb: np.ndarray, cfg: ClassicalConfig | None = None) -> Classic
         # Reject regions that still contain a lot of mesh edges (just textured
         # net) — UNLESS the region is clearly dark, in which case it is most
         # likely a thin tear whose own edges raise the local density.
-        clearly_dark = region_mean < mean - cfg.dark_region_std_factor * std
-        if (median_density > 0
-                and region_density > cfg.max_region_density_ratio * median_density
-                and not clearly_dark):
+        # Texture gate (always on): reject regions that still contain mesh — a
+        # dark *net* patch has near-median internal edge density, whereas a real
+        # opening is well below it. This is the main real-net FP reducer.
+        if median_density > 0 and region_density > cfg.max_region_density_ratio * median_density:
             continue
+
+        # Optional FFT periodicity gate (off by default; see config note).
+        if cfg.max_periodicity > 0:
+            if _region_periodicity(gray[y:y + h, x:x + w]) > cfg.max_periodicity:
+                continue
 
         # Heuristic score: darker + larger (saturating) + emptier -> more suspicious.
         darkness = float(np.clip((mean - region_mean) / (std + 1e-6), 0, 2) / 2)

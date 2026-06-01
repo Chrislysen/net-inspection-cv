@@ -205,6 +205,79 @@ def _decode_message(msg, msgtype: str):
     return None
 
 
+SONAR_MSGTYPE = "sensors/msg/SonoptixECHO"
+
+
+def extract_sonar_frames(
+    bag_path: str | Path,
+    out_dir: str | Path,
+    topic: str | None = None,
+    every_n: int = 10,
+    max_frames: int | None = 40,
+    colormap: bool = True,
+) -> list[Path]:
+    """Extract multibeam-sonar (SonoptixECHO) frames as images.
+
+    The SonoptixECHO message carries a ``Float32MultiArray`` of acoustic
+    intensities (a square fan image, e.g. 512x512). We reshape it using its
+    layout (or a square fallback), normalise to 8-bit, and optionally apply a
+    perceptual colormap. This demonstrates **multi-modal ingestion**: sonar sees
+    through turbidity where optical cameras fail, and is complementary for net
+    inspection (gross structure/standoff) even though it is not RGB.
+    """
+    import numpy as np
+    from .utils import write_image
+    AnyReader = _require_rosbags()
+    cv2 = optional_import("cv2")
+    bag_path = Path(bag_path)
+    out_dir = ensure_dir(out_dir)
+    prefix = (topic or "sonar").strip("/").replace("/", "_")
+
+    saved: list[Path] = []
+    with AnyReader([bag_path]) as reader:
+        conns = [c for c in reader.connections if c.msgtype == SONAR_MSGTYPE
+                 and (topic is None or c.topic == topic)]
+        if not conns:
+            raise RuntimeError(f"No sonar ({SONAR_MSGTYPE}) topic in {bag_path.name}.")
+        conn = max(conns, key=lambda c: c.msgcount)
+        LOGGER.info("Extracting sonar from %s (%d msgs)", conn.topic, conn.msgcount)
+
+        idx = 0
+        for c, _ts, raw in reader.messages(connections=[conn]):
+            if idx % every_n == 0:
+                msg = reader.deserialize(raw, c.msgtype)
+                data = np.asarray(msg.array_data.data, dtype=np.float32)
+                dims = [d.size for d in getattr(msg.array_data.layout, "dim", []) if d.size > 0]
+                if len(dims) >= 2:
+                    h, w = dims[0], dims[1]
+                else:
+                    side = int(round(np.sqrt(data.size)))
+                    h, w = side, side
+                if h * w != data.size:
+                    side = int(round(np.sqrt(data.size)))
+                    h, w = side, side
+                frame = data[:h * w].reshape(h, w)
+                # Multibeam returns are sparse and span a wide dynamic range, so
+                # a linear min-max stretch renders mostly black. Use a log + 99th
+                # -percentile stretch to bring up faint structure.
+                logf = np.log1p(np.clip(frame, 0, None))
+                hi = float(np.percentile(logf, 99)) or float(logf.max() or 1.0)
+                norm = np.clip(logf / (hi + 1e-6) * 255, 0, 255).astype(np.uint8)
+                if colormap and cv2 is not None:
+                    img = cv2.applyColorMap(norm, cv2.COLORMAP_OCEAN)
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                else:
+                    img = np.repeat(norm[..., None], 3, axis=2)
+                out_path = out_dir / f"{prefix}_{idx:06d}.png"
+                write_image(out_path, img)
+                saved.append(out_path)
+                if max_frames and len(saved) >= max_frames:
+                    break
+            idx += 1
+    LOGGER.info("Wrote %d sonar frames to %s", len(saved), out_dir)
+    return saved
+
+
 def extract_bag_frames(
     bag_path: str | Path,
     out_dir: str | Path,

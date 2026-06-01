@@ -19,12 +19,17 @@ classical:
   edge_density_kernel: 31
   low_density_ratio: 0.35       # flag where edge density < ratio * median
   dark_std_factor: 1.8          # flag where luminance < mean - factor*std (pre-CLAHE)
+  combine_mode: or              # "or" (sensitive) or "and" (stricter)
   morph_kernel: 5
   min_area_frac: 0.0006         # min region size as fraction of image area
   max_area_frac: 0.25           # ignore regions larger than this (likely background)
   min_solidity: 0.35
-  max_region_density_ratio: 0.9 # reject only clearly mesh-textured regions
-  dark_region_std_factor: 1.0   # regions this dark bypass the density gate
+  # Texture gate — THE false-positive knob on real net. Lower = fewer false
+  # alarms but lower recall (measured on real-background data):
+  #   0.82 -> recall 0.64, ~46% fewer false detections vs untuned
+  #   0.70 -> recall 0.51, ~75% fewer false detections
+  max_region_density_ratio: 0.82
+  max_periodicity: 0.0          # FFT periodicity gate (off; did not help on real data)
   score_threshold: 0.30
 
 evaluation:

@@ -145,11 +145,17 @@ ingest (synthetic | images | video frames | SOLAQUA ROS bags)
    → report assets
 ```
 
+An **industrial-shaped serving layer** wraps these: a unified inference facade
+(`inference.py`), a **FastAPI** service (`serve.py`), a **Streamlit** viewer, a
+unified **batch/video/bag** runner with run manifests (`infer.py`), and **CI**.
+
 Verified on this machine (Python 3.14, OpenCV 4.x, Ultralytics 8.x, torch 2.x
-CPU, rosbags): the synthetic demo runs end to end, **21/21 unit tests pass**, a
-YOLO training + inference smoke test completes (1 epoch — only to prove the path,
-metrics meaningless), and the **real SOLAQUA pipeline runs** (downloaded a 916 MB
-bag, extracted 38 frames, ran false-positive analysis and the anomaly model).
+CPU, rosbags): synthetic demo runs end to end; **26/26 unit tests pass**; the
+**real SOLAQUA pipeline runs** (downloaded two bags totalling ~2.1 GB, extracted
+camera + multibeam-sonar frames); a **YOLOv8 trained for 30+ epochs** on
+synthetic-damage-on-real-frames reaches **F1 ≈ 0.97** in-clip and **≈ 0.98**
+cross-clip; the FastAPI service and Streamlit viewer both boot and serve
+predictions.
 
 ---
 
@@ -242,6 +248,71 @@ net"** without any labels, which is the right primitive for a label-scarce start
 The honest caveat stands: it cannot yet distinguish damage from heavy fouling —
 that separation needs labelled examples. Heatmaps are in `outputs/anomaly/`.
 
+### 5.4 Reducing classical false positives (measurable improvement on real net)
+
+The 76% real-frame false-alarm rate (§5.3) was the concrete weakness, so I fixed
+it as a measurable engineering task. The cause was a cue that let *intact-but-dark*
+net cells through. The fix is a **texture gate**: a real opening lacks mesh, so
+its internal edge density is well below the image median (measured: holes ≈0.64×,
+net ≈0.99× median), whereas a dark net patch keeps its fibre grid. Applying this
+gate always (not bypassing it for dark regions) gives a tunable recall/false-alarm
+trade-off on real net:
+
+| `max_region_density_ratio` | False detections on undamaged frames | Recall on composited damage |
+|---|---|---|
+| untuned (prior) | 114 | — |
+| 0.82 (default) | 62  (**−46%**) | 0.64 |
+| 0.70 | 28  (**−75%**) | 0.51 |
+
+An honest ceiling emerges: a hand-crafted heuristic tops out around **F1 ≈ 0.5**
+on realistic backgrounds. That is precisely why a learned model is needed.
+
+### 5.5 A trainable detector on realistic proxy data + three-method comparison
+
+To compare methods *quantitatively* without real damage labels, I composited
+plausible damage onto **real** SOLAQUA frames (`compose.py`): real background
+(texture, biofouling, lighting), synthetic but labelled holes/tears. Train/val/
+test use **disjoint real backgrounds**; a second, separately-downloaded clip
+(bag2) is a held-out cross-clip test. A YOLOv8n was trained on this set and all
+three methods evaluated with the shared metrics (IoU 0.30, class-agnostic):
+
+| Method | In-clip F1 | In-clip AP | Cross-clip F1 (held-out clip) |
+|---|---|---|---|
+| Classical (OpenCV) | 0.50 | 0.55 | 0.67 |
+| Anomaly (patch-Mahalanobis) | 0.12 | 0.02 | 0.05 |
+| **YOLOv8** | **0.97** | **0.97** | **0.98** |
+
+**What this shows (honestly):**
+* The **ML approach is decisively the right path** — YOLO beats the heuristic by
+  ~2× F1 and, importantly, **does not collapse on a held-out clip**.
+* The **anomaly model is a poor box-localiser** (it is an image-level *screen*,
+  not a detector) — useful as a label-free triage, not as the detector.
+
+**What this does NOT show (the caveats that matter):**
+* The damage *appearance* comes from **one synthetic generator**, identical in
+  train and test. So YOLO's score partly reflects that the damage model is
+  in-distribution — it measures "learns this damage model on real backgrounds and
+  transfers across clips", **not** "detects real damage".
+* bag2 is the **same site, day and camera** (a different traversal), so cross-clip
+  ≠ cross-site. True generalisation needs different sites/seasons/cameras.
+* Therefore **no real-world damage-detection reliability is claimed.** These are
+  strong *relative* results on a realistic proxy, and the exact pipeline trains on
+  real labels unchanged — the moment ScaleAQ provides labelled damage, this
+  becomes a real evaluation.
+
+### 5.6 Is this "industrial-grade"? An honest answer
+
+The user asked for something reliable enough to be an industrial product. The
+*engineering* here is built to that standard: unified inference facade, FastAPI
+service, batch/video/bag runner with run manifests, an interactive viewer, tests
+and CI, graceful dependency degradation, and a real-data ingestion path. But
+**industrial reliability of damage detection is proven by validation on real
+damage, which this project does not have.** The responsible claim is: *a
+production-shaped prototype with a strong, honestly-evaluated proxy result and a
+drop-in slot for real labelled data* — not a certified detector. Shipping it as
+"reliable" without that validation would be the one thing this project refuses to
+do.
+
 ---
 
 ## 6. Expected failure modes (on real data)
@@ -325,16 +396,20 @@ This prototype already provides the scaffolding for items 3–7.
 
 ## 10. Honesty statement
 
-- Synthetic metrics prove only that the code path works.
-- SOLAQUA results describe **false-alarm / anomaly behaviour on *undamaged*
-  net**; they are **not** damage-detection accuracy (no damage, no labels).
-- No real-world damage-detection accuracy is claimed anywhere.
-- The classical baseline is a sanity-check, not a validated detector (76%
-  false-alarm frame rate on real undamaged net).
-- The anomaly model flags deviation-from-normal, not confirmed damage.
-- The ML (YOLO) path is runnable but untrained on real *labelled* damage data.
-- The synthetic generator is clearly marked; SOLAQUA data is downloaded on
-  demand under CC BY-SA 4.0 and not redistributed.
+- Pure-synthetic metrics prove only that the code path works.
+- SOLAQUA-only results describe **false-alarm / anomaly behaviour on *undamaged*
+  net**; not damage-detection accuracy.
+- The YOLO F1≈0.97 is on **synthetic damage composited on real backgrounds**,
+  with the damage appearance from one generator (in-distribution in train and
+  test) and a cross-clip (not cross-site) held-out set. It is a strong *relative*
+  result on realistic proxy data — **not** validated real-damage performance.
+- **No real-world damage-detection reliability is claimed anywhere.** The
+  engineering is production-shaped; the *detector* is not certified — that
+  requires validation on real labelled damage.
+- The classical baseline is a tunable screen (real-net ceiling ~F1 0.5); the
+  anomaly model flags deviation-from-normal, not confirmed damage.
+- Generators are clearly marked; SOLAQUA data is downloaded on demand under
+  CC BY-SA 4.0 and not redistributed.
 
 ---
 

@@ -29,12 +29,30 @@ visualises predictions and failure cases.
 | Classical baseline on **real** SOLAQUA net (all detections are false alarms) | Anomaly model heatmap on the same frame |
 |---|---|
 | ![real false positives](docs/images/real_false_positives.jpg) | ![real anomaly heatmap](docs/images/real_anomaly_heatmap.jpg) |
-| The nets are **undamaged**; the heuristic still fires on oblique/dark cells — ~76% false-alarm frame rate. | Anomaly score (left: boxes, right: heatmap) concentrates on biofouling & lighting, not damage. |
+| The nets are **undamaged**; the heuristic still fires on oblique/dark cells. | Anomaly score (left: boxes, right: heatmap) concentrates on biofouling & lighting, not damage. |
 
-> These images illustrate behaviour, not validated performance. Synthetic
-> metrics only verify the pipeline; SOLAQUA frames are real but **undamaged and
-> unlabelled**, so they show false-alarm/anomaly behaviour, not damage-detection
-> accuracy. See the [report](reports/SCALEAQ_PROTOTYPE_REPORT.md).
+**YOLOv8 trained on synthetic damage composited onto real net, evaluated on a held-out clip:**
+
+| Ground truth (green) vs. YOLO prediction (orange) — cross-clip | Classical (left) vs. YOLO (right) on the same frame |
+|---|---|
+| ![yolo cross-clip](docs/images/yolo_crossclip.jpg) | ![classical vs yolo](docs/images/classical_vs_yolo.jpg) |
+
+**Method comparison** (synthetic damage on real backgrounds; IoU 0.30, class-agnostic):
+
+| Method | In-clip F1 | Cross-clip F1 (held-out clip) |
+|---|---|---|
+| Classical (OpenCV heuristic) | 0.50 | 0.67 |
+| Anomaly (patch-Mahalanobis) | 0.12 | 0.05 |
+| **YOLOv8** | **0.97** | **0.98** |
+
+> **Read these honestly.** Synthetic metrics only verify the pipeline. SOLAQUA
+> frames are real but **undamaged/unlabelled** (false-alarm & anomaly behaviour
+> only). The YOLO numbers are on **synthetic damage composited on real
+> backgrounds** — the *damage appearance* comes from one generator (same in
+> train and test) and the cross-clip set is the same site/camera, so this shows
+> "learns this damage model and transfers across clips/backgrounds", **not**
+> "detects real damage." Real labelled damage is still required to claim
+> real-world performance. Full detail in the [report](reports/SCALEAQ_PROTOTYPE_REPORT.md).
 
 ---
 
@@ -78,18 +96,19 @@ The repo is organised around the workflow I would actually follow on the job:
 
 ---
 
-## Two compared approaches
+## Three compared approaches
 
-| | Classical baseline | ML baseline |
-|---|---|---|
-| **Module** | `classical_baseline.py` | `model_baseline.py` (Ultralytics YOLOv8) |
-| **Idea** | Net = regular mesh texture; damage breaks it. Combine an **absolute-darkness** cue (see-through holes) with a **low-edge-density** cue (mesh locally missing). | Learn "damage" appearance from labelled examples. |
-| **Needs labels?** | No (unsupervised heuristic) | Yes (YOLO det/seg format) |
-| **Pros** | Fast, transparent, no training data. Good for sanity-checking and data triage. | Learns real appearance; far better ceiling on messy data. |
-| **Cons** | Brittle; fooled by shadows/biofouling; many false positives on real footage. | Needs representative labelled data; less interpretable. |
+| | Classical baseline | Anomaly baseline | ML baseline |
+|---|---|---|---|
+| **Module** | `classical_baseline.py` | `anomaly.py` | `model_baseline.py` (YOLOv8) |
+| **Idea** | Net = regular mesh; damage breaks it. **Darkness** cue + **low-edge-density** cue + a **texture gate** to reject dark-but-textured net. | Learn "normal net" patch statistics; flag Mahalanobis outliers. | Learn damage appearance from labelled examples. |
+| **Needs labels?** | No | No (only normal frames) | Yes (YOLO det/seg) |
+| **Pros** | Fast, transparent, no training data. Triage / difficulty probe. | No damage labels needed; localises "unusual net". | Learns appearance; far higher ceiling (F1≈0.97 here). |
+| **Cons** | Brittle; tops out ~F1 0.5 on real backgrounds. | Flags fouling/lighting too; weak box localiser. | Needs representative labelled data; less interpretable. |
 
-The classical baseline is a **sanity-check and difficulty probe**, not a final
-detector. The ML path is the route to real performance once data is available.
+The classical and anomaly methods are **screening / difficulty probes**; the ML
+path is the route to real performance once labelled data exists. All three share
+one prediction schema and are compared with the same metrics (`compare_methods.py`).
 
 ---
 
@@ -109,13 +128,17 @@ net-inspection-cv/
     classical_baseline.py        explainable OpenCV anomaly baseline
     model_baseline.py            YOLOv8 detect/segment wrapper (graceful if missing)
     anomaly.py                   normal-net anomaly model (patch Mahalanobis)
+    compose.py                   composite synthetic damage onto REAL frames (+ labels)
+    inference.py                 unified facade over all 3 methods (used everywhere)
     evaluate.py                  detection / segmentation / image-level metrics
     visualize.py                 overlays, comparisons, galleries
     video.py                     video frame extraction
-    solaqua.py                   SOLAQUA client + ROS-bag frame extraction
+    solaqua.py                   SOLAQUA client + ROS-bag camera & sonar extraction
     synthetic.py                 placeholder data generator (testing only)
     utils.py                     IO, geometry, optional-dependency handling
   scripts/                       CLI entry points (see below)
+  streamlit_app.py               interactive viewer (streamlit run streamlit_app.py)
+  .github/workflows/ci.yml       CI: run tests on push/PR
   tests/                         pytest: data loading + metrics
   reports/SCALEAQ_PROTOTYPE_REPORT.md
   data/  outputs/  runs/         data, predictions, visualisations, training runs
@@ -132,11 +155,12 @@ degrades gracefully without them.
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1            # Windows; use source .venv/bin/activate on Linux/Mac
-pip install -e ".[cv,ml,data,dev]"      # cv = OpenCV/matplotlib/skimage; ml = ultralytics/torch; data = rosbags (SOLAQUA)
+pip install -e ".[cv,ml,data,serve,dev]"  # cv=OpenCV; ml=ultralytics/torch; data=rosbags; serve=FastAPI/Streamlit
 ```
 
 If you only want the classical baseline + evaluation: `pip install -e ".[cv,dev]"`.
-The `data` extra (`rosbags`) is only needed to read SOLAQUA `.bag` files.
+Extras are modular: `data` (rosbags, for SOLAQUA `.bag`), `ml` (YOLO), `serve`
+(API + viewer) are each optional and degrade gracefully when absent.
 If `ultralytics` is unavailable, the YOLO scripts print clear guidance instead of crashing.
 
 ---
@@ -209,6 +233,57 @@ model plus a calibrated FP/FN threshold are needed. These numbers describe
 false-alarm behaviour on undamaged net; they are **not** damage-detection
 metrics (there is no damage to detect here).
 
+### Train a realistic detector (synthetic damage on real backgrounds) + compare
+
+When real labelled damage isn't available, we composite plausible damage onto
+**real** SOLAQUA net frames (real texture/biofouling/lighting; labelled
+holes/tears) to get a believable training/eval set — clearly not real damage.
+
+```powershell
+# Composite damage onto real frames -> YOLO train/val/test (disjoint backgrounds)
+python scripts/make_real_dataset.py --frames data/processed/solaqua_frames_dense --out data/processed/real_composite
+
+# Train YOLOv8 on real backgrounds, then compare all 3 methods on the test split
+python scripts/train_yolo.py --data data/processed/real_composite/dataset.yaml --epochs 60 --imgsz 480
+python scripts/compare_methods.py --images data/processed/real_composite/images/test \
+    --labels data/processed/real_composite/labels/test --config configs/baseline.yaml \
+    --anomaly-model outputs/anomaly/model --yolo-weights runs/detect/train/weights/best.pt \
+    --out outputs/comparison
+```
+
+Measured: **YOLO F1 ≈ 0.97** vs classical **0.50** vs anomaly **0.12**, holding up
+on a held-out clip (F1 ≈ 0.98) — see the caveats above and in the report.
+
+### Tuning classical false positives
+
+The classical baseline's `max_region_density_ratio` (texture gate) trades recall
+for fewer false alarms on real net. Lowering it from the untuned setting cut
+false detections on undamaged frames **~46–75%** (config `configs/baseline.yaml`).
+
+### Serve it (HTTP API) and explore it (Streamlit)
+
+```powershell
+# FastAPI inference service (classical always; anomaly/yolo if provided)
+python scripts/serve.py --anomaly-model outputs/anomaly/model --yolo-weights runs/detect/train/weights/best.pt
+# curl -F file=@frame.jpg "http://localhost:8000/predict?method=yolo"
+
+# Interactive viewer: browse frames, switch methods, live thresholds
+streamlit run streamlit_app.py
+
+# Unified batch/video/bag inference for any method
+python scripts/infer.py --method yolo --yolo-weights runs/detect/train/weights/best.pt \
+    --source data/processed/solaqua_frames --out outputs/infer
+```
+
+### Multi-modal: multibeam sonar
+
+```powershell
+python scripts/fetch_solaqua.py --bag data/raw/solaqua/<clip>.bag --sonar-out data/processed/sonar
+```
+
+Sonar (SonoptixECHO) decodes to a 512×512 intensity image — a complementary
+modality that sees through turbidity. Experimental; not RGB damage detection.
+
 ### Working from video
 
 ```powershell
@@ -227,10 +302,12 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 - YOLOv8 detect/segment training & inference wrapper (graceful when ultralytics is absent).
 - Evaluation: IoU-matched precision/recall/F1, VOC-style AP, confidence sweep, image-level "contains damage?", mask IoU, explicit FP/FN lists, failure overlays.
 - Visualisation: prediction/GT overlays, colour-coded match overlays, markdown gallery.
-- **Real-data ingestion (SOLAQUA)**: public-API client, resumable download, ROS `.bag` frame extraction.
+- **Real-data ingestion (SOLAQUA)**: public-API client, resumable download, ROS `.bag` camera **and multibeam-sonar** extraction.
 - **Anomaly-detection baseline**: patch-feature Mahalanobis model with anomaly heatmaps; trains on normal net, flags deviations.
-- **Real-frame false-positive analysis** on SOLAQUA.
-- Tests for data loading, metrics, and the anomaly model; one-command report-asset generation.
+- **Realistic training data**: synthetic damage composited on real backgrounds (`compose.py`) → trainable, labelled, comparable.
+- **Three-method comparison** with a measured improvement story (classical FP reduction; YOLO F1≈0.97).
+- **Industrial layer**: unified inference facade, FastAPI service, Streamlit viewer, batch/video/bag runner with run manifests, CI.
+- Tests (26) for data loading, metrics, anomaly, compositing, and inference; one-command report-asset generation.
 
 **Placeholder / synthetic (clearly marked):**
 

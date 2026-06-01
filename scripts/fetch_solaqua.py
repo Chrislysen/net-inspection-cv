@@ -40,7 +40,8 @@ def main() -> None:
     ap.add_argument("--data-id", default=None, help="Download a specific data id")
     ap.add_argument("--bag", default=None, help="Use a .bag already on disk (skip download)")
     ap.add_argument("--out", default="data/raw/solaqua", help="Download directory")
-    ap.add_argument("--frames-out", default=None, help="Extract frames to this directory")
+    ap.add_argument("--frames-out", default=None, help="Extract camera frames to this dir")
+    ap.add_argument("--sonar-out", default=None, help="Extract sonar frames to this dir")
     ap.add_argument("--every-n", type=int, default=30, help="Keep 1 frame per N messages")
     ap.add_argument("--max-frames", type=int, default=40)
     ap.add_argument("--topic", default=None, help="Image topic (default: most frames)")
@@ -86,10 +87,17 @@ def main() -> None:
             bag_path, args.frames_out, topic=args.topic,
             every_n=args.every_n, max_frames=args.max_frames,
         )
-        print(f"\nExtracted {len(frames)} frames to {args.frames_out}")
+        print(f"\nExtracted {len(frames)} camera frames to {args.frames_out}")
         print("\nNOTE: SOLAQUA nets are UNDAMAGED and UNLABELLED. Use these frames for "
               "preprocessing, false-positive analysis, and anomaly detection — not for "
               "measuring damage-detection accuracy.")
+
+    if args.sonar_out and bag_path is not None:
+        sonar = solaqua.extract_sonar_frames(
+            bag_path, args.sonar_out, every_n=args.every_n, max_frames=args.max_frames,
+        )
+        print(f"\nExtracted {len(sonar)} multibeam-sonar frames to {args.sonar_out}")
+        print("Sonar is a complementary modality (sees through turbidity); not RGB damage detection.")
 
 
 if __name__ == "__main__":
