@@ -262,18 +262,27 @@ false detections on undamaged frames **~46–75%** (config `configs/baseline.yam
 
 ### Serve it (HTTP API) and explore it (Streamlit)
 
+Trained prototype models are committed under `models/` (see `models/NOTICE.md` for
+provenance/licensing), so the YOLO and anomaly paths run out of the box:
+
 ```powershell
-# FastAPI inference service (classical always; anomaly/yolo if provided)
-python scripts/serve.py --anomaly-model outputs/anomaly/model --yolo-weights runs/detect/train/weights/best.pt
+# FastAPI inference service using the committed models
+python scripts/serve.py --anomaly-model models/anomaly_normal_net --yolo-weights models/yolo_damage_v1.pt
 # curl -F file=@frame.jpg "http://localhost:8000/predict?method=yolo"
+
+# Or containerised (serves YOLO + anomaly + classical):
+docker build -t net-inspection-cv . ; docker run -p 8000:8000 net-inspection-cv
 
 # Interactive viewer: browse frames, switch methods, live thresholds
 streamlit run streamlit_app.py
 
 # Unified batch/video/bag inference for any method
-python scripts/infer.py --method yolo --yolo-weights runs/detect/train/weights/best.pt \
+python scripts/infer.py --method yolo --yolo-weights models/yolo_damage_v1.pt \
     --source data/processed/solaqua_frames --out outputs/infer
 ```
+
+Measured results are committed under [`reports/results/`](reports/results/)
+(in-clip and cross-clip method comparisons, real-frame false-positive analysis).
 
 ### Multi-modal: multibeam sonar
 

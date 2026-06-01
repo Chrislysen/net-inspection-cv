@@ -1,0 +1,201 @@
+{
+  "dataset": "SOLAQUA (real, undamaged nets, no damage labels)",
+  "interpretation": "Nets are undamaged, so all detections are candidate FALSE POSITIVES.",
+  "num_frames": 38,
+  "total_detections": 114,
+  "mean_detections_per_frame": 3.0,
+  "frames_with_any_detection": 29,
+  "false_positive_frame_rate": 0.763,
+  "per_image": [
+    {
+      "image": "2024-08-22_14-06-43_video_000000.jpg",
+      "num_detections": 0,
+      "max_score": 0.0
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000025.jpg",
+      "num_detections": 0,
+      "max_score": 0.0
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000050.jpg",
+      "num_detections": 0,
+      "max_score": 0.0
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000075.jpg",
+      "num_detections": 0,
+      "max_score": 0.0
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000100.jpg",
+      "num_detections": 0,
+      "max_score": 0.0
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000125.jpg",
+      "num_detections": 2,
+      "max_score": 0.4930436736583133
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000150.jpg",
+      "num_detections": 0,
+      "max_score": 0.0
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000175.jpg",
+      "num_detections": 0,
+      "max_score": 0.0
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000200.jpg",
+      "num_detections": 2,
+      "max_score": 0.4479481648866741
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000225.jpg",
+      "num_detections": 0,
+      "max_score": 0.0
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000250.jpg",
+      "num_detections": 1,
+      "max_score": 0.533721081151701
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000275.jpg",
+      "num_detections": 1,
+      "max_score": 0.4098477154498128
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000300.jpg",
+      "num_detections": 1,
+      "max_score": 0.4133596903398011
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000325.jpg",
+      "num_detections": 5,
+      "max_score": 0.5712725970192489
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000350.jpg",
+      "num_detections": 1,
+      "max_score": 0.5154054495848208
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000375.jpg",
+      "num_detections": 6,
+      "max_score": 0.5170683547399634
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000400.jpg",
+      "num_detections": 10,
+      "max_score": 0.5162184562338228
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000425.jpg",
+      "num_detections": 10,
+      "max_score": 0.5278151579904155
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000450.jpg",
+      "num_detections": 9,
+      "max_score": 0.4676782461753767
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000475.jpg",
+      "num_detections": 7,
+      "max_score": 0.509949969653655
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000500.jpg",
+      "num_detections": 5,
+      "max_score": 0.47032136611530156
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000525.jpg",
+      "num_detections": 10,
+      "max_score": 0.6247538445630108
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000550.jpg",
+      "num_detections": 9,
+      "max_score": 0.5072175364149143
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000575.jpg",
+      "num_detections": 5,
+      "max_score": 0.4779588790983196
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000600.jpg",
+      "num_detections": 1,
+      "max_score": 0.49944363955979154
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000625.jpg",
+      "num_detections": 5,
+      "max_score": 0.5918958636222338
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000650.jpg",
+      "num_detections": 2,
+      "max_score": 0.7758707980869674
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000675.jpg",
+      "num_detections": 3,
+      "max_score": 0.7157662565882079
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000700.jpg",
+      "num_detections": 3,
+      "max_score": 0.74531272118099
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000725.jpg",
+      "num_detections": 1,
+      "max_score": 0.7314923291309119
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000750.jpg",
+      "num_detections": 2,
+      "max_score": 0.7146353182086176
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000775.jpg",
+      "num_detections": 2,
+      "max_score": 0.6942468043140755
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000800.jpg",
+      "num_detections": 2,
+      "max_score": 0.6869933859809692
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000825.jpg",
+      "num_detections": 3,
+      "max_score": 0.6992492365435248
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000850.jpg",
+      "num_detections": 2,
+      "max_score": 0.691559727624126
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000875.jpg",
+      "num_detections": 3,
+      "max_score": 0.6947045348098345
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000900.jpg",
+      "num_detections": 1,
+      "max_score": 0.4309408530519786
+    },
+    {
+      "image": "2024-08-22_14-06-43_video_000925.jpg",
+      "num_detections": 0,
+      "max_score": 0.0
+    }
+  ]
+}

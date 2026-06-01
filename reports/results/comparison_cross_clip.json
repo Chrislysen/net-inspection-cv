@@ -1,0 +1,81 @@
+{
+  "iou": 0.3,
+  "num_images": 120,
+  "methods": {
+    "classical": {
+      "detection": {
+        "precision": 0.592057761732852,
+        "recall": 0.7735849056603774,
+        "f1": 0.6707566462167689,
+        "tp": 164,
+        "fp": 113,
+        "fn": 48,
+        "iou_threshold": 0.3,
+        "num_scored_images": 120,
+        "num_unscored_images": 0,
+        "ap": 0.7650007427140266
+      },
+      "image_level": {
+        "precision": 0.9272727272727272,
+        "recall": 0.9807692307692307,
+        "f1": 0.9532710280373831,
+        "tp": 102,
+        "fp": 8,
+        "fn": 2,
+        "tn": 8,
+        "accuracy": 0.9166666666666666,
+        "conf_threshold": 0.25
+      }
+    },
+    "anomaly": {
+      "detection": {
+        "precision": 0.07407407407407407,
+        "recall": 0.03773584905660377,
+        "f1": 0.05,
+        "tp": 8,
+        "fp": 100,
+        "fn": 204,
+        "iou_threshold": 0.3,
+        "num_scored_images": 120,
+        "num_unscored_images": 0,
+        "ap": 0.005614988743456389
+      },
+      "image_level": {
+        "precision": 0.971830985915493,
+        "recall": 0.6634615384615384,
+        "f1": 0.7885714285714286,
+        "tp": 69,
+        "fp": 2,
+        "fn": 35,
+        "tn": 14,
+        "accuracy": 0.6916666666666667,
+        "conf_threshold": 0.25
+      }
+    },
+    "yolo": {
+      "detection": {
+        "precision": 0.981042654028436,
+        "recall": 0.9764150943396226,
+        "f1": 0.9787234042553191,
+        "tp": 207,
+        "fp": 4,
+        "fn": 5,
+        "iou_threshold": 0.3,
+        "num_scored_images": 120,
+        "num_unscored_images": 0,
+        "ap": 0.9702970297029703
+      },
+      "image_level": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "tp": 104,
+        "fp": 0,
+        "fn": 0,
+        "tn": 16,
+        "accuracy": 1.0,
+        "conf_threshold": 0.25
+      }
+    }
+  }
+}

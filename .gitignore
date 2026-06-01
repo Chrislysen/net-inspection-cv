@@ -27,6 +27,11 @@ reports/assets/
 !docs/
 !docs/**
 
+# Committed prototype model artifacts (override the *.pt / *.npz ignores above)
+!models/
+!models/*.pt
+!models/*.npz
+
 # OS / editor
 .DS_Store
 .vscode/
