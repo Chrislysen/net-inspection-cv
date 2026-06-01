@@ -31,6 +31,7 @@ reports/assets/
 !models/
 !models/*.pt
 !models/*.npz
+!models/*.onnx        # exported deployment artifact (12 MB)
 
 # OS / editor
 .DS_Store

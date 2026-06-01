@@ -146,8 +146,16 @@ ingest (synthetic | images | video frames | SOLAQUA ROS bags)
 ```
 
 An **industrial-shaped serving layer** wraps these: a unified inference facade
-(`inference.py`), a **FastAPI** service (`serve.py`), a **Streamlit** viewer, a
-unified **batch/video/bag** runner with run manifests (`infer.py`), and **CI**.
+(`inference.py`), a **FastAPI** service with an **interactive ROV web console**
+(`serve.py` + `web/`), a **Streamlit** viewer, a unified **batch/video/bag**
+runner with run manifests (`infer.py`), and **CI**. A **COCO→YOLO adapter**
+(`coco.py`) is the drop-in slot for real labelled data (which usually arrives as
+COCO); public debris datasets (SeaClear etc.) are usable through it as a
+real-image smoke test and for transfer, but **not** as a net-damage proxy.
+**ONNX export** (`export_onnx.py`) plus a latency benchmark provide the
+deployment hand-off; on this CPU box ONNX Runtime was not faster than PyTorch, so
+the real speed-up (**TensorRT FP16/INT8 on the ROV's device**) is documented
+rather than run (it needs the target hardware and calibration frames).
 
 Verified on this machine (Python 3.14, OpenCV 4.x, Ultralytics 8.x, torch 2.x
 CPU, rosbags): synthetic demo runs end to end; **26/26 unit tests pass**; the

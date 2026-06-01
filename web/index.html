@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NET-INSPECT // ROV CONSOLE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700&family=Saira+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="grain"></div>
+<div class="scanlines"></div>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo-mark" aria-hidden="true"></span>
+    <div class="brand-text">
+      <h1>NET&#8202;INSPECT</h1>
+      <span class="brand-sub">ROV NET-DAMAGE CONSOLE</span>
+    </div>
+  </div>
+  <div class="sys">
+    <div class="sys-item"><span class="dot" id="statusDot"></span><span id="statusText">LINKING…</span></div>
+    <div class="sys-item">MODELS <b id="methodCount">—</b></div>
+    <div class="sys-item">LAT <b id="latencyHud">––</b> ms</div>
+    <div class="sys-item warn">PROTOTYPE · PROXY-TRAINED · HUMAN REVIEW</div>
+  </div>
+</header>
+
+<main class="console">
+  <!-- LEFT: controls -->
+  <section class="panel controls">
+    <div class="panel-head"><span class="bracket">[</span> CONTROL <span class="bracket">]</span></div>
+
+    <label class="field">
+      <span class="field-label">FRAME SOURCE</span>
+      <div class="select-wrap">
+        <select id="sourceSelect"></select>
+      </div>
+    </label>
+
+    <div class="field">
+      <span class="field-label">FRAME <em id="frameIdx">000</em> / <em id="frameTotal">000</em></span>
+      <input type="range" id="frameSlider" min="0" max="0" value="0" />
+      <div class="nav-row">
+        <button class="ghost" id="prevBtn">◀ PREV</button>
+        <button class="ghost" id="nextBtn">NEXT ▶</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="field-label">METHOD</span>
+      <div class="method-grid" id="methodGrid"></div>
+    </div>
+
+    <label class="field">
+      <span class="field-label">CONFIDENCE <em id="confVal">0.25</em></span>
+      <input type="range" id="confSlider" min="0" max="0.9" step="0.05" value="0.25" />
+    </label>
+
+    <button class="run" id="compareBtn">⟳ RUN ALL METHODS</button>
+    <p class="hint">Frames are real SOLAQUA ROV footage (undamaged) or synthetic
+      damage composited on real net. Detections are model output — not ground truth.</p>
+  </section>
+
+  <!-- CENTER: viewport -->
+  <section class="viewport-wrap">
+    <div class="viewport" id="viewport">
+      <img id="frameImg" alt="frame" />
+      <div class="hud-corner tl"></div><div class="hud-corner tr"></div>
+      <div class="hud-corner bl"></div><div class="hud-corner br"></div>
+      <div class="scanbar" id="scanbar"></div>
+      <div class="vp-readout" id="vpReadout">—</div>
+      <div class="vp-tag" id="vpMethod">—</div>
+    </div>
+    <div class="viewport-foot">
+      <span id="frameName">—</span>
+      <span id="frameDims">—</span>
+    </div>
+  </section>
+
+  <!-- RIGHT: readout -->
+  <section class="panel readout">
+    <div class="panel-head"><span class="bracket">[</span> DETECTIONS <span class="bracket">]</span></div>
+    <div class="stat-row">
+      <div class="stat"><b id="statCount">0</b><span>REGIONS</span></div>
+      <div class="stat"><b id="statLat">0</b><span>MS</span></div>
+      <div class="stat"><b id="statMethod">—</b><span>METHOD</span></div>
+    </div>
+    <div class="det-list" id="detList">
+      <div class="det-empty">NO DETECTIONS</div>
+    </div>
+    <div class="compare-out" id="compareOut" hidden>
+      <div class="panel-head sub"><span class="bracket">[</span> METHOD COMPARISON <span class="bracket">]</span></div>
+      <div id="compareRows"></div>
+    </div>
+  </section>
+</main>
+
+<footer class="ticker">
+  <span>SOLAQUA dataset © SINTEF Ocean · CC BY-SA 4.0 · undamaged nets · damage is synthetic · numbers are proxy, not validated real-world performance · net-inspection-cv prototype ·&nbsp;</span>
+  <span aria-hidden="true">SOLAQUA dataset © SINTEF Ocean · CC BY-SA 4.0 · undamaged nets · damage is synthetic · numbers are proxy, not validated real-world performance · net-inspection-cv prototype ·&nbsp;</span>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

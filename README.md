@@ -19,6 +19,18 @@ visualises predictions and failure cases.
 
 ---
 
+## Interactive console
+
+A localhost **ROV inspection console** (FastAPI + a custom web UI) ties it all
+together — browse real SOLAQUA frames, switch detector (classical / anomaly /
+PatchCore / YOLO), adjust confidence live, and compare methods, with a detection
+readout and latency. `python scripts/serve.py` then open `http://127.0.0.1:8000`.
+
+![web console](docs/images/webapp_console.png)
+
+*(Shown: YOLO flagging 4 damage regions on composited-on-real net. On real
+**undamaged** frames it correctly shows zero — consistent with the adversarial eval.)*
+
 ## Example outputs
 
 | Synthetic demo (prediction vs. ground truth) | Synthetic failure case (merged adjacent defects) |
@@ -215,10 +227,13 @@ net-inspection-cv/
     visualize.py                 overlays, comparisons, galleries
     video.py                     video frame extraction
     solaqua.py                   SOLAQUA client + ROS-bag camera & sonar extraction
+    coco.py                      COCO -> YOLO adapter (real labelled data drop-in)
     synthetic.py                 placeholder data generator (testing only)
     utils.py                     IO, geometry, optional-dependency handling
   scripts/                       CLI entry points (see below)
-  streamlit_app.py               interactive viewer (streamlit run streamlit_app.py)
+  web/                           interactive console (index.html / style.css / app.js)
+  streamlit_app.py               alternative interactive viewer
+  models/                        committed prototype models (.pt/.npz/.onnx) + NOTICE
   .github/workflows/ci.yml       CI: run tests on push/PR
   tests/                         pytest: data loading + metrics
   reports/SCALEAQ_PROTOTYPE_REPORT.md
@@ -352,6 +367,30 @@ python scripts/run_temporal.py --method classical --source data/processed/solaqu
 Committed result tables: [`reports/results/`](reports/results/) — 4-method
 comparison, adversarial eval, temporal.
 
+### Ingesting real labelled data (COCO) + deployment export
+
+```powershell
+# Real labels usually arrive as COCO -> convert to YOLO (the drop-in slot for
+# ScaleAQ's eventual labelled damage). Also handles SeaClear/TrashCan etc.
+python scripts/convert_coco.py --coco anns.json --images imgs --out data/processed/real --single-class
+python scripts/train_yolo.py --data data/processed/real/dataset.yaml --epochs 60
+
+# Export to ONNX (portable; TensorRT/INT8 on-device) + latency benchmark
+python scripts/export_onnx.py --weights models/yolo_damage_v1.pt --imgsz 480
+```
+
+> **Honest note on public datasets.** SeaClear / TrashCan / Trash-ICRA19 are
+> marine *debris* (plastic, animals, plants) — useful as a real-image smoke test
+> of the COCO adapter and for transfer/pretraining, **not** a net-damage proxy.
+> Verify each dataset's licence before downloading. The COCO adapter exists so
+> that *real labelled net-damage data* drops straight in when it's available.
+>
+> **Deployment.** ONNX export works and is benchmarked
+> ([`reports/results/onnx_benchmark.json`](reports/results/onnx_benchmark.json));
+> on this CPU dev box ONNX Runtime wasn't faster than PyTorch — the real speedup
+> is **TensorRT (FP16/INT8) on the target device** (e.g. Jetson), which is
+> documented rather than run here (needs the device + calibration data).
+
 ### Tuning classical false positives
 
 The classical baseline's `max_region_density_ratio` (texture gate) trades recall
@@ -415,8 +454,9 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 - **Four-method comparison** + a **measured improvement story** (classical FP reduction; PatchCore; YOLO F1≈0.97).
 - **Adversarial "is it cheating?" evaluation**: false positives on real undamaged net, different-day generalization, FROC curve.
 - **Temporal reasoning**: persistence tracking that removes ~70% of transient false alarms on real video.
-- **Segmentation** (YOLOv8-seg) for masks; **industrial layer**: unified facade, FastAPI service, Streamlit viewer, batch/video/bag runner, CI.
-- Tests (31) for data, metrics, anomaly, compositing, inference, temporal, and PatchCore IO.
+- **Segmentation** (YOLOv8-seg) for masks; **COCO ingestion adapter** (real labelled data drops in); **ONNX export + latency benchmark**.
+- **Interactive web console** (FastAPI + custom UI), Streamlit viewer, batch/video/bag runner, per-class evaluation, CI.
+- Tests (35) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, and per-class metrics.
 
 **Placeholder / synthetic (clearly marked):**
 

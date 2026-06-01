@@ -1,0 +1,28 @@
+{
+  "weights": "models\\yolo_damage_v1.pt",
+  "onnx": "models\\yolo_damage_v1.onnx",
+  "imgsz": 480,
+  "runs": 40,
+  "pytorch_cpu": {
+    "mean_ms": 107.02,
+    "p50_ms": 82.1,
+    "p95_ms": 236.4,
+    "fps": 9.3
+  },
+  "onnxruntime_cpu": {
+    "mean_ms": 184.38,
+    "p50_ms": 155.24,
+    "p95_ms": 374.56,
+    "fps": 5.4
+  },
+  "onnx_output_shape": [
+    1,
+    5,
+    4725
+  ],
+  "parity_note": "ONNX runs and produces an output tensor of the expected shape; box-level parity depends on identical pre/post-processing.",
+  "deployment": {
+    "next": "Compile ONNX -> TensorRT on target NVIDIA device (e.g. Jetson Orin); use FP16, or INT8 with calibration frames from the deployment site.",
+    "caveat": "Latencies here are CPU on this dev machine; on-device numbers differ."
+  }
+}

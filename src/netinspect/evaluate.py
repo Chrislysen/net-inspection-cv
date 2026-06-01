@@ -238,3 +238,39 @@ def evaluate_image_level(
 def best_f1_threshold(sweep: list[dict]) -> dict:
     """Return the sweep row with the highest F1."""
     return max(sweep, key=lambda r: r["f1"]) if sweep else {}
+
+
+def evaluate_per_class(
+    preds_by_image: dict[str, list[BBox]],
+    gts_by_image: dict[str, list[BBox]],
+    iou_threshold: float = 0.5,
+    class_names: dict[int, str] | None = None,
+) -> dict:
+    """Per-class precision/recall/F1/AP plus a macro average.
+
+    For multi-class datasets (e.g. converted COCO). Each class is scored on its
+    own boxes (matching is class-agnostic *within* a class). Returns
+    ``{"per_class": {name: metrics}, "macro": {...}, "overall_class_agnostic": {...}}``.
+    """
+    class_ids = sorted({b.class_id for boxes in list(gts_by_image.values()) + list(preds_by_image.values())
+                        for b in boxes})
+    class_names = class_names or {}
+    per_class: dict[str, dict] = {}
+    for cid in class_ids:
+        p = {img: [b for b in boxes if b.class_id == cid] for img, boxes in preds_by_image.items()}
+        g = {img: [b for b in boxes if b.class_id == cid] for img, boxes in gts_by_image.items()}
+        res = evaluate_detection(p, g, iou_threshold, class_agnostic=True)["overall"]
+        name = class_names.get(cid, f"class_{cid}")
+        per_class[name] = {k: res[k] for k in ("precision", "recall", "f1", "ap", "tp", "fp", "fn")}
+
+    if per_class:
+        macro = {m: round(sum(c[m] for c in per_class.values()) / len(per_class), 4)
+                 for m in ("precision", "recall", "f1", "ap")}
+    else:
+        macro = {"precision": 0.0, "recall": 0.0, "f1": 0.0, "ap": 0.0}
+
+    overall = evaluate_detection(preds_by_image, gts_by_image, iou_threshold,
+                                 class_agnostic=True)["overall"]
+    return {"per_class": per_class, "macro": macro,
+            "overall_class_agnostic": {k: overall[k] for k in
+                                       ("precision", "recall", "f1", "ap", "tp", "fp", "fn")}}
