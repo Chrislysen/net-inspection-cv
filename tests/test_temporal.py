@@ -39,6 +39,18 @@ def test_confidence_gate():
     assert len(tr.update([_box(10, score=0.9)])) == 1
 
 
+def test_confirmed_tracks_exposes_stable_ids():
+    tr = Tracker(TemporalConfig(min_hits=2, iou_match=0.2))
+    tr.update([_box(50)])
+    assert tr.confirmed_tracks() == []          # not confirmed at 1 hit
+    tr.update([_box(51)])                         # 2nd hit -> confirmed
+    ct = tr.confirmed_tracks()
+    assert len(ct) == 1 and isinstance(ct[0][0], int)
+    tid = ct[0][0]
+    tr.update([_box(52)])                         # same track keeps its id
+    assert tr.confirmed_tracks()[0][0] == tid
+
+
 def test_filter_sequence_reduces_transients():
     # 6 frames: a persistent box + a different transient box on frame 0 only.
     seq = [[_box(50 + i)] + ([_box(200)] if i == 0 else []) for i in range(6)]

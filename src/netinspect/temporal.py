@@ -86,6 +86,15 @@ class Tracker:
     def num_tracks(self) -> int:
         return len(self._tracks)
 
+    def confirmed_tracks(self) -> list[tuple[int, BBox]]:
+        """Currently-visible confirmed tracks as ``(track_id, box)`` pairs.
+
+        Lets a streaming consumer emit exactly one alert per *new* confirmed
+        damage (by track id) rather than one per frame.
+        """
+        return [(t.track_id, t.box) for t in self._tracks
+                if t.confirmed and t.misses == 0]
+
 
 def filter_sequence(per_frame_detections: list[list[BBox]],
                     cfg: TemporalConfig | None = None) -> list[list[BBox]]:

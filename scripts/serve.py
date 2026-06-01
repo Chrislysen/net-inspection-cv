@@ -1,23 +1,31 @@
 """FastAPI inference service + interactive web console for net inspection.
 
+Production-shaped serving layer:
+* path-traversal-safe frame access; upload size/type validation;
+* structured request logging with a request id and latency;
+* liveness/readiness/metrics endpoints (`/api/health`, `/api/ready`, `/api/metrics`);
+* a global exception handler that never leaks stack traces to clients.
+
 Endpoints
 ---------
 * ``GET  /``                  — the web console (static SPA)
-* ``GET  /api/health``        — methods + frame sources available
+* ``GET  /api/health``        — liveness + methods + sources
+* ``GET  /api/ready``         — readiness (models resolvable)
+* ``GET  /api/metrics``       — Prometheus-style text metrics
 * ``GET  /api/frames``        — list frames in a source directory
-* ``GET  /api/image``         — raw frame bytes
+* ``GET  /api/image``         — raw frame bytes (basename only)
 * ``GET  /api/infer``         — run a method on a server-side frame -> JSON
-                                (detections + base64 overlay + latency)
-* ``POST /predict``           — multipart upload -> JSON detections
-* ``POST /predict/overlay``   — multipart upload -> overlay PNG
+* ``POST /predict``           — multipart image upload -> JSON detections
+* ``POST /predict/overlay``   — multipart image upload -> overlay PNG
 
 Run
 ---
     python scripts/serve.py            # auto-loads committed models in models/
     # open http://127.0.0.1:8000
 
-Prototype serving layer: single process, no auth. Predictions are from
-synthetic/proxy-trained models and require human review.
+Still single-process and unauthenticated — a prototype service, not a hardened
+public deployment. Predictions are from synthetic/proxy-trained models and
+require human review.
 
 Note: no ``from __future__ import annotations`` — FastAPI resolves annotations
 at runtime.
@@ -25,6 +33,9 @@ at runtime.
 import argparse
 import base64
 import io
+import time
+import uuid
+from collections import defaultdict
 from pathlib import Path
 
 import _common  # noqa: F401
@@ -39,7 +50,9 @@ LOGGER = get_logger()
 REPO = _common.REPO_ROOT
 WEB_DIR = REPO / "web"
 
-# Candidate demo frame sources (only those that exist are exposed).
+MAX_UPLOAD_BYTES = 16 * 1024 * 1024          # reject oversized uploads
+ALLOWED_UPLOAD_TYPES = {"image/jpeg", "image/png", "image/bmp", "image/webp", "image/tiff"}
+
 FRAME_SOURCES = {
     "SOLAQUA bag1 (real, undamaged)": "data/processed/solaqua_frames",
     "SOLAQUA bag2 (real, undamaged)": "data/processed/solaqua_bag2",
@@ -50,9 +63,49 @@ FRAME_SOURCES = {
 }
 
 
+class _Metrics:
+    """Tiny in-process metrics store (single-process prototype)."""
+    def __init__(self):
+        self.requests = defaultdict(int)        # path -> count
+        self.errors = 0
+        self.inferences = defaultdict(int)       # method -> count
+        self.latency_sum_ms = 0.0
+        self.latency_count = 0
+        self.started = time.time()
+
+    def observe(self, path: str, ms: float):
+        self.requests[path] += 1
+        self.latency_sum_ms += ms
+        self.latency_count += 1
+
+    def prometheus(self) -> str:
+        lines = [
+            "# HELP netinspect_requests_total HTTP requests by path",
+            "# TYPE netinspect_requests_total counter",
+        ]
+        for p, n in sorted(self.requests.items()):
+            lines.append(f'netinspect_requests_total{{path="{p}"}} {n}')
+        lines += ["# HELP netinspect_inferences_total Inferences by method",
+                  "# TYPE netinspect_inferences_total counter"]
+        for m, n in sorted(self.inferences.items()):
+            lines.append(f'netinspect_inferences_total{{method="{m}"}} {n}')
+        avg = self.latency_sum_ms / self.latency_count if self.latency_count else 0.0
+        lines += [
+            "# HELP netinspect_request_latency_ms_avg Average request latency",
+            "# TYPE netinspect_request_latency_ms_avg gauge",
+            f"netinspect_request_latency_ms_avg {avg:.2f}",
+            "# HELP netinspect_errors_total Unhandled errors",
+            "# TYPE netinspect_errors_total counter",
+            f"netinspect_errors_total {self.errors}",
+            "# HELP netinspect_uptime_seconds Service uptime",
+            "# TYPE netinspect_uptime_seconds gauge",
+            f"netinspect_uptime_seconds {time.time() - self.started:.0f}",
+        ]
+        return "\n".join(lines) + "\n"
+
+
 def _available_sources():
-    return {name: rel for name, rel in FRAME_SOURCES.items()
-            if list_images(REPO / rel)}
+    return {name: rel for name, rel in FRAME_SOURCES.items() if list_images(REPO / rel)}
 
 
 def _png_b64(image: np.ndarray) -> str:
@@ -63,30 +116,77 @@ def _png_b64(image: np.ndarray) -> str:
 
 
 def build_app(inspector: NetInspector):
-    from fastapi import FastAPI, File, HTTPException, Query, UploadFile
-    from fastapi.responses import FileResponse, JSONResponse, Response
+    from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+    from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
     from fastapi.staticfiles import StaticFiles
 
-    app = FastAPI(title="net-inspection-cv console", version="0.2.0")
+    app = FastAPI(title="net-inspection-cv console", version="0.3.0")
     sources = _available_sources()
+    metrics = _Metrics()
 
-    def _read_upload(data: bytes) -> np.ndarray:
-        from PIL import Image
-        return np.asarray(Image.open(io.BytesIO(data)).convert("RGB"))
+    @app.middleware("http")
+    async def _observability(request: Request, call_next):
+        rid = uuid.uuid4().hex[:8]
+        t0 = time.perf_counter()
+        try:
+            response = await call_next(request)
+        except Exception:  # pragma: no cover - defensive
+            metrics.errors += 1
+            LOGGER.exception("rid=%s unhandled error on %s", rid, request.url.path)
+            return JSONResponse({"error": "internal error", "request_id": rid}, status_code=500)
+        ms = (time.perf_counter() - t0) * 1000
+        if request.url.path.startswith("/api") or request.url.path.startswith("/predict"):
+            metrics.observe(request.url.path, ms)
+            LOGGER.info("rid=%s %s %s -> %d %.0fms", rid, request.method,
+                        request.url.path, response.status_code, ms)
+        response.headers["X-Request-ID"] = rid
+        return response
+
+    async def _read_upload(file: UploadFile) -> np.ndarray:
+        if file.content_type and file.content_type not in ALLOWED_UPLOAD_TYPES:
+            raise HTTPException(415, f"Unsupported content type: {file.content_type}")
+        data = await file.read()
+        if len(data) > MAX_UPLOAD_BYTES:
+            raise HTTPException(413, f"Upload exceeds {MAX_UPLOAD_BYTES // (1024*1024)} MB")
+        try:
+            from PIL import Image
+            return np.asarray(Image.open(io.BytesIO(data)).convert("RGB"))
+        except Exception:
+            raise HTTPException(400, "Could not decode image")
 
     def _resolve(source: str, name: str) -> Path:
         rel = sources.get(source)
         if rel is None:
             raise HTTPException(404, f"Unknown source: {source}")
-        p = REPO / rel / name
-        if not p.exists():
-            raise HTTPException(404, f"Frame not found: {name}")
+        # Path-traversal safe: keep only the basename, then confirm containment.
+        safe_name = Path(name).name
+        base = (REPO / rel).resolve()
+        p = (base / safe_name).resolve()
+        if base != p.parent or not p.exists():
+            raise HTTPException(404, f"Frame not found: {safe_name}")
         return p
+
+    def _validate_method(method: str):
+        if method not in inspector.available_methods():
+            raise HTTPException(400, f"Method '{method}' unavailable. "
+                                     f"Available: {inspector.available_methods()}")
 
     @app.get("/api/health")
     def health():
         return {"status": "ok", "methods": inspector.available_methods(),
-                "sources": list(sources.keys())}
+                "sources": list(sources.keys()), "version": app.version}
+
+    @app.get("/api/ready")
+    def ready():
+        # Ready if the always-on classical method is usable; report model availability.
+        methods = inspector.available_methods()
+        return JSONResponse(
+            {"ready": "classical" in methods, "methods": methods},
+            status_code=200 if "classical" in methods else 503)
+
+    @app.get("/api/metrics", response_class=PlainTextResponse)
+    def metrics_endpoint():
+        return metrics.prometheus()
 
     @app.get("/api/frames")
     def frames(source: str = Query(...)):
@@ -101,43 +201,47 @@ def build_app(inspector: NetInspector):
 
     @app.get("/api/infer")
     def infer(source: str = Query(...), name: str = Query(...),
-              method: str = Query("yolo"), conf: float = Query(0.25)):
-        if method not in inspector.available_methods():
-            raise HTTPException(400, f"Method '{method}' unavailable.")
+              method: str = Query("yolo"), conf: float = Query(0.25, ge=0.0, le=1.0)):
+        _validate_method(method)
         img = read_image(_resolve(source, name))
         result = inspector.predict(img, method=method, conf=conf)
+        metrics.inferences[method] += 1
         vis = result.heatmap if result.heatmap is not None else overlay_boxes(img, preds=result.boxes)
         return JSONResponse({
-            "method": method, "frame": name, "conf": conf,
-            "latency_ms": round(result.elapsed_ms, 1),
-            "count": len(result.boxes),
+            "method": method, "frame": Path(name).name, "conf": conf,
+            "latency_ms": round(result.elapsed_ms, 1), "count": len(result.boxes),
             "image_size": {"width": img.shape[1], "height": img.shape[0]},
             "detections": [
                 {"class": b.class_name, "score": round(b.score, 3),
                  "bbox": [int(b.x1), int(b.y1), int(b.x2), int(b.y2)]}
                 for b in result.boxes],
-            "overlay": _png_b64(vis),
-            "is_heatmap": result.heatmap is not None,
+            "overlay": _png_b64(vis), "is_heatmap": result.heatmap is not None,
+            "disclaimer": "Prototype: proxy-trained model; human review required.",
         })
 
     @app.post("/predict")
     async def predict(file: UploadFile = File(...), method: str = Query("classical"),
-                      conf: float = Query(0.25)):
-        img = _read_upload(await file.read())
+                      conf: float = Query(0.25, ge=0.0, le=1.0)):
+        _validate_method(method)
+        img = await _read_upload(file)
         r = inspector.predict(img, method=method, conf=conf)
-        return JSONResponse(r.to_dict())
+        metrics.inferences[method] += 1
+        payload = r.to_dict()
+        payload["disclaimer"] = "Prototype: proxy-trained model; human review required."
+        return JSONResponse(payload)
 
     @app.post("/predict/overlay")
     async def predict_overlay(file: UploadFile = File(...), method: str = Query("classical"),
-                              conf: float = Query(0.25)):
+                              conf: float = Query(0.25, ge=0.0, le=1.0)):
         from PIL import Image
-        img = _read_upload(await file.read())
+        _validate_method(method)
+        img = await _read_upload(file)
         r = inspector.predict(img, method=method, conf=conf)
+        metrics.inferences[method] += 1
         vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
         buf = io.BytesIO(); Image.fromarray(vis).save(buf, format="PNG")
         return Response(content=buf.getvalue(), media_type="image/png")
 
-    # Web console (mounted last so /api/* take precedence).
     if WEB_DIR.exists():
         app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")
 

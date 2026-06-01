@@ -93,7 +93,8 @@ def gray_world_white_balance(image: np.ndarray) -> np.ndarray:
     img = image.astype(np.float32)
     means = img.reshape(-1, 3).mean(axis=0)
     gray = means.mean()
-    scale = np.where(means > 1e-6, gray / means, 1.0)
+    # Guard the divide so a black/uniform frame doesn't warn or produce NaNs.
+    scale = np.divide(gray, means, out=np.ones_like(means), where=means > 1e-6)
     return np.clip(img * scale, 0, 255).astype(np.uint8)
 
 

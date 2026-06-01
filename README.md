@@ -44,7 +44,10 @@ result tables/figures in [`reports/results/`](reports/results/), models in
 [`models/`](models/), and the web UI in [`web/`](web/). For the reasoning trail:
 the [research decision log](reports/RESEARCH_SYNTHESIS.md) (what external research
 was adopted vs rejected and why) and a code-grounded
-[technical defense Q&A](reports/INTERVIEW_DEFENSE.md).
+[technical defense Q&A](reports/INTERVIEW_DEFENSE.md). For deployment:
+[model card](reports/MODEL_CARD.md), [deployment runbook + SLOs](reports/DEPLOYMENT.md),
+[data-collection protocol](reports/DATA_COLLECTION.md), and the honest
+[production-readiness scorecard](reports/PRODUCTION_READINESS.md).
 
 > **Status: prototype.** The repository ships with a small *synthetic* dataset
 > so the full pipeline runs out of the box, **and** an integration with the real
@@ -495,7 +498,10 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 - **Temporal reasoning**: persistence tracking that removes ~70% of transient false alarms on real video.
 - **Segmentation** (YOLOv8-seg) for masks; **COCO ingestion adapter** (real labelled data drops in); **ONNX export + latency benchmark**.
 - **Interactive web console** (FastAPI + custom UI), Streamlit viewer, batch/video/bag runner, per-class evaluation, CI.
-- Tests (35) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, and per-class metrics.
+- **Production-shaped serving:** path-traversal-safe, upload validation, structured logging + request IDs, `/health` `/ready` `/metrics`, no-leak error handling.
+- **Torch-free ONNX inference** (`onnx_infer.py`, parity-verified) + a **streaming pipeline** (`stream_inspect.py`) that emits one confirmed-damage alert per new track.
+- **Ops artifacts:** model card, deployment/SLO runbook, data-collection protocol, and a self-critical [production-readiness scorecard](reports/PRODUCTION_READINESS.md).
+- Tests (48) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, and **ONNX**.
 
 **Placeholder / synthetic (clearly marked):**
 
