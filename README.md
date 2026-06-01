@@ -31,6 +31,10 @@ visualises predictions and failure cases.
 | ![real false positives](docs/images/real_false_positives.jpg) | ![real anomaly heatmap](docs/images/real_anomaly_heatmap.jpg) |
 | The nets are **undamaged**; the heuristic still fires on oblique/dark cells. | Anomaly score (left: boxes, right: heatmap) concentrates on biofouling & lighting, not damage. |
 
+**YOLOv8 detecting damage on real net (live `scripts/infer.py` output, confidences shown):**
+
+![yolo detection](docs/images/yolo_detection_example.jpg)
+
 **YOLOv8 trained on synthetic damage composited onto real net, evaluated on a held-out clip:**
 
 | Ground truth (green) vs. YOLO prediction (orange) — cross-clip | Classical (left) vs. YOLO (right) on the same frame |
@@ -72,6 +76,62 @@ further **70%** of transient false alarms on real undamaged video.
 > "learns this damage model and transfers across clips/backgrounds", **not**
 > "detects real damage." Real labelled damage is still required to claim
 > real-world performance. Full detail in the [report](reports/SCALEAQ_PROTOTYPE_REPORT.md).
+
+## Results (figures)
+
+Generated from the committed result JSONs by `python scripts/make_plots.py`
+(figures in [`reports/results/plots/`](reports/results/plots/)).
+
+| Label-free → supervised ladder | Detection metrics by method |
+|---|---|
+| ![f1 ladder](reports/results/plots/method_f1_ladder.png) | ![metrics](reports/results/plots/method_metrics.png) |
+
+| Adversarial: FP on REAL undamaged net | FROC operating curve (det v1 vs seg v2) |
+|---|---|
+| ![fp undamaged](reports/results/plots/fp_on_undamaged.png) | ![froc](reports/results/plots/froc.png) |
+
+| Temporal confirmation removes ~70% of transient false alarms |
+|---|
+| ![temporal](reports/results/plots/temporal_reduction.png) |
+
+The FROC tells the honest story at a glance: the simple detector (`det v1`) sits
+top-left (≈0.97 recall at ~0 false positives), while the "fancier" segmentation
+model (`seg v2`) needs many more false positives for the same recall on a
+different day — a regression the evaluation **caught** rather than hid.
+
+## Usage cases
+
+**1. Screen inspection video for suspicious regions (offline review).**
+```powershell
+python scripts/infer.py --method yolo --yolo-weights models/yolo_damage_v1.pt --source clip.mp4 --out outputs/review --every-n 5
+# fewer false alarms via temporal confirmation on a contiguous sequence:
+python scripts/run_temporal.py --method yolo --yolo-weights models/yolo_damage_v1.pt --source data/processed/frames --out outputs/review_temporal
+```
+
+**2. Only have *normal*-net footage, want to flag anything unusual (label-free).**
+```powershell
+python scripts/train_patchcore.py --images data/processed/normal_frames --out models/patchcore_mynet
+python scripts/run_anomaly.py --images data/processed/new_frames --model models/patchcore_mynet --out outputs/anomaly   # heatmaps + boxes
+```
+
+**3. Have labelled damage → train and rank approaches.**
+```powershell
+python scripts/prepare_data.py --images data/raw/images --labels data/raw/labels --out data/processed --yolo-split
+python scripts/train_yolo.py --data data/processed/yolo/dataset.yaml --epochs 60
+python scripts/compare_methods.py --images <test_imgs> --labels <test_lbls> --yolo-weights runs/detect/train/weights/best.pt --out outputs/comparison
+```
+
+**4. Decide whether to trust a model (before deploying).**
+```powershell
+python scripts/adversarial_eval.py --yolo-weights models/yolo_damage_v1.pt --out reports/results/adversarial   # FP on undamaged + FROC
+python scripts/make_plots.py        # turn results into figures
+```
+
+**5. Serve / explore.**
+```powershell
+python scripts/serve.py --yolo-weights models/yolo_damage_v1.pt --patchcore-model models/patchcore_normal_net   # HTTP API
+streamlit run streamlit_app.py      # interactive viewer
+```
 
 ---
 
