@@ -20,6 +20,7 @@ import argparse
 from pathlib import Path
 
 import _common  # noqa: F401
+
 from netinspect.patchcore import PatchCoreConfig, fit
 from netinspect.utils import list_images, read_image, write_json
 

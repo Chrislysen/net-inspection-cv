@@ -7,6 +7,14 @@ on:
     branches: [main]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v1
+        with:
+          args: "check src scripts tests streamlit_app.py"
+
   test:
     runs-on: ubuntu-latest
     strategy:

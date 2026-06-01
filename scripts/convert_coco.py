@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 
 import _common  # noqa: F401
+
 from netinspect.coco import convert_coco_to_yolo
 
 

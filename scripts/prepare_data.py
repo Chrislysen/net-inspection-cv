@@ -16,6 +16,7 @@ import shutil
 from pathlib import Path
 
 import _common  # noqa: F401
+
 from netinspect.data import format_summary, load_dataset, summarize_dataset
 from netinspect.utils import ensure_dir, write_json
 

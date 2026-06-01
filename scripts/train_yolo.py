@@ -14,8 +14,8 @@ import argparse
 import sys
 
 import _common  # noqa: F401
-from netinspect.model_baseline import (YoloConfig, train,
-                                        ultralytics_available, ULTRALYTICS_HINT)
+
+from netinspect.model_baseline import ULTRALYTICS_HINT, YoloConfig, train, ultralytics_available
 
 
 def main() -> None:

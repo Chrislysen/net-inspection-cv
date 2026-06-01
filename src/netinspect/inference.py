@@ -13,7 +13,8 @@ from pathlib import Path
 
 import numpy as np
 
-from .classical_baseline import ClassicalConfig, detect as classical_detect
+from .classical_baseline import ClassicalConfig
+from .classical_baseline import detect as classical_detect
 from .utils import BBox, get_logger, optional_import
 
 LOGGER = get_logger()
@@ -112,13 +113,14 @@ class NetInspector:
             heatmap = None
             meta = res.debug
         elif method == "anomaly":
-            from .anomaly import score_image, anomaly_heatmap
+            from .anomaly import anomaly_heatmap, score_image
             ar = score_image(image_rgb, self._anomaly())
             boxes = [b for b in ar.boxes if b.score >= conf]
             heatmap = anomaly_heatmap(image_rgb, ar, self._anomaly())
             meta = {"max_score": ar.max_score, "threshold": self._anomaly().threshold}
         elif method == "patchcore":
-            from .patchcore import score_image as pc_score, heatmap as pc_heatmap
+            from .patchcore import heatmap as pc_heatmap
+            from .patchcore import score_image as pc_score
             pr = pc_score(image_rgb, self._patchcore())
             boxes = [b for b in pr.boxes if b.score >= conf]
             heatmap = pc_heatmap(image_rgb, pr, self._patchcore())

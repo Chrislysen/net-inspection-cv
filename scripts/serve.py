@@ -29,6 +29,7 @@ from pathlib import Path
 
 import _common  # noqa: F401
 import numpy as np
+
 from netinspect.classical_baseline import ClassicalConfig
 from netinspect.inference import NetInspector
 from netinspect.utils import get_logger, list_images, read_image

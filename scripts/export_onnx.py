@@ -21,6 +21,7 @@ from pathlib import Path
 
 import _common  # noqa: F401
 import numpy as np
+
 from netinspect.utils import get_logger, optional_import, write_json
 
 LOGGER = get_logger()

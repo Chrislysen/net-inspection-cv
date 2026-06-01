@@ -51,7 +51,7 @@ def test_filter_sequence_reduces_transients():
 
 def test_patchcore_config_roundtrip(tmp_path):
     pytest.importorskip("torchvision")
-    from netinspect.patchcore import PatchCoreModel, PatchCoreConfig
+    from netinspect.patchcore import PatchCoreConfig, PatchCoreModel
     cfg = PatchCoreConfig(coreset_size=10)
     model = PatchCoreModel(bank=np.random.rand(10, 384).astype(np.float32),
                            grid=(7, 7), threshold=2.5, cfg=cfg, train_stats={})

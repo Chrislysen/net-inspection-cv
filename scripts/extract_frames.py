@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 
 import _common  # noqa: F401  (path bootstrap)
+
 from netinspect.video import extract_frames
 
 

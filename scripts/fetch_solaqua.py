@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 
 import _common  # noqa: F401
+
 from netinspect import solaqua
 
 

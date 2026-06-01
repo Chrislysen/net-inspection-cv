@@ -17,10 +17,18 @@ import json
 from pathlib import Path
 
 import _common  # noqa: F401
+
 from netinspect.classical_baseline import ClassicalConfig
 from netinspect.inference import NetInspector
-from netinspect.utils import (VIDEO_EXTENSIONS, ensure_dir, get_logger,
-                              list_images, read_image, write_image, write_json)
+from netinspect.utils import (
+    VIDEO_EXTENSIONS,
+    ensure_dir,
+    get_logger,
+    list_images,
+    read_image,
+    write_image,
+    write_json,
+)
 from netinspect.visualize import overlay_boxes
 
 LOGGER = get_logger()
@@ -34,8 +42,9 @@ def _iter_frames(source: Path, every_n: int, max_frames: int | None):
         return
     suffix = source.suffix.lower()
     if suffix == ".bag":
-        from netinspect.solaqua import extract_bag_frames
         import tempfile
+
+        from netinspect.solaqua import extract_bag_frames
         tmp = Path(tempfile.mkdtemp())
         for p in extract_bag_frames(source, tmp, every_n=every_n, max_frames=max_frames):
             yield p.stem, read_image(p)

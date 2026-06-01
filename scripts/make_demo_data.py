@@ -16,6 +16,7 @@ from __future__ import annotations
 import argparse
 
 import _common  # noqa: F401
+
 from netinspect.synthetic import generate_dataset
 
 

@@ -19,9 +19,11 @@ import argparse
 from pathlib import Path
 
 import _common  # noqa: F401
-from netinspect.classical_baseline import ClassicalConfig, detect as classical_detect
+
+from netinspect.classical_baseline import ClassicalConfig
+from netinspect.classical_baseline import detect as classical_detect
 from netinspect.data import load_dataset
-from netinspect.evaluate import evaluate_detection, evaluate_image_level
+from netinspect.evaluate import coco_map, evaluate_detection, evaluate_image_level
 from netinspect.utils import ensure_dir, get_logger, read_image, write_json
 
 LOGGER = get_logger()
@@ -97,8 +99,9 @@ def main() -> None:
             continue
         det = evaluate_detection(preds, gts, args.iou)["overall"]
         img = evaluate_image_level(preds, gts, conf_threshold=0.25)
-        methods[name] = {"detection": det, "image_level": img}
-        rows.append((name, det, img))
+        cmap = coco_map(preds, gts)
+        methods[name] = {"detection": det, "image_level": img, "coco_map": cmap}
+        rows.append((name, det, img, cmap))
 
     out = ensure_dir(args.out)
     write_json({"iou": args.iou, "num_images": len(samples), "methods": methods},
@@ -107,11 +110,12 @@ def main() -> None:
     # Markdown table.
     md = ["# Method comparison",
           f"\nTest set: `{args.images}` ({len(samples)} images, IoU={args.iou}, class-agnostic)\n",
-          "| Method | Precision | Recall | F1 | AP | Image-level acc |",
-          "|---|---|---|---|---|---|"]
-    for name, det, img in rows:
+          "| Method | Precision | Recall | F1 | AP@.5 | mAP@[.5:.95] | Image-level acc |",
+          "|---|---|---|---|---|---|---|"]
+    for name, det, img, cmap in rows:
         md.append(f"| {name} | {det['precision']:.3f} | {det['recall']:.3f} | "
-                  f"{det['f1']:.3f} | {det['ap']:.3f} | {img['accuracy']:.3f} |")
+                  f"{det['f1']:.3f} | {det['ap']:.3f} | {cmap['map_50_95']:.3f} | "
+                  f"{img['accuracy']:.3f} |")
     md.append("\n> Numbers are on **synthetic damage composited on real backgrounds** "
               "from a single clip. Optimistic vs. truly independent sites; treat as "
               "relative comparison, not validated absolute performance.")

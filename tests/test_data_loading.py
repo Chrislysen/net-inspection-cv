@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from netinspect.data import (load_dataset, parse_yolo_label, summarize_dataset)
+from netinspect.data import load_dataset, parse_yolo_label, summarize_dataset
 from netinspect.utils import write_image
 
 

@@ -25,7 +25,7 @@ import json
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterator
+from typing import Callable
 
 from .utils import ensure_dir, get_logger, optional_import
 
@@ -226,6 +226,7 @@ def extract_sonar_frames(
     inspection (gross structure/standoff) even though it is not RGB.
     """
     import numpy as np
+
     from .utils import write_image
     AnyReader = _require_rosbags()
     cv2 = optional_import("cv2")

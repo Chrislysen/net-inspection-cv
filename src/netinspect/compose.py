@@ -28,7 +28,7 @@ What damage looks like here
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -114,7 +114,10 @@ def inject_hole(frame: np.ndarray, rng: np.random.Generator,
     cy = int(rng.integers(ry + 1, h - ry - 1))
     poly = _irregular_polygon(cx, cy, rx, ry, rng)
 
-    color = _see_through_color(frame, cx, cy, max(rx, ry), cfg.darkness)
+    # Per-instance darkness jitter so the damage appearance varies (a shallow
+    # hole over lit water is brighter than a deep one) — more diverse training.
+    darkness = float(np.clip(cfg.darkness * rng.uniform(0.7, 1.5), 0.18, 0.7))
+    color = _see_through_color(frame, cx, cy, max(rx, ry), darkness)
     if cv2 is not None:
         mask = np.zeros((h, w), np.uint8)
         cv2.fillPoly(mask, [poly], 255)

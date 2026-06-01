@@ -11,9 +11,17 @@ import argparse
 from pathlib import Path
 
 import _common  # noqa: F401
+
 from netinspect.anomaly import AnomalyModel, anomaly_heatmap, score_image
-from netinspect.utils import (ensure_dir, get_logger, list_images, read_image,
-                              save_predictions, write_image, write_json)
+from netinspect.utils import (
+    ensure_dir,
+    get_logger,
+    list_images,
+    read_image,
+    save_predictions,
+    write_image,
+    write_json,
+)
 from netinspect.visualize import overlay_boxes, side_by_side, write_gallery_markdown
 
 LOGGER = get_logger()

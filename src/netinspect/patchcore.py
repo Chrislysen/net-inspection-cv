@@ -66,7 +66,7 @@ class _FeatureExtractor:
         weights = "DEFAULT"
         model = getattr(tv.models, cfg.backbone)(weights=weights)
         model.eval()
-        self.body = create_feature_extractor(model, return_nodes={l: l for l in cfg.layers})
+        self.body = create_feature_extractor(model, return_nodes={ly: ly for ly in cfg.layers})
         self.cfg = cfg
         self.torch = torch
         for p in self.body.parameters():

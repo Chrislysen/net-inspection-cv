@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from netinspect.compose import ComposeConfig, composite_damage, build_dataset
+from netinspect.compose import ComposeConfig, build_dataset, composite_damage
 from netinspect.inference import NetInspector
 from netinspect.utils import write_image
 

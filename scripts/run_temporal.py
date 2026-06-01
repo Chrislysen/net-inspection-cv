@@ -18,11 +18,18 @@ import argparse
 from pathlib import Path
 
 import _common  # noqa: F401
+
 from netinspect.classical_baseline import ClassicalConfig
 from netinspect.inference import NetInspector
 from netinspect.temporal import TemporalConfig, Tracker
-from netinspect.utils import (ensure_dir, get_logger, list_images, read_image,
-                              write_image, write_json)
+from netinspect.utils import (
+    ensure_dir,
+    get_logger,
+    list_images,
+    read_image,
+    write_image,
+    write_json,
+)
 from netinspect.visualize import overlay_boxes, side_by_side
 
 LOGGER = get_logger()

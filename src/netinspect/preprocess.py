@@ -59,10 +59,10 @@ def apply_clahe(image: np.ndarray, clip: float = 2.0, grid: int = 8) -> np.ndarr
                 out[..., c] = np.clip((ch - lo) * 255.0 / (hi - lo), 0, 255)
         return out.astype(np.uint8)
     lab = cv2.cvtColor(image, cv2.COLOR_RGB2LAB)
-    l, a, b = cv2.split(lab)
+    lch, a, b = cv2.split(lab)
     clahe = cv2.createCLAHE(clipLimit=clip, tileGridSize=(grid, grid))
-    l = clahe.apply(l)
-    return cv2.cvtColor(cv2.merge((l, a, b)), cv2.COLOR_LAB2RGB)
+    lch = clahe.apply(lch)
+    return cv2.cvtColor(cv2.merge((lch, a, b)), cv2.COLOR_LAB2RGB)
 
 
 def denoise(image: np.ndarray) -> np.ndarray:

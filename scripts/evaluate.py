@@ -18,11 +18,22 @@ import argparse
 from pathlib import Path
 
 import _common  # noqa: F401
+
 from netinspect.data import load_dataset
-from netinspect.evaluate import (best_f1_threshold, confidence_sweep,
-                                  evaluate_detection, evaluate_image_level)
-from netinspect.utils import (ensure_dir, list_images, load_predictions,
-                              read_image, write_image, write_json)
+from netinspect.evaluate import (
+    best_f1_threshold,
+    confidence_sweep,
+    evaluate_detection,
+    evaluate_image_level,
+)
+from netinspect.utils import (
+    ensure_dir,
+    list_images,
+    load_predictions,
+    read_image,
+    write_image,
+    write_json,
+)
 from netinspect.visualize import overlay_match, write_gallery_markdown
 
 

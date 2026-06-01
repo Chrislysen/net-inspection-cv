@@ -14,10 +14,22 @@ import sys
 from pathlib import Path
 
 import _common  # noqa: F401
-from netinspect.model_baseline import (YoloConfig, load_model, predict_image,
-                                        ultralytics_available, ULTRALYTICS_HINT)
-from netinspect.utils import (ensure_dir, get_logger, list_images, read_image,
-                              save_predictions, write_image)
+
+from netinspect.model_baseline import (
+    ULTRALYTICS_HINT,
+    YoloConfig,
+    load_model,
+    predict_image,
+    ultralytics_available,
+)
+from netinspect.utils import (
+    ensure_dir,
+    get_logger,
+    list_images,
+    read_image,
+    save_predictions,
+    write_image,
+)
 from netinspect.visualize import overlay_boxes
 
 LOGGER = get_logger()

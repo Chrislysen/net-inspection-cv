@@ -28,6 +28,7 @@ import argparse
 from pathlib import Path
 
 import _common  # noqa: F401
+
 from netinspect.classical_baseline import ClassicalConfig
 from netinspect.data import load_dataset
 from netinspect.evaluate import evaluate_detection

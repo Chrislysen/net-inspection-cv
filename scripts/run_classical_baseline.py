@@ -13,9 +13,16 @@ import argparse
 from pathlib import Path
 
 import _common  # noqa: F401
+
 from netinspect.classical_baseline import ClassicalConfig, detect
-from netinspect.utils import (ensure_dir, get_logger, list_images, read_image,
-                              save_predictions, write_image)
+from netinspect.utils import (
+    ensure_dir,
+    get_logger,
+    list_images,
+    read_image,
+    save_predictions,
+    write_image,
+)
 from netinspect.visualize import overlay_boxes
 
 LOGGER = get_logger()

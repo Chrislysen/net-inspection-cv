@@ -3,9 +3,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from netinspect.evaluate import (average_precision, confidence_sweep,
-                                  evaluate_detection, evaluate_image_level,
-                                  match_detections)
+from netinspect.evaluate import (
+    average_precision,
+    confidence_sweep,
+    evaluate_detection,
+    evaluate_image_level,
+    match_detections,
+)
 from netinspect.utils import BBox, iou_xyxy, mask_iou
 
 
@@ -87,3 +91,14 @@ def test_confidence_sweep_monotonic_filtering():
 def test_no_ground_truth_is_handled():
     res = evaluate_detection({"a": [_box(0, 0, 10, 10, 0.9)]}, {})
     assert res["overall"]["num_scored_images"] == 0
+
+
+def test_coco_map_perfect_and_keys():
+    from netinspect.evaluate import coco_map
+    gts = {"a": [_box(0, 0, 10, 10)]}
+    preds = {"a": [_box(0, 0, 10, 10, 0.9)]}
+    m = coco_map(preds, gts)
+    assert set(m) == {"map_50_95", "map_50", "map_75", "per_iou"}
+    assert m["map_50"] == 1.0          # perfect overlap -> AP 1 at IoU 0.5
+    assert len(m["per_iou"]) == 10     # .50:.95 in 0.05 steps
+    assert 0.0 <= m["map_50_95"] <= 1.0

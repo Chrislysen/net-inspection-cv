@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 
 import _common  # noqa: F401
+
 from netinspect.compose import ComposeConfig, build_dataset
 from netinspect.utils import list_images, write_json
 

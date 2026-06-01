@@ -15,10 +15,11 @@ import json
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
+import _common  # noqa: F401
 import matplotlib.pyplot as plt  # noqa: E402
 
-import _common  # noqa: F401
 from netinspect.utils import ensure_dir, get_logger
 
 LOGGER = get_logger()

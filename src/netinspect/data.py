@@ -14,9 +14,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterator
 
-from .utils import BBox, IMAGE_EXTENSIONS, image_size, list_images
+from .utils import BBox, image_size, list_images
 
 # Default class map for the prototype. Real projects should define this with
 # domain experts; see configs/baseline.yaml.

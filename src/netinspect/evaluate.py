@@ -188,6 +188,31 @@ def average_precision(
     return ap / 101.0
 
 
+def coco_map(
+    preds_by_image: dict[str, list[BBox]],
+    gts_by_image: dict[str, list[BBox]],
+    iou_thresholds: Sequence[float] | None = None,
+    class_agnostic: bool = True,
+) -> dict:
+    """COCO-style mean Average Precision averaged over IoU thresholds.
+
+    Returns ``mAP@[.5:.95]`` (the headline COCO metric), plus ``mAP@.5`` and
+    ``mAP@.75`` and the full per-IoU AP curve. Uses the VOC-style 101-point AP
+    at each threshold (see ``average_precision``).
+    """
+    if iou_thresholds is None:
+        iou_thresholds = [round(0.5 + 0.05 * i, 2) for i in range(10)]  # .50:.95
+    per_iou = {t: average_precision(preds_by_image, gts_by_image, t, class_agnostic)
+               for t in iou_thresholds}
+    vals = list(per_iou.values())
+    return {
+        "map_50_95": round(sum(vals) / len(vals), 4) if vals else 0.0,
+        "map_50": round(per_iou.get(0.5, 0.0), 4),
+        "map_75": round(per_iou.get(0.75, 0.0), 4),
+        "per_iou": {str(k): round(v, 4) for k, v in per_iou.items()},
+    }
+
+
 def confidence_sweep(
     preds_by_image: dict[str, list[BBox]],
     gts_by_image: dict[str, list[BBox]],

@@ -1,5 +1,11 @@
 # net-inspection-cv
 
+[![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
+![Tests](https://img.shields.io/badge/tests-36%20passing-brightgreen)
+![Lint](https://img.shields.io/badge/lint-ruff-261230)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 A research-grade computer-vision toolkit for **detecting possible damage (holes,
 tears, abnormal regions) in aquaculture fish-farm net imagery**, built as an
 honest *exploration framework*. It ingests images / video / ROS bags, preprocesses

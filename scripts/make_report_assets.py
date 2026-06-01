@@ -22,14 +22,18 @@ import shutil
 from pathlib import Path
 
 import _common  # noqa: F401
+
 from netinspect.classical_baseline import ClassicalConfig, detect
 from netinspect.data import load_dataset, summarize_dataset
-from netinspect.evaluate import (best_f1_threshold, confidence_sweep,
-                                  evaluate_detection, evaluate_image_level)
+from netinspect.evaluate import (
+    best_f1_threshold,
+    confidence_sweep,
+    evaluate_detection,
+    evaluate_image_level,
+)
 from netinspect.synthetic import generate_dataset
 from netinspect.utils import ensure_dir, read_image, write_image, write_json
-from netinspect.visualize import (overlay_boxes, overlay_match,
-                                  write_gallery_markdown)
+from netinspect.visualize import overlay_boxes, overlay_match, write_gallery_markdown
 
 REPO = _common.REPO_ROOT
 
