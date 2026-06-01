@@ -20,8 +20,8 @@ dependencies = [
 [project.optional-dependencies]
 # Classical baseline, visualisation, and video need OpenCV + matplotlib.
 cv = ["opencv-python-headless>=4.8", "matplotlib>=3.7", "scikit-image>=0.21", "scikit-learn>=1.3"]
-# ML baseline.
-ml = ["ultralytics>=8.1", "torch>=2.0"]
+# ML baseline (YOLO) + foundation-model anomaly (PatchCore uses torchvision backbones).
+ml = ["ultralytics>=8.1", "torch>=2.0", "torchvision>=0.15", "scikit-learn>=1.3"]
 # Real-data ingestion (SOLAQUA ROS .bag reading, no ROS install needed).
 data = ["rosbags>=0.9"]
 # Serving + interactive viewer.

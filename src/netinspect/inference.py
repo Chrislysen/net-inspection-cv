@@ -18,7 +18,7 @@ from .utils import BBox, get_logger, optional_import
 
 LOGGER = get_logger()
 
-METHODS = ("classical", "anomaly", "yolo")
+METHODS = ("classical", "anomaly", "patchcore", "yolo")
 
 
 @dataclass
@@ -57,11 +57,14 @@ class NetInspector:
 
     def __init__(self, classical_cfg: ClassicalConfig | None = None,
                  anomaly_model_path: str | Path | None = None,
+                 patchcore_model_path: str | Path | None = None,
                  yolo_weights: str | Path | None = None):
         self.classical_cfg = classical_cfg or ClassicalConfig()
         self._anomaly_path = str(anomaly_model_path) if anomaly_model_path else None
+        self._patchcore_path = str(patchcore_model_path) if patchcore_model_path else None
         self._yolo_weights = str(yolo_weights) if yolo_weights else None
         self._anomaly_model = None
+        self._patchcore_model = None
         self._yolo_model = None
 
     # -- availability -------------------------------------------------------
@@ -69,6 +72,9 @@ class NetInspector:
         methods = ["classical"]
         if self._anomaly_path and Path(self._anomaly_path).with_suffix(".npz").exists():
             methods.append("anomaly")
+        if self._patchcore_path and Path(self._patchcore_path).with_suffix(".npz").exists() \
+                and optional_import("torchvision") is not None:
+            methods.append("patchcore")
         if self._yolo_weights and Path(self._yolo_weights).exists() \
                 and optional_import("ultralytics") is not None:
             methods.append("yolo")
@@ -80,6 +86,12 @@ class NetInspector:
             from .anomaly import AnomalyModel
             self._anomaly_model = AnomalyModel.load(self._anomaly_path)
         return self._anomaly_model
+
+    def _patchcore(self):
+        if self._patchcore_model is None:
+            from .patchcore import PatchCoreModel
+            self._patchcore_model = PatchCoreModel.load(self._patchcore_path)
+        return self._patchcore_model
 
     def _yolo(self):
         if self._yolo_model is None:
@@ -105,6 +117,12 @@ class NetInspector:
             boxes = [b for b in ar.boxes if b.score >= conf]
             heatmap = anomaly_heatmap(image_rgb, ar, self._anomaly())
             meta = {"max_score": ar.max_score, "threshold": self._anomaly().threshold}
+        elif method == "patchcore":
+            from .patchcore import score_image as pc_score, heatmap as pc_heatmap
+            pr = pc_score(image_rgb, self._patchcore())
+            boxes = [b for b in pr.boxes if b.score >= conf]
+            heatmap = pc_heatmap(image_rgb, pr, self._patchcore())
+            meta = {"max_score": pr.max_score, "threshold": self._patchcore().threshold}
         else:  # yolo
             from .model_baseline import YoloConfig, predict_image
             boxes = predict_image(self._yolo(), image_rgb,

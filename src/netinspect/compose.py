@@ -45,6 +45,9 @@ class ComposeConfig:
     darkness: float = 0.35          # multiply local colour toward dark water
     fray: bool = True               # draw torn bright fibre ends
     single_class: bool = True       # label everything as class 0 "damage"
+    seamless: bool = True           # Poisson-blend the see-through fill into the net
+    radial_depth: bool = True       # darker toward the centre (water depth cue)
+    hard_negatives: tuple[int, int] = (0, 3)  # dark-but-textured distractors per image (UNLABELLED)
 
 
 def _bright_fibre_color(frame: np.ndarray, cx: int, cy: int, r: int) -> tuple[int, int, int]:
@@ -115,11 +118,25 @@ def inject_hole(frame: np.ndarray, rng: np.random.Generator,
     if cv2 is not None:
         mask = np.zeros((h, w), np.uint8)
         cv2.fillPoly(mask, [poly], 255)
-        # radial darkening toward the centre for depth
         ys, xs = np.where(mask > 0)
-        frame[ys, xs] = color.astype(np.uint8)
-        blurred = cv2.GaussianBlur(frame, (0, 0), sigmaX=1.2)
-        frame[ys, xs] = blurred[ys, xs]
+        fill = np.empty_like(frame)
+        fill[:] = color.astype(np.uint8)
+        if cfg.radial_depth:
+            # Darker toward the centre (looking deeper into open water).
+            dist = np.sqrt(((xs - cx) / max(rx, 1)) ** 2 + ((ys - cy) / max(ry, 1)) ** 2)
+            depth = (0.55 + 0.45 * np.clip(dist, 0, 1))[:, None]
+            fill[ys, xs] = np.clip(color[None, :] * depth, 0, 255).astype(np.uint8)
+        if cfg.seamless:
+            # Poisson blend the dark fill into the net so the rim transitions
+            # naturally instead of a hard cut (harder for a model to 'cheat' on).
+            try:
+                center = (int(np.clip(cx, rx + 2, w - rx - 2)), int(np.clip(cy, ry + 2, h - ry - 2)))
+                frame[:] = cv2.seamlessClone(fill, frame, mask, center, cv2.NORMAL_CLONE)
+            except cv2.error:
+                frame[ys, xs] = fill[ys, xs]
+        else:
+            frame[ys, xs] = fill[ys, xs]
+        frame[ys, xs] = cv2.GaussianBlur(frame, (0, 0), sigmaX=1.2)[ys, xs]
         if cfg.fray:
             _draw_fray(frame, poly, _bright_fibre_color(frame, cx, cy, max(rx, ry)), rng)
     xs2, ys2 = poly[:, 0], poly[:, 1]
@@ -169,6 +186,33 @@ def inject_tear(frame: np.ndarray, rng: np.random.Generator,
                0 if cfg.single_class else 2, "damage" if cfg.single_class else "tear", 1.0)
     polygon = Polygon([(float(x), float(y)) for x, y in poly], box.class_id, box.class_name)
     return box, polygon
+
+
+def add_hard_negatives(frame: np.ndarray, rng: np.random.Generator, n: int) -> None:
+    """Add dark-but-TEXTURED distractors (shadow / biofouling) — NOT labelled.
+
+    These resemble damage in being dark, but unlike a real opening they keep the
+    net texture (they darken existing pixels rather than replacing them with flat
+    see-through water, and have no frayed fibre rim). Training with these forces
+    a detector to use *damage* cues — uniform see-through fill + frayed edges —
+    instead of simply "this region is dark", which is the cheapest way to cheat.
+    """
+    cv2 = optional_import("cv2")
+    if cv2 is None:
+        return
+    h, w = frame.shape[:2]
+    for _ in range(n):
+        rx = int(rng.uniform(0.05, 0.12) * w)
+        ry = int(rx * rng.uniform(0.6, 1.4))
+        cx = int(rng.integers(rx + 1, w - rx - 1))
+        cy = int(rng.integers(ry + 1, h - ry - 1))
+        poly = _irregular_polygon(cx, cy, rx, ry, rng)
+        mask = np.zeros((h, w), np.uint8)
+        cv2.fillPoly(mask, [poly], 255)
+        mask = cv2.GaussianBlur(mask, (0, 0), sigmaX=rx * 0.3)
+        m = (mask.astype(np.float32) / 255.0)[..., None]
+        darken = rng.uniform(0.35, 0.6)          # shadow/fouling darkening factor
+        frame[:] = np.clip(frame * (1 - m * (1 - darken)), 0, 255).astype(np.uint8)
 
 
 def composite_damage(frame: np.ndarray, rng: np.random.Generator, num: int,
@@ -234,6 +278,11 @@ def build_dataset(
     for frame_path, split in zip(frames, assignment):
         img = read_image(frame_path)
         h, w = img.shape[:2]
+        # Add UNLABELLED hard negatives first (dark distractors the model must
+        # learn to ignore), then composite the (labelled) damage on top.
+        lo, hi = cfg.hard_negatives
+        if hi > 0:
+            add_hard_negatives(img, rng, int(rng.integers(lo, hi + 1)))
         damaged = rng.random() < damaged_fraction
         num = int(rng.integers(1, max_damage_per_image + 1)) if damaged else 0
         out_img, boxes, polys = composite_damage(img, rng, num, cfg)

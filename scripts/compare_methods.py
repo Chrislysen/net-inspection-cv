@@ -39,6 +39,13 @@ def _anomaly(samples, model_path):
             for s in samples}
 
 
+def _patchcore(samples, model_path):
+    from netinspect.patchcore import PatchCoreModel, score_image
+    model = PatchCoreModel.load(model_path)
+    return {s.image_path.name: score_image(read_image(s.image_path), model).boxes
+            for s in samples}
+
+
 def _yolo(samples, weights):
     from netinspect.model_baseline import YoloConfig, load_model, predict_image
     cfg = YoloConfig(conf=0.25, iou=0.5)
@@ -55,6 +62,7 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--config", default=None, help="classical config yaml")
     ap.add_argument("--anomaly-model", default=None)
+    ap.add_argument("--patchcore-model", default=None)
     ap.add_argument("--yolo-weights", default=None)
     ap.add_argument("--iou", type=float, default=0.30)
     args = ap.parse_args()
@@ -75,6 +83,8 @@ def main() -> None:
     runners = [("classical", lambda: _classical(samples, ccfg))]
     if args.anomaly_model:
         runners.append(("anomaly", lambda: _anomaly(samples, args.anomaly_model)))
+    if args.patchcore_model:
+        runners.append(("patchcore", lambda: _patchcore(samples, args.patchcore_model)))
     if args.yolo_weights:
         runners.append(("yolo", lambda: _yolo(samples, args.yolo_weights)))
 

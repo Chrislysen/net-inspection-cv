@@ -313,6 +313,48 @@ drop-in slot for real labelled data* — not a certified detector. Shipping it a
 "reliable" without that validation would be the one thing this project refuses to
 do.
 
+### 5.7 Stronger methods and adversarial rigor
+
+Three upgrades push the prototype well past a first pass, each measured honestly.
+
+**Foundation-model anomaly (PatchCore).** Replacing the 6-feature hand-crafted
+model with patch embeddings from a pretrained ResNet (memory bank + nearest-
+neighbour distance) lifts label-free anomaly localisation from **F1 0.12 → 0.78**
+on the composite test (threshold picked on val, reported on test). Updated
+label-free → supervised ladder on the same test set:
+
+| Method | Labels? | F1 |
+|---|---|---|
+| Hand-crafted anomaly | no | 0.12 |
+| Classical heuristic | no | 0.50 |
+| PatchCore (foundation) | no | **0.78** |
+| YOLOv8 | yes | **0.97** |
+
+**Adversarial "is it cheating?" evaluation.** A high F1 on synthetic-on-real is
+only trustworthy if the model isn't keying on compositing artifacts. The tests
+that try to break that:
+
+* *False positives on REAL undamaged net* (no damage → every fire is a false
+  alarm): **0%** frame-FP on bag1 (its own training backgrounds), **0%** on bag2,
+  **1%** on a different day. A model cheating on background/artifacts would light
+  up here; it does not.
+* *Generalisation*: damage recall holds at **F1 ≈ 0.97** across in-clip,
+  cross-clip and different-day backgrounds.
+* *FROC* (different-day): **0 false positives per undamaged frame at conf ≥ 0.4**
+  with recall ≈ 0.97 — a clean operating point.
+
+This rules out the cheapest cheating and characterises the operating curve. It
+still does **not** prove real-damage performance — the damage appearance is
+synthetic — but it materially strengthens the proxy result. Hard negatives
+(dark-but-textured distractors) are baked into the training data so the detector
+must use damage cues (uniform see-through fill + frayed rim), not just "is dark".
+
+**Temporal confirmation.** Real damage is static on the net; clutter (fish,
+glints) is transient. A lightweight IoU tracker that confirms only detections
+persisting over ≥3 frames removes **~70%** of transient false alarms on real
+undamaged video (30 → 9 detections over 120 contiguous frames), at a few frames'
+latency — exactly the post-processing an operator-facing tool needs.
+
 ---
 
 ## 6. Expected failure modes (on real data)

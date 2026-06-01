@@ -37,13 +37,32 @@ visualises predictions and failure cases.
 |---|---|
 | ![yolo cross-clip](docs/images/yolo_crossclip.jpg) | ![classical vs yolo](docs/images/classical_vs_yolo.jpg) |
 
+| PatchCore (foundation, label-free): boxes \| anomaly heatmap | Temporal: raw (left) vs. persistence-confirmed (right) |
+|---|---|
+| ![patchcore](docs/images/patchcore_heatmap.jpg) | ![temporal](docs/images/temporal_raw_vs_confirmed.jpg) |
+
 **Method comparison** (synthetic damage on real backgrounds; IoU 0.30, class-agnostic):
 
-| Method | In-clip F1 | Cross-clip F1 (held-out clip) |
-|---|---|---|
-| Classical (OpenCV heuristic) | 0.50 | 0.67 |
-| Anomaly (patch-Mahalanobis) | 0.12 | 0.05 |
-| **YOLOv8** | **0.97** | **0.98** |
+| Method | Labels? | In-clip F1 | Cross-clip F1 (held-out clip) |
+|---|---|---|---|
+| Hand-crafted anomaly (Mahalanobis) | no | 0.12 | 0.05 |
+| Classical (OpenCV heuristic) | no | 0.50 | 0.67 |
+| **PatchCore (foundation-model, label-free)** | no | **0.78** | — |
+| **YOLOv8 (supervised)** | yes | **0.97** | **0.98** |
+
+**Adversarial "is it cheating?" check** — the trained YOLO on **real undamaged
+net** (no damage present, so any detection is a false alarm):
+
+| Frame set | False-positive frame rate |
+|---|---|
+| bag1 (the backgrounds it trained on) | **0%** |
+| bag2 (same site, other clip) | **0%** |
+| different day | **1%** |
+
+It almost never fires on undamaged net (incl. its own training backgrounds) and
+holds F1≈0.97 across in-clip/cross-clip/different-day — ruling out the cheapest
+"keying on background/artifacts" failure. **Temporal confirmation** removes a
+further **70%** of transient false alarms on real undamaged video.
 
 > **Read these honestly.** Synthetic metrics only verify the pipeline. SOLAQUA
 > frames are real but **undamaged/unlabelled** (false-alarm & anomaly behaviour
@@ -128,8 +147,10 @@ net-inspection-cv/
     classical_baseline.py        explainable OpenCV anomaly baseline
     model_baseline.py            YOLOv8 detect/segment wrapper (graceful if missing)
     anomaly.py                   normal-net anomaly model (patch Mahalanobis)
-    compose.py                   composite synthetic damage onto REAL frames (+ labels)
-    inference.py                 unified facade over all 3 methods (used everywhere)
+    patchcore.py                 foundation-model anomaly (pretrained-CNN PatchCore)
+    temporal.py                  IoU tracker — confirm detections that persist
+    compose.py                   composite photorealistic damage + hard negatives onto REAL frames
+    inference.py                 unified facade over all methods (used everywhere)
     evaluate.py                  detection / segmentation / image-level metrics
     visualize.py                 overlays, comparisons, galleries
     video.py                     video frame extraction
@@ -254,6 +275,23 @@ python scripts/compare_methods.py --images data/processed/real_composite/images/
 Measured: **YOLO F1 ≈ 0.97** vs classical **0.50** vs anomaly **0.12**, holding up
 on a held-out clip (F1 ≈ 0.98) — see the caveats above and in the report.
 
+### Stronger methods + rigorous evaluation
+
+```powershell
+# Foundation-model anomaly (label-free, F1 ~0.78): pretrained-CNN PatchCore
+python scripts/train_patchcore.py --images data/processed/solaqua_frames_dense --out models/patchcore_normal_net
+
+# Adversarial "is it cheating?" suite: FP on REAL undamaged net + different-day + FROC
+python scripts/adversarial_eval.py --yolo-weights models/yolo_damage_v1.pt --out reports/results/adversarial_yolo
+
+# Temporal confirmation on a CONTIGUOUS sequence: removes ~70% of transient false alarms
+python scripts/fetch_solaqua.py --bag <clip>.bag --frames-out data/processed/solaqua_seq --every-n 1 --max-frames 120
+python scripts/run_temporal.py --method classical --source data/processed/solaqua_seq --out outputs/temporal --config configs/baseline.yaml
+```
+
+Committed result tables: [`reports/results/`](reports/results/) — 4-method
+comparison, adversarial eval, temporal.
+
 ### Tuning classical false positives
 
 The classical baseline's `max_region_density_ratio` (texture gate) trades recall
@@ -312,11 +350,13 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 - Evaluation: IoU-matched precision/recall/F1, VOC-style AP, confidence sweep, image-level "contains damage?", mask IoU, explicit FP/FN lists, failure overlays.
 - Visualisation: prediction/GT overlays, colour-coded match overlays, markdown gallery.
 - **Real-data ingestion (SOLAQUA)**: public-API client, resumable download, ROS `.bag` camera **and multibeam-sonar** extraction.
-- **Anomaly-detection baseline**: patch-feature Mahalanobis model with anomaly heatmaps; trains on normal net, flags deviations.
-- **Realistic training data**: synthetic damage composited on real backgrounds (`compose.py`) → trainable, labelled, comparable.
-- **Three-method comparison** with a measured improvement story (classical FP reduction; YOLO F1≈0.97).
-- **Industrial layer**: unified inference facade, FastAPI service, Streamlit viewer, batch/video/bag runner with run manifests, CI.
-- Tests (26) for data loading, metrics, anomaly, compositing, and inference; one-command report-asset generation.
+- **Two anomaly baselines**: hand-crafted patch-Mahalanobis, and a **foundation-model PatchCore** (pretrained CNN) reaching F1 0.78 label-free (6.5× the hand-crafted one).
+- **Realistic training data**: photorealistic damage (seamless blend, frayed fibres) + **hard negatives** composited on real backgrounds (`compose.py`).
+- **Four-method comparison** + a **measured improvement story** (classical FP reduction; PatchCore; YOLO F1≈0.97).
+- **Adversarial "is it cheating?" evaluation**: false positives on real undamaged net, different-day generalization, FROC curve.
+- **Temporal reasoning**: persistence tracking that removes ~70% of transient false alarms on real video.
+- **Segmentation** (YOLOv8-seg) for masks; **industrial layer**: unified facade, FastAPI service, Streamlit viewer, batch/video/bag runner, CI.
+- Tests (31) for data, metrics, anomaly, compositing, inference, temporal, and PatchCore IO.
 
 **Placeholder / synthetic (clearly marked):**
 

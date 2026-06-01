@@ -22,8 +22,9 @@ def test_composite_damage_returns_boxes_and_polys():
                                          cfg=ComposeConfig())
     assert out.shape == img.shape
     assert len(boxes) == 3 and len(polys) == 3
-    # Damage should darken some pixels (see-through fill).
-    assert out.mean() <= img.mean()
+    # Compositing must visibly modify the frame (seamless blend can lighten or
+    # darken, so we only assert it changed, not the sign).
+    assert not np.array_equal(out, img)
     for b in boxes:
         assert b.x2 > b.x1 and b.y2 > b.y1
         assert b.class_name == "damage"  # single-class default

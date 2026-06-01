@@ -1,0 +1,104 @@
+{
+  "method": "yolo",
+  "conf": 0.25,
+  "iou": 0.3,
+  "false_positives_on_undamaged": {
+    "bag1 (train backgrounds)": {
+      "frames": 38,
+      "total_detections": 0,
+      "mean_per_frame": 0.0,
+      "frames_with_fp": 0,
+      "fp_frame_rate": 0.0
+    },
+    "bag2 (same site, other clip)": {
+      "frames": 120,
+      "total_detections": 0,
+      "mean_per_frame": 0.0,
+      "frames_with_fp": 0,
+      "fp_frame_rate": 0.0
+    },
+    "different DAY": {
+      "frames": 80,
+      "total_detections": 1,
+      "mean_per_frame": 0.013,
+      "frames_with_fp": 1,
+      "fp_frame_rate": 0.013
+    }
+  },
+  "recall_by_distance": {
+    "in-clip": {
+      "precision": 0.958,
+      "recall": 0.979,
+      "f1": 0.968,
+      "ap": 0.97
+    },
+    "cross-clip (bag2)": {
+      "precision": 0.981,
+      "recall": 0.976,
+      "f1": 0.979,
+      "ap": 0.97
+    },
+    "different-day": {
+      "precision": 0.976,
+      "recall": 0.976,
+      "f1": 0.976,
+      "ap": 0.97
+    }
+  },
+  "froc": [
+    {
+      "conf": 0.05,
+      "fp_per_undamaged_frame": 0.163,
+      "recall": 0.984,
+      "precision": 0.791
+    },
+    {
+      "conf": 0.1,
+      "fp_per_undamaged_frame": 0.087,
+      "recall": 0.984,
+      "precision": 0.906
+    },
+    {
+      "conf": 0.2,
+      "fp_per_undamaged_frame": 0.025,
+      "recall": 0.976,
+      "precision": 0.947
+    },
+    {
+      "conf": 0.3,
+      "fp_per_undamaged_frame": 0.013,
+      "recall": 0.976,
+      "precision": 0.984
+    },
+    {
+      "conf": 0.4,
+      "fp_per_undamaged_frame": 0.0,
+      "recall": 0.969,
+      "precision": 0.984
+    },
+    {
+      "conf": 0.5,
+      "fp_per_undamaged_frame": 0.0,
+      "recall": 0.969,
+      "precision": 0.984
+    },
+    {
+      "conf": 0.6,
+      "fp_per_undamaged_frame": 0.0,
+      "recall": 0.969,
+      "precision": 0.992
+    },
+    {
+      "conf": 0.7,
+      "fp_per_undamaged_frame": 0.0,
+      "recall": 0.961,
+      "precision": 0.992
+    },
+    {
+      "conf": 0.8,
+      "fp_per_undamaged_frame": 0.0,
+      "recall": 0.921,
+      "precision": 1.0
+    }
+  ]
+}

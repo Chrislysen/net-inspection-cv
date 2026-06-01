@@ -1,0 +1,15 @@
+{
+  "method": "classical",
+  "frames": 120,
+  "undamaged": true,
+  "temporal": {
+    "min_hits": 3,
+    "max_age": 2,
+    "iou_match": 0.2
+  },
+  "raw_detections": 30,
+  "confirmed_detections": 9,
+  "detection_reduction": 0.7,
+  "raw_fp_frame_rate": 0.242,
+  "confirmed_fp_frame_rate": 0.075
+}

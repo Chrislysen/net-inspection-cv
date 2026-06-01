@@ -11,8 +11,9 @@ scikit-image>=0.21
 scikit-learn>=1.3
 
 # ML baseline (optional; pulls in torch). Comment out if you only need the
-# classical baseline + evaluation.
+# classical baseline + evaluation. torchvision powers the PatchCore anomaly model.
 ultralytics>=8.1
+torchvision>=0.15
 
 # Real-data ingestion: read SOLAQUA ROS .bag files without a ROS install.
 rosbags>=0.9
