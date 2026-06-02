@@ -1,0 +1,19 @@
+{
+  "conf": 0.25,
+  "iou": 0.3,
+  "frames": 80,
+  "models": {
+    "det v1": {
+      "fp_raw": 0.0,
+      "fp_norm": 0.275,
+      "recall_raw": 0.98,
+      "recall_norm": 0.856
+    },
+    "seg v3": {
+      "fp_raw": 0.087,
+      "fp_norm": 0.075,
+      "recall_raw": 0.958,
+      "recall_norm": 0.943
+    }
+  }
+}
