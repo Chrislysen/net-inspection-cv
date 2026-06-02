@@ -18,11 +18,11 @@
       "fp_frame_rate": 0.033
     },
     "different DAY": {
-      "frames": 80,
-      "total_detections": 40,
-      "mean_per_frame": 0.5,
-      "frames_with_fp": 25,
-      "fp_frame_rate": 0.312
+      "frames": 200,
+      "total_detections": 107,
+      "mean_per_frame": 0.535,
+      "frames_with_fp": 71,
+      "fp_frame_rate": 0.355
     }
   },
   "recall_by_distance": {
@@ -39,66 +39,66 @@
       "ap": 0.885
     },
     "different-day": {
-      "precision": 0.699,
-      "recall": 0.858,
-      "f1": 0.77,
-      "ap": 0.798
+      "precision": 0.698,
+      "recall": 0.846,
+      "f1": 0.765,
+      "ap": 0.803
     }
   },
   "froc": [
     {
       "conf": 0.05,
-      "fp_per_undamaged_frame": 1.837,
-      "recall": 0.969,
-      "precision": 0.353
+      "fp_per_undamaged_frame": 1.855,
+      "recall": 0.962,
+      "precision": 0.439
     },
     {
       "conf": 0.1,
-      "fp_per_undamaged_frame": 0.875,
-      "recall": 0.945,
-      "precision": 0.533
+      "fp_per_undamaged_frame": 1.055,
+      "recall": 0.942,
+      "precision": 0.583
     },
     {
       "conf": 0.2,
-      "fp_per_undamaged_frame": 0.588,
-      "recall": 0.882,
-      "precision": 0.675
+      "fp_per_undamaged_frame": 0.63,
+      "recall": 0.904,
+      "precision": 0.662
     },
     {
       "conf": 0.3,
-      "fp_per_undamaged_frame": 0.425,
-      "recall": 0.843,
-      "precision": 0.743
+      "fp_per_undamaged_frame": 0.46,
+      "recall": 0.846,
+      "precision": 0.733
     },
     {
       "conf": 0.4,
-      "fp_per_undamaged_frame": 0.237,
-      "recall": 0.732,
-      "precision": 0.823
+      "fp_per_undamaged_frame": 0.315,
+      "recall": 0.75,
+      "precision": 0.78
     },
     {
       "conf": 0.5,
       "fp_per_undamaged_frame": 0.175,
-      "recall": 0.661,
-      "precision": 0.875
+      "recall": 0.712,
+      "precision": 0.841
     },
     {
       "conf": 0.6,
-      "fp_per_undamaged_frame": 0.062,
-      "recall": 0.567,
-      "precision": 0.935
+      "fp_per_undamaged_frame": 0.085,
+      "recall": 0.673,
+      "precision": 0.946
     },
     {
       "conf": 0.7,
-      "fp_per_undamaged_frame": 0.0,
-      "recall": 0.449,
-      "precision": 0.983
+      "fp_per_undamaged_frame": 0.04,
+      "recall": 0.615,
+      "precision": 0.941
     },
     {
       "conf": 0.8,
       "fp_per_undamaged_frame": 0.0,
-      "recall": 0.252,
-      "precision": 0.97
+      "recall": 0.385,
+      "precision": 1.0
     }
   ]
 }

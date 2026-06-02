@@ -32,8 +32,8 @@ tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
 | **Methods compared** | Classical OpenCV heuristic · hand-crafted patch-Mahalanobis anomaly · **PatchCore** (pretrained-CNN anomaly, label-free; supervised-ResNet vs self-supervised-DINOv2 backbone ablation) · **YOLOv8** detection + **YOLOv8-seg** (supervised) · **det∧seg agreement ensemble**. |
 | **Data** | Synthetic demo (pipeline test) · **SOLAQUA** real ROV footage of *undamaged* nets (SINTEF, CC BY-SA 4.0) · **synthetic damage composited onto real net frames** for trainable, labelled, comparable data. |
 | **Key result (proxy)** | Damage-localisation F1 on the composite test set: anomaly **0.12** → classical **0.50** → PatchCore **0.78** (label-free) → YOLOv8 **0.97**. |
-| **Honesty check** | The trained YOLO fires on **0%** of real *undamaged* frames (its own training backgrounds) and **1%** on a different day, holding F1≈0.97 — ruling out background/artifact "cheating". |
-| **Robustness work** | Caught a seg-model out-of-distribution regression (31% different-day false alarms), fixed most of it with multi-clip training (→18%); a stronger-augmentation follow-up **failed** (→22%, reported as a negative); a **det∧seg agreement ensemble** then recovered the detector's **1%** false-alarm rate *and* 0.976 recall while keeping masks. An **OOD gate** defers **100%** of different-day frames to human review (6% of in-distribution); test-time domain-normalisation was tried and **failed** too. Every lever — and every failure — is in the [report §5.8 ledger](reports/SCALEAQ_PROTOTYPE_REPORT.md). |
+| **Honesty check** | The trained detector fires on **0%** of real *undamaged* frames (its own training backgrounds) and **1%** on a different day — ruling out background/artifact "cheating". (On a 200-frame re-check its different-day *recall* is lower than an easier subset first suggested; see the robustness row.) |
+| **Robustness work** | Caught a seg-model out-of-distribution regression (31% different-day false alarms); multi-clip training cut it to 18%; stronger augmentation **failed** (→22%, reported as a negative). On a 200-frame re-check (which **corrected an earlier 1% to 11%** — a sampling artifact I caught and fixed), it's a real **precision/recall trade-off**: a bigger **YOLOv8s-seg (A100)** gets the best recall (**0.98**) at 11% FP; the **det∧seg ensemble** drives FP to **0%** but inherits the detector's caution (~0.57 recall). An **OOD gate** defers 100% of different-day frames to review; test-time domain-normalisation **failed** too. Every lever, failure, and correction is in the [report §5.7–5.8](reports/SCALEAQ_PROTOTYPE_REPORT.md). |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **58 passing tests** · GitHub Actions CI · committed models. |
@@ -120,28 +120,32 @@ net** (no damage present, so any detection is a false alarm):
 | bag2 (same site, other clip) | **0%** |
 | different day | **1%** |
 
-It almost never fires on undamaged net (incl. its own training backgrounds) and
-holds F1≈0.97 across in-clip/cross-clip/different-day — ruling out the cheapest
-"keying on background/artifacts" failure. **Temporal confirmation** removes a
+It almost never fires on undamaged net (incl. its own training backgrounds) —
+ruling out the cheapest "keying on background/artifacts" failure. (Its *recall* on
+different-day damage is lower on a larger sample than an easier subset first
+suggested — see the trade-off table below.) **Temporal confirmation** removes a
 further **70%** of transient false alarms on real undamaged video.
 
-**Closing the different-day gap — an agreement ensemble (no retraining).** The
-segmentation model adds masks but fires on 18% of *different-day* undamaged frames
-(vs the detector's 1%). Letting the **detector propose and the segmenter confirm**
-(keep a box only if both models agree) recovers the detector's robustness *and*
-recall while keeping masks — the deployable "best of both":
+**Closing the different-day gap — a precision/recall trade-off (measured on 200
+frames).** The nano segmenter fires on 18% of *different-day* undamaged frames (vs
+the detector's 1%). Two honest options, opposite ends of the operating curve:
 
-| Held-out different day | det v1 | seg v3 | **ensemble (det∧seg)** |
-|---|---|---|---|
-| Undamaged false-positive rate | 1% | 18% | **1%** |
-| Damage recall (F1) | 0.976 | 0.912 | **0.976** |
+| Held-out different day (200 frames) | det v1 | seg v3 | **ensemble (det∧seg)** | **seg-gpu (A100)** |
+|---|---|---|---|---|
+| Undamaged false-positive rate | 1% | 18% | **0%** | 11% |
+| Damage recall (F1) | 0.56 | 0.93 | 0.57 | **0.98** |
+
+The **ensemble** (detector proposes, segmenter confirms) drives false alarms to
+**0%** and adds masks, but inherits the detector's caution (~0.57 recall — it only
+confirms damage the detector already found). The bigger **`seg-gpu`** catches
+**0.98** of the damage at an 11% false-alarm cost. Pick by which error is more
+expensive — a *missed defect* or a *false alarm*. (Recall here is on synthetic
+damage and a small split, so it's a noisy proxy.)
 
 ![ensemble false-positive suppression](docs/images/ensemble_fp_suppression.jpg)
 
 *Real different-day undamaged net. **Left:** `seg v3` false-alarms on an instrument
-housing. **Right:** the det∧seg ensemble stays clean — same frame, no retraining.
-The ensemble keeps the detector's 1% out-of-distribution false-positive rate and
-its 0.976 recall while contributing masks where both models agree.*
+housing. **Right:** the det∧seg ensemble stays clean — same frame, no retraining.*
 
 > **Read these honestly.** Synthetic metrics only verify the pipeline. SOLAQUA
 > frames are real but **undamaged/unlabelled** (false-alarm & anomaly behaviour

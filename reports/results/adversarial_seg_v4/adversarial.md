@@ -6,7 +6,7 @@
 |---|---|---|---|---|
 | bag1 (train backgrounds) | 38 | 0 | 0.0 | 0% |
 | bag2 (same site, other clip) | 120 | 0 | 0.0 | 0% |
-| different DAY | 80 | 28 | 0.35 | 22% |
+| different DAY | 200 | 52 | 0.26 | 18% |
 
 ## 2. Damage recall by background distance (composited damage)
 
@@ -14,20 +14,20 @@
 |---|---|---|---|---|
 | in-clip | 0.957 | 0.957 | 0.957 | 0.95 |
 | cross-clip (bag2) | 0.936 | 0.972 | 0.954 | 0.97 |
-| different-day | 0.785 | 0.976 | 0.87 | 0.968 |
+| different-day | 0.862 | 0.962 | 0.909 | 0.958 |
 
 ## 3. FROC (different-day): FP per undamaged frame vs recall
 
 | conf | FP/undamaged frame | recall | precision |
 |---|---|---|---|
-| 0.05 | 0.45 | 0.984 | 0.691 |
-| 0.1 | 0.412 | 0.976 | 0.725 |
-| 0.2 | 0.35 | 0.976 | 0.752 |
-| 0.3 | 0.312 | 0.976 | 0.8 |
-| 0.4 | 0.263 | 0.976 | 0.821 |
-| 0.5 | 0.237 | 0.976 | 0.849 |
-| 0.6 | 0.15 | 0.969 | 0.918 |
-| 0.7 | 0.075 | 0.953 | 0.945 |
-| 0.8 | 0.0 | 0.929 | 0.992 |
+| 0.05 | 0.34 | 0.962 | 0.781 |
+| 0.1 | 0.32 | 0.962 | 0.806 |
+| 0.2 | 0.28 | 0.962 | 0.833 |
+| 0.3 | 0.235 | 0.962 | 0.862 |
+| 0.4 | 0.195 | 0.962 | 0.877 |
+| 0.5 | 0.16 | 0.962 | 0.893 |
+| 0.6 | 0.105 | 0.962 | 0.926 |
+| 0.7 | 0.075 | 0.962 | 0.98 |
+| 0.8 | 0.005 | 0.846 | 1.0 |
 
 > Passing these rules out the cheapest cheating (background/artifact keying) and characterises behaviour. It does NOT prove real-damage performance — the damage is still synthetic. Real labelled damage remains required.

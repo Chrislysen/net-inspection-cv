@@ -41,7 +41,7 @@ pythonpath = ["src"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-extend-exclude = ["outputs", ".venv", "runs", "web"]
+extend-exclude = ["outputs", ".venv", "runs", "web", "notebooks"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W"]

@@ -24,10 +24,10 @@
         "fp_frame_rate": 0.0
       },
       "different DAY": {
-        "frames": 80,
-        "detections": 1,
-        "mean_per_frame": 0.013,
-        "fp_frame_rate": 0.013
+        "frames": 200,
+        "detections": 2,
+        "mean_per_frame": 0.01,
+        "fp_frame_rate": 0.01
       }
     },
     "seg v3": {
@@ -44,9 +44,9 @@
         "fp_frame_rate": 0.025
       },
       "different DAY": {
-        "frames": 80,
-        "detections": 15,
-        "mean_per_frame": 0.188,
+        "frames": 200,
+        "detections": 36,
+        "mean_per_frame": 0.18,
         "fp_frame_rate": 0.175
       }
     },
@@ -64,10 +64,10 @@
         "fp_frame_rate": 0.0
       },
       "different DAY": {
-        "frames": 80,
+        "frames": 200,
         "detections": 1,
-        "mean_per_frame": 0.013,
-        "fp_frame_rate": 0.013
+        "mean_per_frame": 0.005,
+        "fp_frame_rate": 0.005
       }
     }
   },
@@ -84,9 +84,9 @@
         "f1": 0.979
       },
       "different-day": {
-        "precision": 0.976,
-        "recall": 0.976,
-        "f1": 0.976
+        "precision": 0.815,
+        "recall": 0.423,
+        "f1": 0.557
       }
     },
     "seg v3": {
@@ -101,9 +101,9 @@
         "f1": 0.97
       },
       "different-day": {
-        "precision": 0.85,
-        "recall": 0.984,
-        "f1": 0.912
+        "precision": 0.893,
+        "recall": 0.962,
+        "f1": 0.926
       }
     },
     "ensemble (det\u2227seg)": {
@@ -118,9 +118,9 @@
         "f1": 0.979
       },
       "different-day": {
-        "precision": 0.976,
-        "recall": 0.976,
-        "f1": 0.976
+        "precision": 0.88,
+        "recall": 0.423,
+        "f1": 0.571
       }
     }
   }

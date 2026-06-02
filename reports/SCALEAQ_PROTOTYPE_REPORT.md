@@ -455,24 +455,55 @@ damage signal — not more augmentation. **`seg v3` remains the best segmenter a
 rather than quietly dropping the run — the experiment that fails is part of the
 record.
 
-**The practical fix — an agreement ensemble (best of both, measured).** The
-det-vs-seg tension has a clean resolution that needs *no* retraining: let the
+**Bigger model + real data (`seg-gpu`, YOLOv8s on an A100) — and a sampling error
+I caught and corrected.** Scaling from the nano (3.3 M params) to **YOLOv8s-seg**
+(11.8 M) on the three real clips first *looked* like it slashed different-day false
+alarms to 1%. On re-checking against a **larger 200-frame** different-day sample
+(the earlier figure came from an 80-frame subset that happened to miss the
+harder, later part of the clip), the honest number is **11%** — a real improvement
+over the nano segmenters, but **not** the detector's 1%. Re-measuring *every*
+model on the same 200-frame basis also exposed that the different-day **recall** is
+small-sample/seed-sensitive: the box detector's recall is much lower on the fuller
+clip than the easier subset suggested. The consistent picture:
+
+| Held-out different day (200 frames) | seg v3 | seg v4 | **seg-gpu (8s)** | det v1 | ensemble |
+|---|---|---|---|---|---|
+| FP rate (real undamaged net) | 18% | 18% | **11%** | **1%** | **0%** |
+| Recall F1 (synthetic damage) | 0.93 | 0.91 | **0.98** | 0.56 | 0.57 |
+
+There is **no single winner** — it is a genuine precision/recall trade-off:
+* **det v1 / ensemble** almost never false-alarm (0–1%) but, on this harder clip,
+  *miss ~44%* of the (synthetic) damage;
+* **`seg-gpu`** catches **98%** of it at an **11%** false-alarm cost — the best
+  *recall* by far and a clear improvement over the nano segmenters' 18%.
+
+The honest lessons: (1) a flattering number on a small eval sample must be
+re-checked on a bigger one — which is how the 1% became 11%; (2) the right model
+is an **operating-point decision** (acceptable false-positive vs false-negative
+rate), not an absolute ranking. Caveat in force throughout: damage is synthetic
+and the recall split is small (~26–52 GT boxes), so recall is a noisy proxy, not
+validated real-damage accuracy. `seg-gpu` is the strongest *recall* option; the
+agreement ensemble below is the strongest *precision* option.
+
+**The lowest-false-alarm option — an agreement ensemble (no retraining).** Let the
 robust detector **propose** and the segmenter **confirm** (keep a `det v1` box only
 if `seg v3` also fires on it, box IoU ≥ 0.3), in `src/netinspect/ensemble.py`. A
-region flagged by two independently-trained models is far less likely to be a
-shared spurious cue. Measured head-to-head (`scripts/eval_ensemble.py`):
+region flagged by two independently-trained models is less likely to be a shared
+spurious cue, so agreement suppresses even the detector's last stray false alarm.
+Measured head-to-head on the 200-frame different day (`scripts/eval_ensemble.py`):
 
 | Held-out different day | det v1 | seg v3 | **ensemble (det∧seg)** |
 |---|---|---|---|
-| Undamaged false-positive rate | 1% | 18% | **1%** |
-| Damage recall (F1) | 0.976 | 0.912 | **0.976** |
+| Undamaged false-positive rate | 1% | 18% | **0%** |
+| Damage recall (F1) | 0.56 | 0.93 | 0.57 |
 
-The ensemble keeps the detector's **1%** out-of-distribution false-positive rate
-*and* its **0.976** recall — recovering the robustness the standalone segmenter
-lost — while contributing segmentation masks wherever the two models agree. That is
-the deployable answer to "masks *or* robustness?": **both**, at the cost of a second
-forward pass. It is wired into the inference facade and the web console as its own
-method.
+So the ensemble drives different-day false alarms to **0%** and adds masks — but it
+**inherits the detector's low recall** (~0.57): it only confirms damage the
+conservative detector already found. It is the right pick when a false alarm is
+expensive; `seg-gpu` (0.98 recall, 11% FP) is the right pick when a *missed* defect
+is expensive. Same data, opposite ends of the operating curve — the choice is a
+stakeholder decision. The ensemble is wired into the inference facade and the web
+console as its own method.
 
 ![ensemble false-positive suppression](../docs/images/ensemble_fp_suppression.jpg)
 
@@ -522,10 +553,11 @@ lever tried or scoped to close the different-day gap, so the judgement is visibl
 |---|---|---|
 | Multi-clip training (`seg v3`) | **Done** | 31% → **18%** (most of the regression) |
 | Stronger photometric augmentation (`seg v4`) | **Done — failed** | 18% → 22% (no help; reported, not buried) |
-| **det∧seg agreement ensemble** | **Done** | 18% → **1%** (matches the detector; keeps masks) |
+| **Bigger model + 3 real clips (`seg-gpu`, YOLOv8s, A100)** | **Done** | 18% → **11%** FP with **0.98 recall** (best recall; the earlier "1%" was an 80-frame sampling artifact, corrected on 200 frames) |
+| **det∧seg agreement ensemble** | **Done** | 18% → **0%** FP, but recall ~0.57 (inherits the detector's caution; lowest-false-alarm option) |
 | Confidence-threshold operating point (FROC) | **Done** | `seg v3` at conf ≥0.7 reaches ~0 FP/undamaged frame (recall ~0.93) |
 | Temporal confirmation | **Done** (−70% transient FP on real video) | persistence over ≥3 frames removes flicker false alarms |
-| Real *multi-day* training | **Data-limited** | SOLAQUA's public feature has only **two days** (3 clips on 08‑22, 2 on 08‑20); 08‑20 is the held-out test, so a genuine third *day* does not exist to add. The maximal same-day 3‑clip set is built (`data/processed/multiclip3_seg`); true cross-day robustness needs ScaleAQ's multi-day/multi-site footage. |
+| Real *multi-day* training | **Data-limited (but see `seg-gpu`)** | SOLAQUA's public feature has only **two days** (3 clips on 08‑22, 2 on 08‑20); 08‑20 is the held-out test, so a genuine third *day* does not exist to add. Notably, `seg-gpu` trained on the 3 *same-day* clips cut the nano's different-day FP from 18% to 11% and lifted recall to 0.98 — so much of the gap was **model capacity**, not only day-diversity. More real days/sites would still help and are required for validated real-damage performance. |
 | Hard-negative mining | **Scoped** | the compositor already injects unlabelled hard negatives; the next step is mining the *real* frames the model false-alarms on (e.g. instrument housings) and adding them — a cheap, targeted loop once a labelling pass exists. |
 | Domain normalisation (gray-world WB + CLAHE) | **Done — failed at test time** | measured (`scripts/eval_domain_norm.py`): normalising frames only at inference *hurt* (det v1 different-day FP **0% → 28%**, recall 0.98 → 0.86; seg neutral) — a train/test mismatch. To exploit it the normalisation must be in *both* training and inference (a retrain). Reported, not assumed. |
 | Self-supervised pretraining *on SOLAQUA* | **Deferred (GPU)** | off-the-shelf DINOv2 transfer was probed (§5.7); domain pretraining on the unlabelled frames is the GPU-bound next step. |
