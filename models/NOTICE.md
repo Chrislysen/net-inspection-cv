@@ -8,7 +8,8 @@ re-training/re-downloading. They are **not** validated damage detectors.
 | File | What it is |
 |---|---|
 | `yolo_damage_v1.pt` | YOLOv8n detector — the most ROBUST model (0-1% undamaged FP, F1 0.97 different-day) |
-| `yolo_damage_seg_v2.pt` | YOLOv8n-seg (masks) trained on harder photorealistic data + hard negatives; box F1 0.95, mask IoU 0.66, but worse different-day robustness (see reports/results/segmentation_eval.json) |
+| `yolo_damage_seg_v2.pt` | YOLOv8n-seg (masks), single-clip; regressed out-of-distribution (31% different-day FP) — kept as the documented "before" of the closed-loop fix |
+| `yolo_damage_seg_v3.pt` | YOLOv8n-seg trained on DIVERSE multi-clip backgrounds; recovered most of v2's OOD gap (different-day FP 31%->18%, recall F1 0.77->0.91). See reports/results/adversarial_seg_v3/ |
 | `yolo_damage_v1_training_args.yaml` / `_training_results.csv` | training config + per-epoch metrics |
 | `anomaly_normal_net.npz` | patch-feature Mahalanobis "normal net" anomaly model (weak, F1 0.12) |
 | `patchcore_normal_net.npz` | PatchCore deep-feature anomaly model (label-free, F1 0.78) |

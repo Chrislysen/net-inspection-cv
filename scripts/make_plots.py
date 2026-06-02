@@ -77,10 +77,12 @@ def plot_method_metrics(out: Path):
 def plot_froc(out: Path):
     v1 = _load(RESULTS / "adversarial_yolo" / "adversarial.json")
     v2 = _load(RESULTS / "adversarial_seg" / "adversarial.json")
+    v3 = _load(RESULTS / "adversarial_seg_v3" / "adversarial.json")
     if not v1:
         return
     fig, ax = plt.subplots(figsize=(7, 4.6))
-    for d, name, col in ((v1, "det v1", C["v1"]), (v2, "seg v2", C["v2"])):
+    for d, name, col in ((v1, "det v1", C["v1"]), (v2, "seg v2 (1 clip)", C["v2"]),
+                         (v3, "seg v3 (multi-clip)", "#55A868")):
         if not d:
             continue
         froc = d["froc"]
@@ -92,7 +94,7 @@ def plot_froc(out: Path):
                             fontsize=7, xytext=(3, 3), textcoords="offset points")
     ax.set_xlabel("False positives per undamaged frame (different-day)")
     ax.set_ylabel("Recall on damage")
-    ax.set_title("FROC — operating curve (labels = conf threshold)\nleft/up is better; det v1 dominates seg v2 out-of-distribution")
+    ax.set_title("FROC — operating curve (labels = conf threshold)\nleft/up is better; multi-clip (v3) recovers most of seg v2's OOD gap")
     ax.legend(); ax.grid(alpha=0.3)
     fig.tight_layout(); fig.savefig(out / "froc.png", dpi=130); plt.close(fig)
 
@@ -100,20 +102,23 @@ def plot_froc(out: Path):
 def plot_fp_undamaged(out: Path):
     v1 = _load(RESULTS / "adversarial_yolo" / "adversarial.json")
     v2 = _load(RESULTS / "adversarial_seg" / "adversarial.json")
+    v3 = _load(RESULTS / "adversarial_seg_v3" / "adversarial.json")
     if not v1:
         return
     import numpy as np
     sets = list(v1["false_positives_on_undamaged"].keys())
-    x = np.arange(len(sets)); w = 0.38
-    fig, ax = plt.subplots(figsize=(8, 4.2))
-    r1 = [v1["false_positives_on_undamaged"][s]["fp_frame_rate"] for s in sets]
-    ax.bar(x - w / 2, r1, w, label="det v1", color=C["v1"])
-    if v2:
-        r2 = [v2["false_positives_on_undamaged"][s]["fp_frame_rate"] for s in sets]
-        ax.bar(x + w / 2, r2, w, label="seg v2", color=C["v2"])
+    x = np.arange(len(sets)); w = 0.26
+    fig, ax = plt.subplots(figsize=(8.5, 4.2))
+    series = [("det v1", v1, C["v1"], -1), ("seg v2 (1 clip)", v2, C["v2"], 0),
+              ("seg v3 (multi-clip)", v3, "#55A868", 1)]
+    for label, d, col, off in series:
+        if not d:
+            continue
+        rates = [d["false_positives_on_undamaged"][s]["fp_frame_rate"] for s in sets]
+        ax.bar(x + off * w, rates, w, label=label, color=col)
     ax.set_xticks(x); ax.set_xticklabels([s.replace(" (", "\n(") for s in sets], fontsize=8)
     ax.set_ylabel("False-positive frame rate")
-    ax.set_title("False positives on REAL UNDAMAGED net (lower is better)\nthe adversarial test: v1 stays clean; v2 regresses on a different day")
+    ax.set_title("False positives on REAL UNDAMAGED net (lower is better)\nseg v2 regressed on a different day; multi-clip v3 cuts it 31%->18%")
     ax.legend(); ax.grid(axis="y", alpha=0.3)
     fig.tight_layout(); fig.savefig(out / "fp_on_undamaged.png", dpi=130); plt.close(fig)
 

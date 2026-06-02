@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-36%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-48%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -151,7 +151,11 @@ Generated from the committed result JSONs by `python scripts/make_plots.py`
 The FROC tells the honest story at a glance: the simple detector (`det v1`) sits
 top-left (≈0.97 recall at ~0 false positives), while the "fancier" segmentation
 model (`seg v2`) needs many more false positives for the same recall on a
-different day — a regression the evaluation **caught** rather than hid.
+different day — a regression the evaluation **caught** rather than hid. Retraining
+on **diverse multi-clip backgrounds** (`seg v3`) then **recovered most of that
+gap** (different-day false positives 31% → 18%, recall F1 0.77 → 0.91) — the
+closed loop: *caught a regression → diagnosed it → fixed it with diverse data →
+re-measured*, reported with its residual gap intact.
 
 ## Usage cases
 

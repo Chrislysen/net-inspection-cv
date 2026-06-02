@@ -401,6 +401,28 @@ seg model adds masks but needs more epochs / more diverse damage appearance to
 match it. This is the evaluation doing its job — preventing the overclaim that
 the newer, fancier model is strictly better.
 
+**Closing the loop — the fix, measured.** The diagnosis (single-clip backgrounds
++ subtle damage → fuzzy, non-robust concept) predicts a fix: train on *diverse*
+backgrounds. So `yolo_damage_seg_v3` was trained on a **multi-clip** dataset
+(bag1 + bag2 backgrounds, per-instance appearance jitter), holding out the
+different-day clip. Result on that held-out day:
+
+| Different-day (held out) | seg v2 (1 clip) | **seg v3 (multi-clip)** | det v1 |
+|---|---|---|---|
+| Undamaged false-positive rate | 31% | **18%** | 1% |
+| Damage recall (F1) | 0.77 | **0.91** | 0.98 |
+| FROC: recall at ~0 FP/frame | 0.45 | **0.93** | 0.97 |
+
+Multi-clip training **cut OOD false positives 31% → 18%, lifted held-out recall
+0.77 → 0.91**, and made the operating curve usable (at conf 0.7: ~0 FP/frame with
+0.93 recall, where v2 collapsed to 0.45). The diagnosis was correct and the fix
+is real — **but partial**: it still does not match the box detector's 1% OOD
+false-positive rate. Honest takeaway: diverse data closed most of the gap;
+segmenting subtle (synthetic) damage remains harder to generalise, and `det v1`
+stays the most robust *detector*. This is the senior loop in full — *found a
+regression in my own model, diagnosed it, fixed it with diverse data, and
+re-measured* — reported with its residual gap intact rather than rounded up.
+
 ---
 
 ## 6. Expected failure modes (on real data)
