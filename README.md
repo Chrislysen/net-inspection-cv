@@ -337,6 +337,12 @@ python -m venv .venv
 pip install -e ".[cv,ml,data,serve,dev]"  # cv=OpenCV; ml=ultralytics/torch; data=rosbags; serve=FastAPI/Streamlit
 ```
 
+**GPU training (Colab).** Heavy runs (multi-clip, bigger `yolov8s/m-seg`, longer
+schedules) are slow on CPU. [`notebooks/colab_train_gpu.ipynb`](notebooks/colab_train_gpu.ipynb)
+runs the identical pipeline on a Colab GPU — clone → pull SOLAQUA → rebuild the
+composited dataset → train → held-out adversarial eval → download weights — in
+minutes, and sketches the GPU-only **SSL-pretraining-on-SOLAQUA** next step.
+
 If you only want the classical baseline + evaluation: `pip install -e ".[cv,dev]"`.
 Extras are modular: `data` (rosbags, for SOLAQUA `.bag`), `ml` (YOLO), `serve`
 (API + viewer) are each optional and degrade gracefully when absent.
