@@ -474,6 +474,13 @@ the deployable answer to "masks *or* robustness?": **both**, at the cost of a se
 forward pass. It is wired into the inference facade and the web console as its own
 method.
 
+![ensemble false-positive suppression](../docs/images/ensemble_fp_suppression.jpg)
+
+*Held-out different day. Left: `seg v3` raises a false alarm on an instrument
+housing; right: the det∧seg ensemble stays clean — same frame, no retraining.
+On actual (composited) damage all three still fire — see
+`docs/images/ensemble_on_damage.jpg`.*
+
 **Self-supervised features — a label-free probe of the deferred SSL idea.** A
 documented next step is self-supervised pretraining on the unlabelled SOLAQUA
 frames. Full pretraining is GPU-bound, but one executable slice of the question
@@ -505,6 +512,33 @@ calibrated operating threshold. These are image-level scores on synthetic damage
 and undamaged net — they characterise behaviour, not real-damage accuracy.
 Reproduce: `scripts/compare_anomaly_backbones.py` (results in
 `reports/results/ssl_dino/`).
+
+### 5.8 Closing the out-of-distribution gap — what worked, what didn't, what's left
+
+Pulling the robustness thread together, here is the honest ledger of *every*
+lever tried or scoped to close the different-day gap, so the judgement is visible:
+
+| Lever | Status | Effect on different-day false alarms |
+|---|---|---|
+| Multi-clip training (`seg v3`) | **Done** | 31% → **18%** (most of the regression) |
+| Stronger photometric augmentation (`seg v4`) | **Done — failed** | 18% → 22% (no help; reported, not buried) |
+| **det∧seg agreement ensemble** | **Done** | 18% → **1%** (matches the detector; keeps masks) |
+| Confidence-threshold operating point (FROC) | **Done** | `seg v3` at conf ≥0.7 reaches ~0 FP/undamaged frame (recall ~0.93) |
+| Temporal confirmation | **Done** (−70% transient FP on real video) | persistence over ≥3 frames removes flicker false alarms |
+| Real *multi-day* training | **Data-limited** | SOLAQUA's public feature has only **two days** (3 clips on 08‑22, 2 on 08‑20); 08‑20 is the held-out test, so a genuine third *day* does not exist to add. The maximal same-day 3‑clip set is built (`data/processed/multiclip3_seg`); true cross-day robustness needs ScaleAQ's multi-day/multi-site footage. |
+| Hard-negative mining | **Scoped** | the compositor already injects unlabelled hard negatives; the next step is mining the *real* frames the model false-alarms on (e.g. instrument housings) and adding them — a cheap, targeted loop once a labelling pass exists. |
+| Domain normalisation (consistent WB/CLAHE) | **Scoped** | implemented in `preprocess.py`; to help OOD it must be applied in *both* training and inference (a retrain), not bolted on at test time. |
+| Self-supervised pretraining *on SOLAQUA* | **Deferred (GPU)** | off-the-shelf DINOv2 transfer was probed (§5.7); domain pretraining on the unlabelled frames is the GPU-bound next step. |
+| Uncertainty / OOD gating | **Scoped** | route low-confidence or anomaly-flagged frames to human review instead of auto-deciding; the PatchCore anomaly score is a ready OOD signal. |
+
+**The deployable answer today** is the ensemble plus a calibrated high-confidence
+operating point and temporal confirmation — together they hold the detector's ~1%
+different-day false-alarm rate *with* masks, no new data required. **The honest
+ceiling is unchanged:** every number here is on synthetic damage or undamaged net.
+"Industry-ready" is gated on **real labelled damage across sites/seasons** and an
+agreed false-positive/false-negative operating point — a *data-and-process*
+threshold no modelling trick crosses. The engineering is built to receive that
+data the moment it exists.
 
 ---
 

@@ -2,20 +2,21 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-51%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-55%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 A research-grade computer-vision toolkit for **detecting possible damage (holes,
 tears, abnormal regions) in aquaculture fish-farm net imagery**, built as an
 honest *exploration framework*. It ingests images / video / ROS bags, preprocesses
-underwater footage, and compares **four detection approaches** — a classical
+underwater footage, and compares **five detection approaches** — a classical
 OpenCV heuristic, a hand-crafted anomaly model, a **foundation-model anomaly
-detector (PatchCore)**, and a **supervised YOLOv8** detector/segmenter — with a
-rigorous, adversarial evaluation, temporal video reasoning, an interactive web
-console, ONNX export, real-data (SINTEF **SOLAQUA**) ingestion, and CI. Its
-defining feature is **intellectual honesty**: it never claims real-world
-damage-detection performance it cannot prove.
+detector (PatchCore)**, a **supervised YOLOv8** detector/segmenter, and a
+**det∧seg agreement ensemble** — with a rigorous, adversarial evaluation, temporal
+video reasoning, an interactive web console, ONNX export, real-data (SINTEF
+**SOLAQUA**) ingestion, and CI. Its defining feature is **intellectual honesty**:
+it never claims real-world damage-detection performance it cannot prove, and it
+reports the experiments that *failed* alongside the ones that worked.
 
 <!-- Keywords (for search/research): aquaculture, fish farm, net pen, net damage,
 hole/tear detection, underwater computer vision, ROV inspection, SOLAQUA, SINTEF,
@@ -35,7 +36,7 @@ tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
 | **Robustness work** | Caught a seg-model out-of-distribution regression (31% different-day false alarms), fixed most of it with multi-clip training (→18%); a stronger-augmentation follow-up **failed** (→22%, reported as a negative result); a **det∧seg agreement ensemble** then recovered the detector's **1%** false-alarm rate *and* 0.976 recall while keeping masks. |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **51 passing tests** · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **55 passing tests** · GitHub Actions CI · committed models. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
@@ -66,8 +67,9 @@ was adopted vs rejected and why) and a code-grounded
 
 A localhost **inspection console** (FastAPI + a custom web UI) ties it all
 together — browse real SOLAQUA frames, switch detector (classical / anomaly /
-PatchCore / YOLO), adjust confidence live, and compare methods, with a detection
-table and latency. `python scripts/serve.py` then open `http://127.0.0.1:8000`.
+PatchCore / YOLO / **ensemble**), adjust confidence live, and compare methods, with
+a per-method explainer, detection table and latency. `python scripts/serve.py` then
+open `http://127.0.0.1:8000`.
 
 ![web console](docs/images/webapp_console.png)
 
@@ -134,9 +136,12 @@ recall while keeping masks — the deployable "best of both":
 | Undamaged false-positive rate | 1% | 18% | **1%** |
 | Damage recall (F1) | 0.976 | 0.912 | **0.976** |
 
-The ensemble keeps the detector's 1% out-of-distribution false-positive rate *and*
-its recall while contributing masks where both models agree — see the
-[ensemble comparison figure](reports/results/plots/ensemble_comparison.png) below.
+![ensemble false-positive suppression](docs/images/ensemble_fp_suppression.jpg)
+
+*Real different-day undamaged net. **Left:** `seg v3` false-alarms on an instrument
+housing. **Right:** the det∧seg ensemble stays clean — same frame, no retraining.
+The ensemble keeps the detector's 1% out-of-distribution false-positive rate and
+its 0.976 recall while contributing masks where both models agree.*
 
 > **Read these honestly.** Synthetic metrics only verify the pipeline. SOLAQUA
 > frames are real but **undamaged/unlabelled** (false-alarm & anomaly behaviour
@@ -541,7 +546,7 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 - **Production-shaped serving:** path-traversal-safe, upload validation, structured logging + request IDs, `/health` `/ready` `/metrics`, no-leak error handling.
 - **Torch-free ONNX inference** (`onnx_infer.py`, parity-verified) + a **streaming pipeline** (`stream_inspect.py`) that emits one confirmed-damage alert per new track.
 - **Ops artifacts:** model card, deployment/SLO runbook, data-collection protocol, and a self-critical [production-readiness scorecard](reports/PRODUCTION_READINESS.md).
-- Tests (51) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, **ONNX**, and the **self-supervised DINOv2 backbone**.
+- Tests (55) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, **ONNX**, and the **self-supervised DINOv2 backbone**.
 
 **Placeholder / synthetic (clearly marked):**
 
