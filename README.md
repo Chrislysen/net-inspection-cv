@@ -33,7 +33,7 @@ tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
 | **Data** | Synthetic demo (pipeline test) · **SOLAQUA** real ROV footage of *undamaged* nets (SINTEF, CC BY-SA 4.0) · **synthetic damage composited onto real net frames** for trainable, labelled, comparable data. |
 | **Key result (proxy)** | Damage-localisation F1 on the composite test set: anomaly **0.12** → classical **0.50** → PatchCore **0.78** (label-free) → YOLOv8 **0.97**. |
 | **Honesty check** | The trained detector fires on **0%** of real *undamaged* frames (its own training backgrounds) and **1%** on a different day — ruling out background/artifact "cheating". (On a 200-frame re-check its different-day *recall* is lower than an easier subset first suggested; see the robustness row.) |
-| **Robustness work** | Caught a seg-model out-of-distribution regression (31% different-day false alarms); multi-clip training cut it to 18%; stronger augmentation **failed** (→22%, reported as a negative). On a 200-frame re-check (which **corrected an earlier 1% to 11%** — a sampling artifact I caught and fixed), it's a real **precision/recall trade-off**: a bigger **YOLOv8s-seg (A100)** gets the best recall (**0.98**) at 11% FP; the **det∧seg ensemble** drives FP to **0%** but inherits the detector's caution (~0.57 recall). An **OOD gate** defers 100% of different-day frames to review; test-time domain-normalisation **failed** too. Every lever, failure, and correction is in the [report §5.7–5.8](reports/SCALEAQ_PROTOTYPE_REPORT.md). |
+| **Robustness work** | Caught a seg-model out-of-distribution regression (31% → **18%** via multi-clip training; stronger augmentation **failed** at 22%). A 200-frame re-check — which **corrected my own 1%→11% sampling artifact** — shows an honest **precision/recall trade-off** on the held-out day: a bigger **YOLOv8s-seg (A100)** = best recall **0.98** at 11% false alarms; the **det∧seg ensemble** = **0%** false alarms but ~0.57 recall. Plus an **OOD gate** (defers 100% of different-day frames to human review) and a *failed* test-time normalisation. Full ledger: [report §5.7–5.8](reports/SCALEAQ_PROTOTYPE_REPORT.md). |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **58 passing tests** · GitHub Actions CI · committed models. |
@@ -177,26 +177,19 @@ Generated from the committed result JSONs by `python scripts/make_plots.py`
 |---|
 | ![temporal](reports/results/plots/temporal_reduction.png) |
 
-The FROC tells the honest story at a glance: the simple detector (`det v1`) sits
-top-left (≈0.97 recall at ~0 false positives), while the "fancier" segmentation
-model (`seg v2`) needs many more false positives for the same recall on a
-different day — a regression the evaluation **caught** rather than hid. Retraining
-on **diverse multi-clip backgrounds** (`seg v3`) then **recovered most of that
-gap** (different-day false positives 31% → 18%, recall F1 0.77 → 0.91) — the
-closed loop: *caught a regression → diagnosed it → fixed it with diverse data →
-re-measured*, reported with its residual gap intact.
-
-A follow-up experiment (`seg v4`) tested whether **stronger photometric
-augmentation** + more negatives could shrink the residual gap further. It did
-**not** (different-day FP 22% vs v3's 18%; better in-distribution masks, no better
-OOD) — augmenting two clips can't manufacture real day-to-day diversity. It is
-kept in the plots as an honest **negative result**; `seg v3` stays the best
-segmenter and `det v1` the most robust detector. Separately, a label-free
-**self-supervised (DINOv2) vs supervised (ResNet18)** ablation for the anomaly
-detector (`reports/results/ssl_dino/`) found SSL features *competitive and
-cleaner* (image-level AUROC 1.00 in-clip, half the false alarms) but **not** a
-free win out-of-distribution — the real bottleneck is threshold transfer, and
-SOLAQUA-specific SSL pretraining remains the documented next step.
+The robustness story, end to end: the first segmentation model (`seg v2`) regressed
+badly out-of-distribution (31% different-day false alarms) — a failure the
+evaluation **caught**. Multi-clip training (`seg v3`) cut that to **18%**; a
+**stronger-augmentation** follow-up (`seg v4`) **failed** to improve it (22% — kept
+as an honest negative); and a bigger **YOLOv8s-seg on a GPU** (`seg-gpu`) reached
+the **best recall (0.98)** at an 11% false-alarm cost. The honest conclusion is a
+**precision/recall trade-off**, not a single winner: the **det v1 / ensemble** end
+(0–1% false alarms, lower recall) vs the **seg-gpu** end (0.98 recall, 11% false
+alarms) — chosen by which error costs more. (One flattering 1% number along the way
+turned out to be a small-sample artifact, re-checked on 200 frames and corrected.)
+Separately, a label-free **DINOv2-vs-ResNet** anomaly ablation
+(`reports/results/ssl_dino/`) found self-supervised features *competitive and
+cleaner* but **not** a free out-of-distribution win.
 
 ## Usage cases
 
