@@ -26,7 +26,7 @@ LOGGER = get_logger()
 RESULTS = _common.REPO_ROOT / "reports" / "results"
 C = {"classical": "#4C72B0", "anomaly": "#937860", "patchcore": "#55A868",
      "yolo": "#C44E52", "v1": "#C44E52", "v2": "#DD8452", "v3": "#55A868",
-     "v4": "#8172B3"}
+     "v4": "#8172B3", "gpu": "#1F9E89"}
 
 
 def _load(p: Path):
@@ -80,12 +80,14 @@ def plot_froc(out: Path):
     v2 = _load(RESULTS / "adversarial_seg" / "adversarial.json")
     v3 = _load(RESULTS / "adversarial_seg_v3" / "adversarial.json")
     v4 = _load(RESULTS / "adversarial_seg_v4" / "adversarial.json")
+    vgpu = _load(RESULTS / "adversarial_seg_gpu" / "adversarial.json")
     if not v1:
         return
     fig, ax = plt.subplots(figsize=(7, 4.6))
     for d, name, col in ((v1, "det v1", C["v1"]), (v2, "seg v2 (1 clip)", C["v2"]),
                          (v3, "seg v3 (multi-clip)", C["v3"]),
-                         (v4, "seg v4 (+strong aug)", C["v4"])):
+                         (v4, "seg v4 (+strong aug)", C["v4"]),
+                         (vgpu, "seg-gpu (yolov8s, 3-clip)", C["gpu"])):
         if not d:
             continue
         froc = d["froc"]
@@ -97,7 +99,7 @@ def plot_froc(out: Path):
                             fontsize=7, xytext=(3, 3), textcoords="offset points")
     ax.set_xlabel("False positives per undamaged frame (different-day)")
     ax.set_ylabel("Recall on damage")
-    ax.set_title("FROC — operating curve (labels = conf threshold)\nleft/up is better; v3≈v4 recover most of seg v2's OOD gap; det v1 still best")
+    ax.set_title("FROC — operating curve (labels = conf threshold)\nleft/up is better; the bigger seg-gpu (3-clip) joins det v1 at ~0 FP")
     ax.legend(); ax.grid(alpha=0.3)
     fig.tight_layout(); fig.savefig(out / "froc.png", dpi=130); plt.close(fig)
 
@@ -107,15 +109,17 @@ def plot_fp_undamaged(out: Path):
     v2 = _load(RESULTS / "adversarial_seg" / "adversarial.json")
     v3 = _load(RESULTS / "adversarial_seg_v3" / "adversarial.json")
     v4 = _load(RESULTS / "adversarial_seg_v4" / "adversarial.json")
+    vgpu = _load(RESULTS / "adversarial_seg_gpu" / "adversarial.json")
     if not v1:
         return
     import numpy as np
     sets = list(v1["false_positives_on_undamaged"].keys())
-    x = np.arange(len(sets)); w = 0.2
-    fig, ax = plt.subplots(figsize=(8.5, 4.2))
-    series = [("det v1", v1, C["v1"], -1.5), ("seg v2 (1 clip)", v2, C["v2"], -0.5),
-              ("seg v3 (multi-clip)", v3, C["v3"], 0.5),
-              ("seg v4 (+strong aug)", v4, C["v4"], 1.5)]
+    x = np.arange(len(sets)); w = 0.16
+    fig, ax = plt.subplots(figsize=(9.5, 4.2))
+    series = [("det v1", v1, C["v1"], -2), ("seg v2 (1 clip)", v2, C["v2"], -1),
+              ("seg v3 (multi-clip)", v3, C["v3"], 0),
+              ("seg v4 (+strong aug)", v4, C["v4"], 1),
+              ("seg-gpu (yolov8s, 3-clip)", vgpu, C["gpu"], 2)]
     for label, d, col, off in series:
         if not d:
             continue
@@ -123,7 +127,7 @@ def plot_fp_undamaged(out: Path):
         ax.bar(x + off * w, rates, w, label=label, color=col)
     ax.set_xticks(x); ax.set_xticklabels([s.replace(" (", "\n(") for s in sets], fontsize=8)
     ax.set_ylabel("False-positive frame rate")
-    ax.set_title("False positives on REAL UNDAMAGED net (lower is better)\nseg v2 regressed OOD; v3 cut it 31%->18%; stronger aug (v4) did not improve it")
+    ax.set_title("False positives on REAL UNDAMAGED net (lower is better)\nnano seg overfired OOD (18-31%); a bigger yolov8s on 3 real clips (seg-gpu) hits 1%")
     ax.legend(); ax.grid(axis="y", alpha=0.3)
     fig.tight_layout(); fig.savefig(out / "fp_on_undamaged.png", dpi=130); plt.close(fig)
 

@@ -11,6 +11,7 @@ re-training/re-downloading. They are **not** validated damage detectors.
 | `yolo_damage_seg_v2.pt` | YOLOv8n-seg (masks), single-clip; regressed out-of-distribution (31% different-day FP) — kept as the documented "before" of the closed-loop fix |
 | `yolo_damage_seg_v3.pt` | YOLOv8n-seg trained on DIVERSE multi-clip backgrounds; recovered most of v2's OOD gap (different-day FP 31%->18%, recall F1 0.77->0.91). **Best segmenter.** See reports/results/adversarial_seg_v3/ |
 | `yolo_damage_seg_v4.pt` | YOLOv8n-seg, multi-clip + STRONG photometric augmentation + more negatives. Tested the hypothesis that simulated day-to-day jitter would shrink the residual OOD gap; it did NOT (different-day FP 22% vs v3's 18%; better in-distribution masks, no better OOD). Kept as the honest negative result. See reports/results/adversarial_seg_v4/ |
+| `yolo_damage_seg_gpu.pt` | **YOLOv8s-seg (bigger), trained on 3 real clips on an A100.** Model capacity + real multi-clip diversity closed the OOD gap that augmentation could not: different-day undamaged FP **1%** (matching the detector) with recall F1 0.958 and masks. **Best segmenter.** Still synthetic damage — proxy, not validated real-damage performance. See reports/results/adversarial_seg_gpu/ |
 | `yolo_damage_v1_training_args.yaml` / `_training_results.csv` | training config + per-epoch metrics |
 | `anomaly_normal_net.npz` | patch-feature Mahalanobis "normal net" anomaly model (weak, F1 0.12) |
 | `patchcore_normal_net.npz` | PatchCore deep-feature anomaly model (label-free, F1 0.78) |

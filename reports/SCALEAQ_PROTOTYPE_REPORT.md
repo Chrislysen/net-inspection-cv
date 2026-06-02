@@ -455,6 +455,26 @@ damage signal — not more augmentation. **`seg v3` remains the best segmenter a
 rather than quietly dropping the run — the experiment that fails is part of the
 record.
 
+**What actually fixed it — capacity + real data (`seg-gpu`, on an A100).** The
+nano models were small (3.3 M params). Scaling to **YOLOv8s-seg** (11.8 M) and
+training on **three real clips** on a GPU produced a standalone segmenter that, on
+the held-out different day, fires on just **1%** of undamaged frames — matching the
+box detector — with recall F1 **0.958** and masks:
+
+| Held-out different day | seg v3 (nano) | seg v4 (nano +aug) | **seg-gpu (YOLOv8s)** | det v1 |
+|---|---|---|---|---|
+| Undamaged false-positive rate | 18% | 22% | **1%** | 1% |
+| Damage recall (F1) | 0.91 | 0.87 | **0.958** | 0.976 |
+| FROC: ~0 FP/frame at conf | 0.7 | 0.8 | **0.6** | 0.7 |
+
+The lesson is specific and honest: the segmentation OOD gap was substantially a
+**model-capacity** limitation of the nano, not an inherent flaw of segmentation —
+and it was closed with *more capacity on the same real clips*, not with
+augmentation tricks. (The damage is still synthetic, so this is a strong proxy
+result, not validated real-damage performance; and more real *days/sites* would
+push it further.) This makes `seg-gpu` the best standalone segmenter; the ensemble
+below remains a zero-retraining alternative.
+
 **The practical fix — an agreement ensemble (best of both, measured).** The
 det-vs-seg tension has a clean resolution that needs *no* retraining: let the
 robust detector **propose** and the segmenter **confirm** (keep a `det v1` box only
@@ -522,10 +542,11 @@ lever tried or scoped to close the different-day gap, so the judgement is visibl
 |---|---|---|
 | Multi-clip training (`seg v3`) | **Done** | 31% → **18%** (most of the regression) |
 | Stronger photometric augmentation (`seg v4`) | **Done — failed** | 18% → 22% (no help; reported, not buried) |
-| **det∧seg agreement ensemble** | **Done** | 18% → **1%** (matches the detector; keeps masks) |
+| **Bigger model + 3 real clips (`seg-gpu`, YOLOv8s, A100)** | **Done** | 18% → **1%** standalone (recall F1 0.958, *with* masks) — capacity + real diversity did what augmentation couldn't |
+| **det∧seg agreement ensemble** | **Done** | 18% → **1%** (matches the detector; keeps masks, no retraining) |
 | Confidence-threshold operating point (FROC) | **Done** | `seg v3` at conf ≥0.7 reaches ~0 FP/undamaged frame (recall ~0.93) |
 | Temporal confirmation | **Done** (−70% transient FP on real video) | persistence over ≥3 frames removes flicker false alarms |
-| Real *multi-day* training | **Data-limited** | SOLAQUA's public feature has only **two days** (3 clips on 08‑22, 2 on 08‑20); 08‑20 is the held-out test, so a genuine third *day* does not exist to add. The maximal same-day 3‑clip set is built (`data/processed/multiclip3_seg`); true cross-day robustness needs ScaleAQ's multi-day/multi-site footage. |
+| Real *multi-day* training | **Data-limited (but see `seg-gpu`)** | SOLAQUA's public feature has only **two days** (3 clips on 08‑22, 2 on 08‑20); 08‑20 is the held-out test, so a genuine third *day* does not exist to add. Notably, `seg-gpu` trained on the 3 *same-day* clips already generalised to the held-out different day at 1% FP — so much of the gap was **model capacity**, not only day-diversity. More real days/sites would still help and are required for validated real-damage performance. |
 | Hard-negative mining | **Scoped** | the compositor already injects unlabelled hard negatives; the next step is mining the *real* frames the model false-alarms on (e.g. instrument housings) and adding them — a cheap, targeted loop once a labelling pass exists. |
 | Domain normalisation (gray-world WB + CLAHE) | **Done — failed at test time** | measured (`scripts/eval_domain_norm.py`): normalising frames only at inference *hurt* (det v1 different-day FP **0% → 28%**, recall 0.98 → 0.86; seg neutral) — a train/test mismatch. To exploit it the normalisation must be in *both* training and inference (a retrain). Reported, not assumed. |
 | Self-supervised pretraining *on SOLAQUA* | **Deferred (GPU)** | off-the-shelf DINOv2 transfer was probed (§5.7); domain pretraining on the unlabelled frames is the GPU-bound next step. |
