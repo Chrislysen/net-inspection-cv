@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-48%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-51%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -34,7 +34,7 @@ tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
 | **Honesty check** | The trained YOLO fires on **0%** of real *undamaged* frames (its own training backgrounds) and **1%** on a different day, holding F1≈0.97 — ruling out background/artifact "cheating". |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **35 passing tests** · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **51 passing tests** · GitHub Actions CI · committed models. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
@@ -140,7 +140,7 @@ Generated from the committed result JSONs by `python scripts/make_plots.py`
 |---|---|
 | ![f1 ladder](reports/results/plots/method_f1_ladder.png) | ![metrics](reports/results/plots/method_metrics.png) |
 
-| Adversarial: FP on REAL undamaged net | FROC operating curve (det v1 vs seg v2) |
+| Adversarial: FP on REAL undamaged net (det v1 vs seg v2/v3/v4) | FROC operating curve (det v1 vs seg v2/v3/v4) |
 |---|---|
 | ![fp undamaged](reports/results/plots/fp_on_undamaged.png) | ![froc](reports/results/plots/froc.png) |
 
@@ -156,6 +156,18 @@ on **diverse multi-clip backgrounds** (`seg v3`) then **recovered most of that
 gap** (different-day false positives 31% → 18%, recall F1 0.77 → 0.91) — the
 closed loop: *caught a regression → diagnosed it → fixed it with diverse data →
 re-measured*, reported with its residual gap intact.
+
+A follow-up experiment (`seg v4`) tested whether **stronger photometric
+augmentation** + more negatives could shrink the residual gap further. It did
+**not** (different-day FP 22% vs v3's 18%; better in-distribution masks, no better
+OOD) — augmenting two clips can't manufacture real day-to-day diversity. It is
+kept in the plots as an honest **negative result**; `seg v3` stays the best
+segmenter and `det v1` the most robust detector. Separately, a label-free
+**self-supervised (DINOv2) vs supervised (ResNet18)** ablation for the anomaly
+detector (`reports/results/ssl_dino/`) found SSL features *competitive and
+cleaner* (image-level AUROC 1.00 in-clip, half the false alarms) but **not** a
+free win out-of-distribution — the real bottleneck is threshold transfer, and
+SOLAQUA-specific SSL pretraining remains the documented next step.
 
 ## Usage cases
 
@@ -266,6 +278,7 @@ net-inspection-cv/
     model_baseline.py            YOLOv8 detect/segment wrapper (graceful if missing)
     anomaly.py                   normal-net anomaly model (patch Mahalanobis)
     patchcore.py                 foundation-model anomaly (pretrained-CNN PatchCore)
+    dino_backbone.py             self-supervised DINOv2 backbone for PatchCore (SSL-vs-supervised ablation)
     temporal.py                  IoU tracker — confirm detections that persist
     compose.py                   composite photorealistic damage + hard negatives onto REAL frames
     inference.py                 unified facade over all methods (used everywhere)
@@ -402,6 +415,10 @@ on a held-out clip (F1 ≈ 0.98) — see the caveats above and in the report.
 # Foundation-model anomaly (label-free, F1 ~0.78): pretrained-CNN PatchCore
 python scripts/train_patchcore.py --images data/processed/solaqua_frames_dense --out models/patchcore_normal_net
 
+# Self-supervised vs supervised features (same detector, only the backbone differs):
+python scripts/train_patchcore.py --images data/processed/solaqua_frames_dense --backbone dinov2_vits14 --out models/patchcore_dino_vits14
+python scripts/compare_anomaly_backbones.py --models resnet18=models/patchcore_resnet18 dinov2=models/patchcore_dino_vits14 --out reports/results/ssl_dino
+
 # Adversarial "is it cheating?" suite: FP on REAL undamaged net + different-day + FROC
 python scripts/adversarial_eval.py --yolo-weights models/yolo_damage_v1.pt --out reports/results/adversarial_yolo
 
@@ -505,7 +522,7 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 - **Production-shaped serving:** path-traversal-safe, upload validation, structured logging + request IDs, `/health` `/ready` `/metrics`, no-leak error handling.
 - **Torch-free ONNX inference** (`onnx_infer.py`, parity-verified) + a **streaming pipeline** (`stream_inspect.py`) that emits one confirmed-damage alert per new track.
 - **Ops artifacts:** model card, deployment/SLO runbook, data-collection protocol, and a self-critical [production-readiness scorecard](reports/PRODUCTION_READINESS.md).
-- Tests (48) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, and **ONNX**.
+- Tests (51) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, **ONNX**, and the **self-supervised DINOv2 backbone**.
 
 **Placeholder / synthetic (clearly marked):**
 

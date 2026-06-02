@@ -41,6 +41,13 @@ class YoloConfig:
     epochs: int = 50
     batch: int = 16
     device: str | None = None          # None -> ultralytics auto-selects
+    # Augmentation overrides. None -> use the Ultralytics default for that key.
+    # Exposed because the dominant out-of-distribution failure for underwater net
+    # inspection is *day-to-day* appearance shift (lighting, water colour/turbidity).
+    # With only a few clips available, the practical lever is photometric
+    # augmentation that simulates that shift — so these must be tunable, not hidden.
+    augment: dict | None = None
+    patience: int | None = None        # early-stopping patience (None -> ultralytics default)
 
 
 def _load_yolo(weights: str, task: str):
@@ -70,6 +77,11 @@ def train(data_yaml: str | Path, cfg: YoloConfig, project: str | None = None,
         data=str(data_yaml), epochs=cfg.epochs, imgsz=cfg.imgsz,
         batch=cfg.batch, device=cfg.device,
     )
+    if cfg.patience is not None:
+        train_kwargs["patience"] = cfg.patience
+    if cfg.augment:
+        # Only forward keys ultralytics understands as train() hyper-parameters.
+        train_kwargs.update({k: v for k, v in cfg.augment.items() if v is not None})
     if project:
         train_kwargs["project"] = project
     if name:

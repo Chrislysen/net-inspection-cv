@@ -1,0 +1,8 @@
+{
+  "train_frames": 150,
+  "threshold": 16.05640697479248,
+  "train_patches": 38400,
+  "bank": 6000,
+  "dist_median": 8.02820348739624,
+  "dist_p99": 14.169374628067018
+}

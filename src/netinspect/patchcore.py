@@ -159,11 +159,18 @@ def _coreset_subsample(feats: np.ndarray, size: int, seed: int,
 _EXTRACTOR_CACHE: dict = {}
 
 
-def _get_extractor(cfg: PatchCoreConfig) -> "_FeatureExtractor":
-    """Cache the (heavy) backbone so repeated scoring doesn't reload it."""
+def _get_extractor(cfg: PatchCoreConfig):
+    """Cache the (heavy) backbone so repeated scoring doesn't reload it.
+
+    A ``dino*`` backbone selects the self-supervised DINOv2 extractor
+    (``dino_backbone.py``); anything else uses the torchvision CNN. Both expose
+    the same ``extract`` contract, so ``fit``/``score_image`` are backbone-agnostic.
+    """
     key = (cfg.backbone, cfg.input_size, cfg.layers, cfg.neighbourhood)
     if key not in _EXTRACTOR_CACHE:
-        _EXTRACTOR_CACHE[key] = _FeatureExtractor(cfg)
+        from .dino_backbone import DinoFeatureExtractor, is_dino_backbone
+        _EXTRACTOR_CACHE[key] = (DinoFeatureExtractor(cfg) if is_dino_backbone(cfg.backbone)
+                                 else _FeatureExtractor(cfg))
     return _EXTRACTOR_CACHE[key]
 
 

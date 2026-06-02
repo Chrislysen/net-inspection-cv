@@ -22,7 +22,9 @@ from netinspect.utils import list_images, write_json
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--frames", required=True, help="Directory of real frames")
+    ap.add_argument("--frames", required=True, nargs="+",
+                    help="One or more directories of real frames (multi-clip -> "
+                         "more diverse backgrounds, better day-to-day generalisation)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--seg", action="store_true", help="Write segmentation polygons")
     ap.add_argument("--damaged-fraction", type=float, default=0.85)
@@ -32,7 +34,13 @@ def main() -> None:
                     help="Keep hole/tear subtypes (default: single 'damage' class)")
     args = ap.parse_args()
 
-    frames = list_images(args.frames)
+    frames: list = []
+    for d in args.frames:
+        frames.extend(list_images(d))
+    # Dedupe by frame stem so the same background sampled into two dirs is not
+    # composited twice (and cannot leak across the train/val/test split).
+    seen: set[str] = set()
+    frames = [p for p in frames if not (p.stem in seen or seen.add(p.stem))]
     if not frames:
         print(f"No frames in {args.frames}. Run scripts/fetch_solaqua.py first.")
         return

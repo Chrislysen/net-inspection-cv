@@ -423,6 +423,66 @@ stays the most robust *detector*. This is the senior loop in full — *found a
 regression in my own model, diagnosed it, fixed it with diverse data, and
 re-measured* — reported with its residual gap intact rather than rounded up.
 
+**Pushing further — a hypothesis that did *not* pan out (`seg v4`).** The residual
+gap (v3's 18% different-day FP vs det v1's 1%) invites an obvious next lever:
+since only two training clips exist and the third day is held out, *simulate*
+day-to-day variation with **strong photometric augmentation** (hue/brightness
+jitter ≈3–4× the YOLO default, plus rotation/perspective) and add more
+pure-negative frames (26% vs 15%) on a larger, multi-clip set. Hypothesis:
+lighting-invariant features + more "this is just net" examples should cut the OOD
+false positives. Trained to convergence (`yolo_damage_seg_v4`, 80 epochs), it did
+**not**:
+
+| Different-day (held out) | seg v2 | seg v3 | **seg v4 (+strong aug)** | det v1 |
+|---|---|---|---|---|
+| Undamaged false-positive rate | 31% | **18%** | 22% | 1% |
+| Damage recall (F1) | 0.77 | **0.91** | 0.87 | 0.98 |
+| FROC: recall at ~0 FP/frame | 0.45 | 0.93 | 0.93 | 0.97 |
+
+v4 segments *in-distribution* damage better than v3 (mask mAP50 0.967 vs ≈0.94)
+but generalises no better out-of-distribution — slightly worse at the default
+threshold, tied on the FROC operating curve. The honest reading: augmenting only
+two source clips cannot manufacture genuine day-to-day diversity (water colour,
+turbidity, sun angle), and pushing the jitter harder made the in-distribution fit
+sharper without transferring. Closing the residual gap needs a real *third*
+training day (deliberately held out here for an honest OOD test) or a less fuzzy
+damage signal — not more augmentation. **`seg v3` remains the best segmenter and
+`det v1` the most robust detector.** I am reporting this as a negative result
+rather than quietly dropping the run — the experiment that fails is part of the
+record.
+
+**Self-supervised features — a label-free probe of the deferred SSL idea.** A
+documented next step is self-supervised pretraining on the unlabelled SOLAQUA
+frames. Full pretraining is GPU-bound, but one executable slice of the question
+runs on CPU: *do off-the-shelf self-supervised features transfer better than
+supervised ones for our one-class anomaly detector?* The PatchCore pipeline's
+only learned component is its **backbone**, so I swapped it — ImageNet-supervised
+**ResNet18** vs self-supervised **DINOv2 ViT-S/14** (`dino_backbone.py`) — holding
+everything else fixed, and measured the fair, threshold-free metric: image-level
+**AUROC** for separating damaged from undamaged frames.
+
+| Backbone (same detector) | in-clip AUROC | different-day AUROC | undamaged FP frame-rate (in-clip) |
+|---|---|---|---|
+| ResNet18 (ImageNet-supervised) | 0.98 | **0.99** | 68% |
+| DINOv2 ViT-S/14 (self-supervised) | **1.00** | 0.96 | **32%** |
+
+The honest read: **as a frame-level screen both are strong (AUROC 0.96–1.00)** —
+the anomaly route *can* flag damaged frames even though it draws poor boxes (an
+image-level screen, not a localiser; tight boxes need the calibrated threshold of
+the PatchCore F1-0.78 result above). Self-supervised features are **competitive
+and visibly cleaner** — DINOv2 is perfect in-clip and fires on roughly half as
+many undamaged frames — but they do **not** beat supervised features on the
+hardest different-day AUROC. And the real bottleneck is **threshold transfer, not
+the backbone**: at the uncalibrated 2×-median threshold *both* backbones fire on
+100% of different-day undamaged frames even though their scores still rank
+damaged frames above undamaged ones (high AUROC). So off-the-shelf SSL is **not a
+free lunch** here; the gains to chase are (a) SSL pretraining *on SOLAQUA* itself
+(domain-matched, the still-deferred GPU step) and (b) a domain-adaptive,
+calibrated operating threshold. These are image-level scores on synthetic damage
+and undamaged net — they characterise behaviour, not real-damage accuracy.
+Reproduce: `scripts/compare_anomaly_backbones.py` (results in
+`reports/results/ssl_dino/`).
+
 ---
 
 ## 6. Expected failure modes (on real data)

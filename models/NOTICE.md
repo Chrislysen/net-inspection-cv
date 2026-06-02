@@ -9,10 +9,13 @@ re-training/re-downloading. They are **not** validated damage detectors.
 |---|---|
 | `yolo_damage_v1.pt` | YOLOv8n detector — the most ROBUST model (0-1% undamaged FP, F1 0.97 different-day) |
 | `yolo_damage_seg_v2.pt` | YOLOv8n-seg (masks), single-clip; regressed out-of-distribution (31% different-day FP) — kept as the documented "before" of the closed-loop fix |
-| `yolo_damage_seg_v3.pt` | YOLOv8n-seg trained on DIVERSE multi-clip backgrounds; recovered most of v2's OOD gap (different-day FP 31%->18%, recall F1 0.77->0.91). See reports/results/adversarial_seg_v3/ |
+| `yolo_damage_seg_v3.pt` | YOLOv8n-seg trained on DIVERSE multi-clip backgrounds; recovered most of v2's OOD gap (different-day FP 31%->18%, recall F1 0.77->0.91). **Best segmenter.** See reports/results/adversarial_seg_v3/ |
+| `yolo_damage_seg_v4.pt` | YOLOv8n-seg, multi-clip + STRONG photometric augmentation + more negatives. Tested the hypothesis that simulated day-to-day jitter would shrink the residual OOD gap; it did NOT (different-day FP 22% vs v3's 18%; better in-distribution masks, no better OOD). Kept as the honest negative result. See reports/results/adversarial_seg_v4/ |
 | `yolo_damage_v1_training_args.yaml` / `_training_results.csv` | training config + per-epoch metrics |
 | `anomaly_normal_net.npz` | patch-feature Mahalanobis "normal net" anomaly model (weak, F1 0.12) |
 | `patchcore_normal_net.npz` | PatchCore deep-feature anomaly model (label-free, F1 0.78) |
+| `patchcore_resnet18.npz` | PatchCore with an ImageNet-**supervised** ResNet18 backbone — the baseline arm of the self-supervised-vs-supervised ablation (`reports/results/ssl_dino/`) |
+| `patchcore_dino_vits14.npz` | PatchCore with a **self-supervised** DINOv2 ViT-S/14 backbone — the SSL arm of the same ablation (image-level AUROC 1.00 in-clip / 0.96 different-day; cleaner false-alarm behaviour than ResNet18) |
 
 ## How they were produced
 
