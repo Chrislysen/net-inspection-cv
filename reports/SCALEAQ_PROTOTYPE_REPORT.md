@@ -529,7 +529,7 @@ lever tried or scoped to close the different-day gap, so the judgement is visibl
 | Hard-negative mining | **Scoped** | the compositor already injects unlabelled hard negatives; the next step is mining the *real* frames the model false-alarms on (e.g. instrument housings) and adding them — a cheap, targeted loop once a labelling pass exists. |
 | Domain normalisation (gray-world WB + CLAHE) | **Done — failed at test time** | measured (`scripts/eval_domain_norm.py`): normalising frames only at inference *hurt* (det v1 different-day FP **0% → 28%**, recall 0.98 → 0.86; seg neutral) — a train/test mismatch. To exploit it the normalisation must be in *both* training and inference (a retrain). Reported, not assumed. |
 | Self-supervised pretraining *on SOLAQUA* | **Deferred (GPU)** | off-the-shelf DINOv2 transfer was probed (§5.7); domain pretraining on the unlabelled frames is the GPU-bound next step. |
-| Uncertainty / OOD gating | **Scoped** | route low-confidence or anomaly-flagged frames to human review instead of auto-deciding; the PatchCore anomaly score is a ready OOD signal. |
+| Uncertainty / OOD gating | **Done** | `src/netinspect/ood_gate.py` — a PatchCore-score gate calibrated on in-distribution frames flags **6%** of training-clip frames, **0%** of same-site/other-clip, and **100%** of the different DAY for human review (`scripts/eval_ood_gate.py`). A not-yet-certified detector can then run safely: auto-handle familiar frames, defer exactly the unfamiliar ones. |
 
 **The deployable answer today** is the ensemble plus a calibrated high-confidence
 operating point and temporal confirmation — together they hold the detector's ~1%

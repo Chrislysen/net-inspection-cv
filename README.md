@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-55%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-58%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -36,7 +36,7 @@ tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
 | **Robustness work** | Caught a seg-model out-of-distribution regression (31% different-day false alarms), fixed most of it with multi-clip training (→18%); a stronger-augmentation follow-up **failed** (→22%, reported as a negative result); a **det∧seg agreement ensemble** then recovered the detector's **1%** false-alarm rate *and* 0.976 recall while keeping masks. |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **55 passing tests** · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **58 passing tests** · GitHub Actions CI · committed models. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
@@ -165,9 +165,13 @@ Generated from the committed result JSONs by `python scripts/make_plots.py`
 |---|---|
 | ![fp undamaged](reports/results/plots/fp_on_undamaged.png) | ![froc](reports/results/plots/froc.png) |
 
-| Ensemble recovers det-v1 robustness + keeps masks | Temporal confirmation removes ~70% of transient false alarms |
+| Ensemble recovers det-v1 robustness + keeps masks | OOD gate defers the unfamiliar frames to a human |
 |---|---|
-| ![ensemble](reports/results/plots/ensemble_comparison.png) | ![temporal](reports/results/plots/temporal_reduction.png) |
+| ![ensemble](reports/results/plots/ensemble_comparison.png) | ![ood gate](reports/results/plots/ood_gate.png) |
+
+| Temporal confirmation removes ~70% of transient false alarms |
+|---|
+| ![temporal](reports/results/plots/temporal_reduction.png) |
 
 The FROC tells the honest story at a glance: the simple detector (`det v1`) sits
 top-left (≈0.97 recall at ~0 false positives), while the "fancier" segmentation
@@ -217,6 +221,8 @@ python scripts/compare_methods.py --images <test_imgs> --labels <test_lbls> --yo
 python scripts/adversarial_eval.py --yolo-weights models/yolo_damage_v1.pt --out reports/results/adversarial   # FP on undamaged + FROC
 # Combine the robust detector with the segmenter (det proposes, seg confirms):
 python scripts/eval_ensemble.py --det models/yolo_damage_v1.pt --seg models/yolo_damage_seg_v3.pt --out reports/results/ensemble
+# Out-of-distribution gate — flag unfamiliar frames for human review:
+python scripts/eval_ood_gate.py --patchcore-model models/patchcore_normal_net --out reports/results/ood_gate
 python scripts/make_plots.py        # turn results into figures
 ```
 
@@ -303,6 +309,7 @@ net-inspection-cv/
     patchcore.py                 foundation-model anomaly (pretrained-CNN PatchCore)
     dino_backbone.py             self-supervised DINOv2 backbone for PatchCore (SSL-vs-supervised ablation)
     ensemble.py                  det-proposes / seg-confirms agreement ensemble (det-v1 robustness + masks)
+    ood_gate.py                  out-of-distribution gate — defer unfamiliar frames to human review
     temporal.py                  IoU tracker — confirm detections that persist
     compose.py                   composite photorealistic damage + hard negatives onto REAL frames
     inference.py                 unified facade over all methods (used everywhere)
@@ -552,7 +559,7 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 - **Production-shaped serving:** path-traversal-safe, upload validation, structured logging + request IDs, `/health` `/ready` `/metrics`, no-leak error handling.
 - **Torch-free ONNX inference** (`onnx_infer.py`, parity-verified) + a **streaming pipeline** (`stream_inspect.py`) that emits one confirmed-damage alert per new track.
 - **Ops artifacts:** model card, deployment/SLO runbook, data-collection protocol, and a self-critical [production-readiness scorecard](reports/PRODUCTION_READINESS.md).
-- Tests (55) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, **ONNX**, and the **self-supervised DINOv2 backbone**.
+- Tests (58) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, **ONNX**, and the **self-supervised DINOv2 backbone**.
 
 **Placeholder / synthetic (clearly marked):**
 

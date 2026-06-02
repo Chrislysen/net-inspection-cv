@@ -1,0 +1,21 @@
+{
+  "threshold": 2.698587703704834,
+  "percentile": 95.0,
+  "sets": {
+    "in-clip (training backgrounds)": {
+      "frames": 35,
+      "flag_rate": 0.057,
+      "mean_score": 2.229
+    },
+    "same site, other clip": {
+      "frames": 35,
+      "flag_rate": 0.0,
+      "mean_score": 2.213
+    },
+    "different DAY": {
+      "frames": 35,
+      "flag_rate": 1.0,
+      "mean_score": 3.165
+    }
+  }
+}

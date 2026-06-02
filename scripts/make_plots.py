@@ -160,6 +160,25 @@ def plot_ensemble(out: Path):
     fig.tight_layout(); fig.savefig(out / "ensemble_comparison.png", dpi=130); plt.close(fig)
 
 
+def plot_ood_gate(out: Path):
+    d = _load(RESULTS / "ood_gate" / "ood_gate.json")
+    if not d:
+        return
+    sets = list(d["sets"].keys())
+    rates = [d["sets"][s]["flag_rate"] for s in sets]
+    cols = ["#55A868", "#4C72B0", "#C44E52"]
+    fig, ax = plt.subplots(figsize=(7, 4.2))
+    bars = ax.bar(range(len(sets)), rates, color=cols[: len(sets)])
+    for b, v in zip(bars, rates):
+        ax.text(b.get_x() + b.get_width() / 2, v + 0.02, f"{v:.0%}", ha="center", fontweight="bold")
+    ax.set_xticks(range(len(sets)))
+    ax.set_xticklabels([s.replace(" (", "\n(").replace(", ", ",\n") for s in sets], fontsize=8.5)
+    ax.set_ylim(0, 1.1); ax.set_ylabel("Frames flagged for human review")
+    ax.set_title("OOD gate defers exactly the unfamiliar frames\n(calibrated on in-distribution; flags 100% of the different day)")
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout(); fig.savefig(out / "ood_gate.png", dpi=130); plt.close(fig)
+
+
 def plot_temporal(out: Path):
     d = _load(RESULTS / "temporal" / "temporal.json")
     if not d:
@@ -185,7 +204,7 @@ def main() -> None:
     out = ensure_dir(args.out)
     made = []
     for fn in (plot_label_free_ladder, plot_method_metrics, plot_froc,
-               plot_fp_undamaged, plot_ensemble, plot_temporal):
+               plot_fp_undamaged, plot_ensemble, plot_ood_gate, plot_temporal):
         try:
             fn(out)
             made.append(fn.__name__)
