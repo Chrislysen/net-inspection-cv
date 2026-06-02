@@ -99,7 +99,7 @@ def plot_froc(out: Path):
                             fontsize=7, xytext=(3, 3), textcoords="offset points")
     ax.set_xlabel("False positives per undamaged frame (different-day)")
     ax.set_ylabel("Recall on damage")
-    ax.set_title("FROC — operating curve (labels = conf threshold)\nleft/up is better; the bigger seg-gpu (3-clip) joins det v1 at ~0 FP")
+    ax.set_title("FROC — operating curve (labels = conf threshold)\nleft/up is better; det v1 anchors low-FP, the bigger seg-gpu trades FP for higher recall")
     ax.legend(); ax.grid(alpha=0.3)
     fig.tight_layout(); fig.savefig(out / "froc.png", dpi=130); plt.close(fig)
 
@@ -127,7 +127,7 @@ def plot_fp_undamaged(out: Path):
         ax.bar(x + off * w, rates, w, label=label, color=col)
     ax.set_xticks(x); ax.set_xticklabels([s.replace(" (", "\n(") for s in sets], fontsize=8)
     ax.set_ylabel("False-positive frame rate")
-    ax.set_title("False positives on REAL UNDAMAGED net (lower is better)\nnano seg overfired OOD (18-31%); a bigger yolov8s on 3 real clips (seg-gpu) hits 1%")
+    ax.set_title("False positives on REAL UNDAMAGED net (lower is better)\nnano seg overfired OOD (18-31%); a bigger yolov8s on 3 real clips (seg-gpu) cuts it to 11%")
     ax.legend(); ax.grid(axis="y", alpha=0.3)
     fig.tight_layout(); fig.savefig(out / "fp_on_undamaged.png", dpi=130); plt.close(fig)
 
@@ -160,7 +160,7 @@ def plot_ensemble(out: Path):
         ax.set_xticklabels([m.replace(" (", "\n(") for m in models], fontsize=9)
         ax.grid(axis="y", alpha=0.3)
     a1.set_ylim(0, max(0.25, max(fp_rates) * 1.25)); a2.set_ylim(0, 1.05)
-    fig.suptitle("Ensemble = detector's robustness + segmenter's masks (no retraining)", fontsize=11)
+    fig.suptitle("Precision/recall trade-off: ensemble drives FP to ~0 but inherits the detector's low recall", fontsize=10.5)
     fig.tight_layout(); fig.savefig(out / "ensemble_comparison.png", dpi=130); plt.close(fig)
 
 
