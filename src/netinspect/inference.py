@@ -19,7 +19,7 @@ from .utils import BBox, get_logger, optional_import
 
 LOGGER = get_logger()
 
-METHODS = ("classical", "anomaly", "patchcore", "yolo")
+METHODS = ("classical", "anomaly", "patchcore", "yolo", "ensemble")
 
 
 @dataclass
@@ -59,14 +59,17 @@ class NetInspector:
     def __init__(self, classical_cfg: ClassicalConfig | None = None,
                  anomaly_model_path: str | Path | None = None,
                  patchcore_model_path: str | Path | None = None,
-                 yolo_weights: str | Path | None = None):
+                 yolo_weights: str | Path | None = None,
+                 seg_weights: str | Path | None = None):
         self.classical_cfg = classical_cfg or ClassicalConfig()
         self._anomaly_path = str(anomaly_model_path) if anomaly_model_path else None
         self._patchcore_path = str(patchcore_model_path) if patchcore_model_path else None
         self._yolo_weights = str(yolo_weights) if yolo_weights else None
+        self._seg_weights = str(seg_weights) if seg_weights else None
         self._anomaly_model = None
         self._patchcore_model = None
         self._yolo_model = None
+        self._seg_model = None
 
     # -- availability -------------------------------------------------------
     def available_methods(self) -> list[str]:
@@ -79,6 +82,10 @@ class NetInspector:
         if self._yolo_weights and Path(self._yolo_weights).exists() \
                 and optional_import("ultralytics") is not None:
             methods.append("yolo")
+        if self._yolo_weights and self._seg_weights \
+                and Path(self._yolo_weights).exists() and Path(self._seg_weights).exists() \
+                and optional_import("ultralytics") is not None:
+            methods.append("ensemble")
         return methods
 
     # -- lazy loaders -------------------------------------------------------
@@ -93,6 +100,12 @@ class NetInspector:
             from .patchcore import PatchCoreModel
             self._patchcore_model = PatchCoreModel.load(self._patchcore_path)
         return self._patchcore_model
+
+    def _seg(self):
+        if self._seg_model is None:
+            from .model_baseline import load_model
+            self._seg_model = load_model(self._seg_weights)
+        return self._seg_model
 
     def _yolo(self):
         if self._yolo_model is None:
@@ -125,6 +138,16 @@ class NetInspector:
             boxes = [b for b in pr.boxes if b.score >= conf]
             heatmap = pc_heatmap(image_rgb, pr, self._patchcore())
             meta = {"max_score": pr.max_score, "threshold": self._patchcore().threshold}
+        elif method == "ensemble":
+            from .ensemble import EnsembleConfig, combine
+            from .model_baseline import YoloConfig, predict_image
+            det = predict_image(self._yolo(), image_rgb, YoloConfig(conf=0.01, iou=0.5))
+            seg = predict_image(self._seg(), image_rgb, YoloConfig(conf=0.01, iou=0.5))
+            ecfg = EnsembleConfig(det_conf=conf, seg_conf=conf, mode="agree")
+            boxes = combine(det, seg, ecfg)
+            heatmap = None
+            meta = {"det_weights": self._yolo_weights, "seg_weights": self._seg_weights,
+                    "rule": "det proposes, seg confirms (box agreement)"}
         else:  # yolo
             from .model_baseline import YoloConfig, predict_image
             boxes = predict_image(self._yolo(), image_rgb,

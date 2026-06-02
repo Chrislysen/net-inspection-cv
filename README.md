@@ -28,10 +28,11 @@ tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
 | | |
 |---|---|
 | **Problem** | Flag holes/tears/abnormal regions in underwater fish-farm net footage to support (not replace) human inspection. |
-| **Methods compared** | Classical OpenCV heuristic · hand-crafted patch-Mahalanobis anomaly · **PatchCore** (pretrained-CNN anomaly, label-free) · **YOLOv8** detection + **YOLOv8-seg** (supervised). |
+| **Methods compared** | Classical OpenCV heuristic · hand-crafted patch-Mahalanobis anomaly · **PatchCore** (pretrained-CNN anomaly, label-free; supervised-ResNet vs self-supervised-DINOv2 backbone ablation) · **YOLOv8** detection + **YOLOv8-seg** (supervised) · **det∧seg agreement ensemble**. |
 | **Data** | Synthetic demo (pipeline test) · **SOLAQUA** real ROV footage of *undamaged* nets (SINTEF, CC BY-SA 4.0) · **synthetic damage composited onto real net frames** for trainable, labelled, comparable data. |
 | **Key result (proxy)** | Damage-localisation F1 on the composite test set: anomaly **0.12** → classical **0.50** → PatchCore **0.78** (label-free) → YOLOv8 **0.97**. |
 | **Honesty check** | The trained YOLO fires on **0%** of real *undamaged* frames (its own training backgrounds) and **1%** on a different day, holding F1≈0.97 — ruling out background/artifact "cheating". |
+| **Robustness work** | Caught a seg-model out-of-distribution regression (31% different-day false alarms), fixed most of it with multi-clip training (→18%); a stronger-augmentation follow-up **failed** (→22%, reported as a negative result); a **det∧seg agreement ensemble** then recovered the detector's **1%** false-alarm rate *and* 0.976 recall while keeping masks. |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **51 passing tests** · GitHub Actions CI · committed models. |
@@ -122,6 +123,21 @@ holds F1≈0.97 across in-clip/cross-clip/different-day — ruling out the cheap
 "keying on background/artifacts" failure. **Temporal confirmation** removes a
 further **70%** of transient false alarms on real undamaged video.
 
+**Closing the different-day gap — an agreement ensemble (no retraining).** The
+segmentation model adds masks but fires on 18% of *different-day* undamaged frames
+(vs the detector's 1%). Letting the **detector propose and the segmenter confirm**
+(keep a box only if both models agree) recovers the detector's robustness *and*
+recall while keeping masks — the deployable "best of both":
+
+| Held-out different day | det v1 | seg v3 | **ensemble (det∧seg)** |
+|---|---|---|---|
+| Undamaged false-positive rate | 1% | 18% | **1%** |
+| Damage recall (F1) | 0.976 | 0.912 | **0.976** |
+
+The ensemble keeps the detector's 1% out-of-distribution false-positive rate *and*
+its recall while contributing masks where both models agree — see the
+[ensemble comparison figure](reports/results/plots/ensemble_comparison.png) below.
+
 > **Read these honestly.** Synthetic metrics only verify the pipeline. SOLAQUA
 > frames are real but **undamaged/unlabelled** (false-alarm & anomaly behaviour
 > only). The YOLO numbers are on **synthetic damage composited on real
@@ -144,9 +160,9 @@ Generated from the committed result JSONs by `python scripts/make_plots.py`
 |---|---|
 | ![fp undamaged](reports/results/plots/fp_on_undamaged.png) | ![froc](reports/results/plots/froc.png) |
 
-| Temporal confirmation removes ~70% of transient false alarms |
-|---|
-| ![temporal](reports/results/plots/temporal_reduction.png) |
+| Ensemble recovers det-v1 robustness + keeps masks | Temporal confirmation removes ~70% of transient false alarms |
+|---|---|
+| ![ensemble](reports/results/plots/ensemble_comparison.png) | ![temporal](reports/results/plots/temporal_reduction.png) |
 
 The FROC tells the honest story at a glance: the simple detector (`det v1`) sits
 top-left (≈0.97 recall at ~0 false positives), while the "fancier" segmentation
@@ -194,6 +210,8 @@ python scripts/compare_methods.py --images <test_imgs> --labels <test_lbls> --yo
 **4. Decide whether to trust a model (before deploying).**
 ```powershell
 python scripts/adversarial_eval.py --yolo-weights models/yolo_damage_v1.pt --out reports/results/adversarial   # FP on undamaged + FROC
+# Combine the robust detector with the segmenter (det proposes, seg confirms):
+python scripts/eval_ensemble.py --det models/yolo_damage_v1.pt --seg models/yolo_damage_seg_v3.pt --out reports/results/ensemble
 python scripts/make_plots.py        # turn results into figures
 ```
 
@@ -279,6 +297,7 @@ net-inspection-cv/
     anomaly.py                   normal-net anomaly model (patch Mahalanobis)
     patchcore.py                 foundation-model anomaly (pretrained-CNN PatchCore)
     dino_backbone.py             self-supervised DINOv2 backbone for PatchCore (SSL-vs-supervised ablation)
+    ensemble.py                  det-proposes / seg-confirms agreement ensemble (det-v1 robustness + masks)
     temporal.py                  IoU tracker — confirm detections that persist
     compose.py                   composite photorealistic damage + hard negatives onto REAL frames
     inference.py                 unified facade over all methods (used everywhere)

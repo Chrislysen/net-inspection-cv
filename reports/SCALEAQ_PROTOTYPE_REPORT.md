@@ -348,7 +348,11 @@ do.
 
 ### 5.7 Stronger methods and adversarial rigor
 
-Three upgrades push the prototype well past a first pass, each measured honestly.
+Several upgrades push the prototype well past a first pass, each measured honestly —
+a foundation-model anomaly detector, an adversarial "is it cheating?" suite,
+temporal confirmation, a caught-and-fixed segmentation regression, a stronger-
+augmentation experiment that *failed*, a detector∧segmenter agreement ensemble that
+resolves it, and a self-supervised-vs-supervised feature ablation.
 
 **Foundation-model anomaly (PatchCore).** Replacing the 6-feature hand-crafted
 model with patch embeddings from a pretrained ResNet (memory bank + nearest-
@@ -450,6 +454,25 @@ damage signal — not more augmentation. **`seg v3` remains the best segmenter a
 `det v1` the most robust detector.** I am reporting this as a negative result
 rather than quietly dropping the run — the experiment that fails is part of the
 record.
+
+**The practical fix — an agreement ensemble (best of both, measured).** The
+det-vs-seg tension has a clean resolution that needs *no* retraining: let the
+robust detector **propose** and the segmenter **confirm** (keep a `det v1` box only
+if `seg v3` also fires on it, box IoU ≥ 0.3), in `src/netinspect/ensemble.py`. A
+region flagged by two independently-trained models is far less likely to be a
+shared spurious cue. Measured head-to-head (`scripts/eval_ensemble.py`):
+
+| Held-out different day | det v1 | seg v3 | **ensemble (det∧seg)** |
+|---|---|---|---|
+| Undamaged false-positive rate | 1% | 18% | **1%** |
+| Damage recall (F1) | 0.976 | 0.912 | **0.976** |
+
+The ensemble keeps the detector's **1%** out-of-distribution false-positive rate
+*and* its **0.976** recall — recovering the robustness the standalone segmenter
+lost — while contributing segmentation masks wherever the two models agree. That is
+the deployable answer to "masks *or* robustness?": **both**, at the cost of a second
+forward pass. It is wired into the inference facade and the web console as its own
+method.
 
 **Self-supervised features — a label-free probe of the deferred SSL idea.** A
 documented next step is self-supervised pretraining on the unlabelled SOLAQUA

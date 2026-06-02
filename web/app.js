@@ -1,11 +1,18 @@
 /* NET-INSPECT // ROV CONSOLE — client logic */
 const $ = (id) => document.getElementById(id);
 const METHOD_META = {
-  classical: { label: "CLASSICAL", sub: "OpenCV heuristic" },
-  anomaly:   { label: "ANOMALY",   sub: "Mahalanobis" },
-  patchcore: { label: "PATCHCORE", sub: "foundation" },
-  yolo:      { label: "YOLO",      sub: "supervised" },
+  classical: { label: "CLASSICAL", sub: "OpenCV heuristic",
+    info: "Explainable OpenCV baseline (darkness + low-edge-density + texture gate). No training; a fast difficulty probe. Tops out ~F1 0.50 — fires on shadows/fouling." },
+  anomaly:   { label: "ANOMALY",   sub: "Mahalanobis",
+    info: "Hand-crafted patch-Mahalanobis 'normal-net' model. Label-free but a weak localiser (F1 0.12); flags deviation, not confirmed damage." },
+  patchcore: { label: "PATCHCORE", sub: "foundation",
+    info: "PatchCore on pretrained-CNN features — label-free, F1 ~0.78. Strong image-level screen (AUROC ~1.0); see the DINOv2-vs-ResNet ablation in the report." },
+  yolo:      { label: "YOLO",      sub: "supervised",
+    info: "YOLOv8 detector (det v1) trained on synthetic-damage-on-real frames. The most robust model: 1% false alarms on a different day, F1 ≈ 0.97." },
+  ensemble:  { label: "ENSEMBLE",  sub: "det∧seg agree",
+    info: "det v1 proposes, the segmenter confirms (box agreement). Keeps the detector's 1% different-day false-alarm rate AND its recall, while adding masks — no retraining." },
 };
+const METHOD_ORDER = ["classical", "anomaly", "patchcore", "yolo", "ensemble"];
 
 const state = { sources: [], methods: [], method: "yolo", source: null,
                 frames: [], idx: 0, conf: 0.25, busy: false };
@@ -64,7 +71,7 @@ async function boot() {
 function renderMethods() {
   const grid = $("methodGrid");
   grid.innerHTML = "";
-  for (const m of ["classical", "anomaly", "patchcore", "yolo"]) {
+  for (const m of METHOD_ORDER) {
     const meta = METHOD_META[m];
     const on = state.methods.includes(m);
     const btn = document.createElement("button");
@@ -73,6 +80,8 @@ function renderMethods() {
     if (on) btn.onclick = () => { state.method = m; renderMethods(); infer(); };
     grid.appendChild(btn);
   }
+  const ex = $("methodExplain");
+  if (ex) ex.textContent = (METHOD_META[state.method] || {}).info || "";
 }
 
 async function loadSource(name) {

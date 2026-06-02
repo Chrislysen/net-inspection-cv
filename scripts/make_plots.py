@@ -128,6 +128,38 @@ def plot_fp_undamaged(out: Path):
     fig.tight_layout(); fig.savefig(out / "fp_on_undamaged.png", dpi=130); plt.close(fig)
 
 
+def plot_ensemble(out: Path):
+    d = _load(RESULTS / "ensemble" / "ensemble.json")
+    if not d:
+        return
+    import numpy as np
+    models = ["det v1", "seg v3", "ensemble (det∧seg)"]
+    fp = d["false_positives_on_undamaged"]
+    rec = d["recall_by_distance"]
+    # Different-day is the OOD test that matters; show FP rate and recall side by side.
+    fp_rates = [fp[m].get("different DAY", {}).get("fp_frame_rate", 0) for m in models]
+    recalls = [rec[m].get("different-day", {}).get("f1", 0) for m in models]
+    cols = ["#C44E52", "#55A868", "#8172B3"]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(9.5, 4.2))
+    b1 = a1.bar(range(len(models)), fp_rates, color=cols)
+    a1.set_title("Different-day FALSE-POSITIVE rate\n(undamaged net — lower is better)")
+    a1.set_ylabel("FP frame rate")
+    for b, v in zip(b1, fp_rates):
+        a1.text(b.get_x() + b.get_width() / 2, v + 0.005, f"{v:.0%}", ha="center", fontweight="bold")
+    b2 = a2.bar(range(len(models)), recalls, color=cols)
+    a2.set_title("Different-day damage RECALL (F1)\n(higher is better)")
+    a2.set_ylabel("F1")
+    for b, v in zip(b2, recalls):
+        a2.text(b.get_x() + b.get_width() / 2, v + 0.01, f"{v:.2f}", ha="center", fontweight="bold")
+    for ax in (a1, a2):
+        ax.set_xticks(range(len(models)))
+        ax.set_xticklabels([m.replace(" (", "\n(") for m in models], fontsize=9)
+        ax.grid(axis="y", alpha=0.3)
+    a1.set_ylim(0, max(0.25, max(fp_rates) * 1.25)); a2.set_ylim(0, 1.05)
+    fig.suptitle("Ensemble = detector's robustness + segmenter's masks (no retraining)", fontsize=11)
+    fig.tight_layout(); fig.savefig(out / "ensemble_comparison.png", dpi=130); plt.close(fig)
+
+
 def plot_temporal(out: Path):
     d = _load(RESULTS / "temporal" / "temporal.json")
     if not d:
@@ -153,7 +185,7 @@ def main() -> None:
     out = ensure_dir(args.out)
     made = []
     for fn in (plot_label_free_ladder, plot_method_metrics, plot_froc,
-               plot_fp_undamaged, plot_temporal):
+               plot_fp_undamaged, plot_ensemble, plot_temporal):
         try:
             fn(out)
             made.append(fn.__name__)

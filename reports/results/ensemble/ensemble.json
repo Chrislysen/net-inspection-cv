@@ -1,0 +1,127 @@
+{
+  "config": {
+    "det": "models/yolo_damage_v1.pt",
+    "seg": "models/yolo_damage_seg_v3.pt",
+    "det_conf": 0.25,
+    "seg_conf": 0.25,
+    "agree_iou": 0.3,
+    "iou": 0.3,
+    "imgsz": 640,
+    "out": "reports/results/ensemble"
+  },
+  "false_positives_on_undamaged": {
+    "det v1": {
+      "bag1 (train backgrounds)": {
+        "frames": 38,
+        "detections": 0,
+        "mean_per_frame": 0.0,
+        "fp_frame_rate": 0.0
+      },
+      "bag2 (same site, other clip)": {
+        "frames": 120,
+        "detections": 0,
+        "mean_per_frame": 0.0,
+        "fp_frame_rate": 0.0
+      },
+      "different DAY": {
+        "frames": 80,
+        "detections": 1,
+        "mean_per_frame": 0.013,
+        "fp_frame_rate": 0.013
+      }
+    },
+    "seg v3": {
+      "bag1 (train backgrounds)": {
+        "frames": 38,
+        "detections": 0,
+        "mean_per_frame": 0.0,
+        "fp_frame_rate": 0.0
+      },
+      "bag2 (same site, other clip)": {
+        "frames": 120,
+        "detections": 3,
+        "mean_per_frame": 0.025,
+        "fp_frame_rate": 0.025
+      },
+      "different DAY": {
+        "frames": 80,
+        "detections": 15,
+        "mean_per_frame": 0.188,
+        "fp_frame_rate": 0.175
+      }
+    },
+    "ensemble (det\u2227seg)": {
+      "bag1 (train backgrounds)": {
+        "frames": 38,
+        "detections": 0,
+        "mean_per_frame": 0.0,
+        "fp_frame_rate": 0.0
+      },
+      "bag2 (same site, other clip)": {
+        "frames": 120,
+        "detections": 0,
+        "mean_per_frame": 0.0,
+        "fp_frame_rate": 0.0
+      },
+      "different DAY": {
+        "frames": 80,
+        "detections": 1,
+        "mean_per_frame": 0.013,
+        "fp_frame_rate": 0.013
+      }
+    }
+  },
+  "recall_by_distance": {
+    "det v1": {
+      "in-clip": {
+        "precision": 0.958,
+        "recall": 0.979,
+        "f1": 0.968
+      },
+      "cross-clip (bag2)": {
+        "precision": 0.981,
+        "recall": 0.976,
+        "f1": 0.979
+      },
+      "different-day": {
+        "precision": 0.976,
+        "recall": 0.976,
+        "f1": 0.976
+      }
+    },
+    "seg v3": {
+      "in-clip": {
+        "precision": 0.938,
+        "recall": 0.957,
+        "f1": 0.947
+      },
+      "cross-clip (bag2)": {
+        "precision": 0.963,
+        "recall": 0.976,
+        "f1": 0.97
+      },
+      "different-day": {
+        "precision": 0.85,
+        "recall": 0.984,
+        "f1": 0.912
+      }
+    },
+    "ensemble (det\u2227seg)": {
+      "in-clip": {
+        "precision": 0.958,
+        "recall": 0.979,
+        "f1": 0.968
+      },
+      "cross-clip (bag2)": {
+        "precision": 0.981,
+        "recall": 0.976,
+        "f1": 0.979
+      },
+      "different-day": {
+        "precision": 0.976,
+        "recall": 0.976,
+        "f1": 0.976
+      }
+    }
+  }
+}
