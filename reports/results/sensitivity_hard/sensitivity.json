@@ -1,0 +1,63 @@
+{
+  "weights": "models/yolo_damage_seg_gpu.pt",
+  "composited": "data/processed/hard_composite/images/test",
+  "undamaged": "data/processed/solaqua_diffday",
+  "sweep": [
+    {
+      "conf": 0.05,
+      "recall": 0.92,
+      "precision": 0.958,
+      "f1": 0.939,
+      "undamaged_fp_rate": 0.075
+    },
+    {
+      "conf": 0.1,
+      "recall": 0.9,
+      "precision": 0.978,
+      "f1": 0.938,
+      "undamaged_fp_rate": 0.035
+    },
+    {
+      "conf": 0.15,
+      "recall": 0.9,
+      "precision": 0.978,
+      "f1": 0.938,
+      "undamaged_fp_rate": 0.015
+    },
+    {
+      "conf": 0.2,
+      "recall": 0.9,
+      "precision": 0.978,
+      "f1": 0.938,
+      "undamaged_fp_rate": 0.015
+    },
+    {
+      "conf": 0.3,
+      "recall": 0.9,
+      "precision": 1.0,
+      "f1": 0.947,
+      "undamaged_fp_rate": 0.0
+    },
+    {
+      "conf": 0.4,
+      "recall": 0.88,
+      "precision": 1.0,
+      "f1": 0.936,
+      "undamaged_fp_rate": 0.0
+    },
+    {
+      "conf": 0.5,
+      "recall": 0.82,
+      "precision": 1.0,
+      "f1": 0.901,
+      "undamaged_fp_rate": 0.0
+    },
+    {
+      "conf": 0.6,
+      "recall": 0.8,
+      "precision": 1.0,
+      "f1": 0.889,
+      "undamaged_fp_rate": 0.0
+    }
+  ]
+}

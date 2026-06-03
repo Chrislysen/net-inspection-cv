@@ -32,6 +32,10 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--multiclass", action="store_true",
                     help="Keep hole/tear subtypes (default: single 'damage' class)")
+    ap.add_argument("--hard", action="store_true",
+                    help="SUBTLE stress test: small, low-contrast damage (barely darker "
+                         "than the net), no bright frayed rim, and more dark-but-textured "
+                         "hard negatives — much harder to tell from intact net.")
     args = ap.parse_args()
 
     frames: list = []
@@ -45,7 +49,16 @@ def main() -> None:
         print(f"No frames in {args.frames}. Run scripts/fetch_solaqua.py first.")
         return
 
-    cfg = ComposeConfig(single_class=not args.multiclass)
+    if args.hard:
+        # Subtle, small, low-contrast damage that barely differs from intact net,
+        # no obvious frayed rim, and more dark-but-textured distractors. A genuine
+        # "can the model still tell?" stress test (NOT more realistic — just harder).
+        cfg = ComposeConfig(single_class=not args.multiclass,
+                            hole_frac_range=(0.02, 0.05), tear_len_range=(0.06, 0.13),
+                            tear_width_range=(0.008, 0.018), darkness=0.62, fray=False,
+                            hard_negatives=(3, 6))
+    else:
+        cfg = ComposeConfig(single_class=not args.multiclass)
     info = build_dataset(frames, args.out, damaged_fraction=args.damaged_fraction,
                          max_damage_per_image=args.max_damage, seg=args.seg,
                          seed=args.seed, cfg=cfg)
