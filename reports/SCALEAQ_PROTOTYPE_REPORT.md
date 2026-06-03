@@ -567,6 +567,33 @@ change, not a research project: point `scripts/pretrain_ssl.py --device cuda` at
 **full** SOLAQUA video (hours of footage ≈ 10⁴–10⁵ frames) with a long schedule.
 The experiment is built and runnable; the data scale is the remaining lever.
 
+**Subtle-damage stress test + sensitivity dial.** To probe how far the detector can
+be pushed, `make_real_dataset.py --hard` composites **deliberately harder** damage:
+small, low-contrast openings that barely differ from the net, *no* bright frayed
+rim, and more dark-but-textured distractors (`scripts/eval_sensitivity.py` sweeps
+the confidence threshold). Two honest takeaways:
+
+| seg-gpu, held-out day | recall on **subtle** damage | recall on normal damage | undamaged false-alarm rate |
+|---|---|---|---|
+| conf 0.6 (cautious) | 0.80 | 0.96 | 0% |
+| conf 0.3 | 0.90 | 0.96 | 0% |
+| conf 0.15 (sensitive) | 0.90 | 0.96 | 2% |
+| conf 0.05 (very sensitive) | 0.92 | 0.96 | 8% |
+
+1. **Subtle damage is genuinely harder** — at a cautious threshold recall falls
+   0.96 → 0.80; the model is not magic, the harder data exposes it.
+2. **Sensitivity is a dial, and it behaves sanely** — lowering the threshold
+   recovers subtle-damage recall (0.80 → 0.92) at a measured false-alarm cost
+   (0% → 8%). A good operating point is **conf ≈ 0.2–0.3: ~90% of even subtle
+   damage at ≤2% false alarms.** Going more sensitive buys little recall for a lot
+   of false alarms.
+
+For net inspection a *missed* hole (fish escape) usually costs more than a false
+alarm, so leaning sensitive + human-in-the-loop is defensible — but that is a
+**stakeholder decision on real labelled data**, not a default, and "more sensitive"
+is not "more production-ready". Training *on* the harder set (`--hard`, GPU) is the
+next step to push subtle-damage recall further; the data and the dial are built.
+
 ### 5.8 Closing the out-of-distribution gap — what worked, what didn't, what's left
 
 Pulling the robustness thread together, here is the honest ledger of *every*

@@ -250,6 +250,12 @@ python scripts/adversarial_eval.py --yolo-weights models/yolo_damage_v1.pt --out
 python scripts/eval_ensemble.py --det models/yolo_damage_v1.pt --seg models/yolo_damage_seg_v3.pt --out reports/results/ensemble
 # Out-of-distribution gate — flag unfamiliar frames for human review:
 python scripts/eval_ood_gate.py --patchcore-model models/patchcore_normal_net --out reports/results/ood_gate
+
+# Subtle-damage stress test (--hard = small, low-contrast damage) + sensitivity dial:
+python scripts/make_real_dataset.py --frames data/processed/solaqua_diffday --out data/processed/hard_composite --hard
+python scripts/eval_sensitivity.py --yolo-weights models/yolo_damage_seg_gpu.pt \
+    --composited data/processed/hard_composite/images/test data/processed/hard_composite/labels/test \
+    --undamaged data/processed/solaqua_diffday --out reports/results/sensitivity_hard   # recall vs false-alarms by conf
 python scripts/make_plots.py        # turn results into figures
 ```
 
