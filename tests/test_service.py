@@ -30,6 +30,8 @@ def client():
 def test_health_and_ready(client):
     h = client.get("/api/health").json()
     assert h["status"] == "ok" and "classical" in h["methods"]
+    # console capabilities surfaced for an intuitive UI
+    assert "source_info" in h and "ood_gate" in h
     r = client.get("/api/ready")
     assert r.status_code == 200 and r.json()["ready"] is True
     assert "X-Request-ID" in r.headers

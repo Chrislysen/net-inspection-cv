@@ -62,6 +62,16 @@ FRAME_SOURCES = {
     "Synthetic demo": "data/sample/images",
 }
 
+# One-line "what am I looking at" per source — surfaced in the console.
+SOURCE_INFO = {
+    "SOLAQUA bag1 (real, undamaged)": "Real ROV footage the models trained on. Undamaged — a detector should fire ~never.",
+    "SOLAQUA bag2 (real, undamaged)": "Real, same site, a different clip. Undamaged — tests for false alarms.",
+    "SOLAQUA different-day (real)": "Real, a DIFFERENT day (held-out). Undamaged — the honest out-of-distribution test.",
+    "Composited damage on real net": "Synthetic damage pasted on real net (labelled). The only frames here that contain 'damage'.",
+    "Contiguous sequence (video)": "A continuous clip — use temporal confirmation to drop flicker false alarms.",
+    "Synthetic demo": "Procedural placeholder data. Verifies the pipeline only, not real-world skill.",
+}
+
 
 class _Metrics:
     """Tiny in-process metrics store (single-process prototype)."""
@@ -106,6 +116,28 @@ class _Metrics:
 
 def _available_sources():
     return {name: rel for name, rel in FRAME_SOURCES.items() if list_images(REPO / rel)}
+
+
+def _ood_method(inspector):
+    """Cheapest available out-of-distribution signal: anomaly, else patchcore."""
+    avail = inspector.available_methods()
+    for m in ("anomaly", "patchcore"):
+        if m in avail:
+            return m
+    return None
+
+
+def _ood_status(inspector, img):
+    """Run the OOD gate: is this frame unlike the training net? -> human review."""
+    m = _ood_method(inspector)
+    if m is None:
+        return None
+    r = inspector.predict(img, method=m)
+    ms, th = r.meta.get("max_score"), r.meta.get("threshold")
+    if ms is None or not th:
+        return None
+    return {"flagged": bool(ms >= th), "score": round(float(ms), 3),
+            "threshold": round(float(th), 3), "via": m}
 
 
 def _png_b64(image: np.ndarray) -> str:
@@ -174,7 +206,10 @@ def build_app(inspector: NetInspector):
     @app.get("/api/health")
     def health():
         return {"status": "ok", "methods": inspector.available_methods(),
-                "sources": list(sources.keys()), "version": app.version}
+                "sources": list(sources.keys()),
+                "source_info": {k: SOURCE_INFO.get(k, "") for k in sources},
+                "ood_gate": _ood_method(inspector) is not None,
+                "version": app.version}
 
     @app.get("/api/ready")
     def ready():
@@ -201,7 +236,8 @@ def build_app(inspector: NetInspector):
 
     @app.get("/api/infer")
     def infer(source: str = Query(...), name: str = Query(...),
-              method: str = Query("yolo"), conf: float = Query(0.25, ge=0.0, le=1.0)):
+              method: str = Query("yolo"), conf: float = Query(0.25, ge=0.0, le=1.0),
+              ood: bool = Query(False)):
         _validate_method(method)
         img = read_image(_resolve(source, name))
         result = inspector.predict(img, method=method, conf=conf)
@@ -210,6 +246,7 @@ def build_app(inspector: NetInspector):
         return JSONResponse({
             "method": method, "frame": Path(name).name, "conf": conf,
             "latency_ms": round(result.elapsed_ms, 1), "count": len(result.boxes),
+            "ood": _ood_status(inspector, img) if ood else None,
             "image_size": {"width": img.shape[1], "height": img.shape[0]},
             "detections": [
                 {"class": b.class_name, "score": round(b.score, 3),
