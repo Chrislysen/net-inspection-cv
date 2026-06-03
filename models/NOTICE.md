@@ -17,6 +17,8 @@ re-training/re-downloading. They are **not** validated damage detectors.
 | `patchcore_normal_net.npz` | PatchCore deep-feature anomaly model (label-free, F1 0.78) |
 | `patchcore_resnet18.npz` | PatchCore with an ImageNet-**supervised** ResNet18 backbone — the baseline arm of the self-supervised-vs-supervised ablation (`reports/results/ssl_dino/`) |
 | `patchcore_dino_vits14.npz` | PatchCore with a **self-supervised** DINOv2 ViT-S/14 backbone — the SSL arm of the same ablation (image-level AUROC 1.00 in-clip / 0.96 different-day; cleaner false-alarm behaviour than ResNet18) |
+| `ssl_resnet18_solaqua.pt` | ResNet18 backbone **SimCLR-pretrained from scratch on 508 unlabelled SOLAQUA training-day frames** (`scripts/pretrain_ssl.py`). Domain SSL proof-of-concept; underperforms transfer at this data scale (see reports/results/ssl_dino/). NOT pretrained on the held-out day. |
+| `patchcore_ssl_solaqua.npz` | PatchCore using the SOLAQUA-SimCLR backbone above (requires `ssl_resnet18_solaqua.pt`). The domain-SSL arm of the 3-way backbone ablation. |
 
 ## How they were produced
 

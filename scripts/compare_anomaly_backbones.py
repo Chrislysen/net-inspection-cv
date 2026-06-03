@@ -166,10 +166,10 @@ def main() -> None:
             fp = m["fp_on_undamaged"]
             md.append(f"| {label} | {bg} | {fp['frames']} | {fp['mean_per_frame']} | "
                       f"{fp['fp_frame_rate']:.0%} |")
-    md.append("\n> DINOv2 here is pretrained on natural images, NOT on SOLAQUA — this "
-              "measures transfer of published self-supervised features, not the deferred "
-              "SOLAQUA-pretraining experiment. Damage is synthetic and the net is "
-              "undamaged: this characterises behaviour, not real-damage performance.")
+    md.append("\n> Backbones: `resnet18` = ImageNet-supervised; `dinov2` = off-the-shelf "
+              "self-supervised on natural images; `ssl-solaqua` = SimCLR pretrained *on the "
+              "unlabelled SOLAQUA frames* (`pretrain_ssl.py`). Damage is synthetic and the net "
+              "is undamaged: this characterises behaviour, not real-damage performance.")
     (out / "ssl_dino.md").write_text("\n".join(md), encoding="utf-8")
     print("\n".join(md))
     print(f"\nWrote {out / 'ssl_dino.md'}")

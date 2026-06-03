@@ -21,7 +21,7 @@
           }
         },
         "different-day": {
-          "image_auroc": 0.994,
+          "image_auroc": 0.824,
           "localisation": {
             "precision": 0.0,
             "recall": 0.0,
@@ -29,9 +29,9 @@
             "ap": 0.0
           },
           "fp_on_undamaged": {
-            "frames": 80,
-            "total_detections": 198,
-            "mean_per_frame": 2.475,
+            "frames": 200,
+            "total_detections": 460,
+            "mean_per_frame": 2.3,
             "fp_frame_rate": 1.0
           }
         }
@@ -56,7 +56,7 @@
           }
         },
         "different-day": {
-          "image_auroc": 0.957,
+          "image_auroc": 0.934,
           "localisation": {
             "precision": 0.0,
             "recall": 0.0,
@@ -64,9 +64,44 @@
             "ap": 0.0
           },
           "fp_on_undamaged": {
-            "frames": 80,
-            "total_detections": 80,
+            "frames": 200,
+            "total_detections": 200,
             "mean_per_frame": 1.0,
+            "fp_frame_rate": 1.0
+          }
+        }
+      }
+    },
+    "ssl-solaqua": {
+      "model": "models/patchcore_ssl_solaqua",
+      "by_set": {
+        "in-clip": {
+          "image_auroc": 0.804,
+          "localisation": {
+            "precision": 0.05,
+            "recall": 0.106,
+            "f1": 0.068,
+            "ap": 0.029
+          },
+          "fp_on_undamaged": {
+            "frames": 38,
+            "total_detections": 171,
+            "mean_per_frame": 4.5,
+            "fp_frame_rate": 0.842
+          }
+        },
+        "different-day": {
+          "image_auroc": 0.612,
+          "localisation": {
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "ap": 0.0
+          },
+          "fp_on_undamaged": {
+            "frames": 200,
+            "total_detections": 210,
+            "mean_per_frame": 1.05,
             "fp_frame_rate": 1.0
           }
         }
