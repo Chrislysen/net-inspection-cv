@@ -39,6 +39,7 @@
     <div class="field">
       <label for="sourceSelect">Frame source</label>
       <select id="sourceSelect"></select>
+      <p class="src-info" id="sourceInfo"></p>
     </div>
 
     <div class="field">
@@ -61,6 +62,11 @@
       <input type="range" id="confSlider" min="0" max="0.9" step="0.05" value="0.25" />
     </div>
 
+    <label class="toggle" id="oodToggleRow" hidden>
+      <input type="checkbox" id="oodToggle" />
+      <span>OOD gate — flag frames unlike the training net for human review</span>
+    </label>
+
     <button class="btn primary" id="compareBtn">Compare all methods</button>
     <p class="note">Frames are real SOLAQUA ROV footage (undamaged net) or synthetic
       damage composited onto real net. Boxes are model output, not ground truth.</p>
@@ -71,6 +77,7 @@
     <div class="viewer-bar">
       <span class="file" id="frameName">—</span>
       <span class="tags">
+        <span class="vp-tag" id="oodBadge" hidden></span>
         <span class="tag" id="vpMethod">—</span>
         <span class="dims" id="frameDims">—</span>
       </span>

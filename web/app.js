@@ -15,7 +15,8 @@ const METHOD_META = {
 const METHOD_ORDER = ["classical", "anomaly", "patchcore", "yolo", "ensemble"];
 
 const state = { sources: [], methods: [], method: "yolo", source: null,
-                frames: [], idx: 0, conf: 0.25, busy: false };
+                frames: [], idx: 0, conf: 0.25, busy: false,
+                sourceInfo: {}, ood: false, oodAvailable: false };
 
 async function api(path) {
   const r = await fetch(path);
@@ -32,8 +33,16 @@ async function boot() {
   try {
     const h = await api("/api/health");
     state.methods = h.methods; state.sources = h.sources;
+    state.sourceInfo = h.source_info || {};
+    state.oodAvailable = !!h.ood_gate;
     $("methodCount").textContent = h.methods.length;
     setStatus("ONLINE", "live");
+
+    // OOD gate toggle (only shown if the server has an anomaly/patchcore model)
+    if (state.oodAvailable) {
+      $("oodToggleRow").hidden = false;
+      $("oodToggle").onchange = (e) => { state.ood = e.target.checked; infer(); };
+    }
 
     // deep-link params: ?source=&frame=&method=&conf=
     const params = new URLSearchParams(location.search);
@@ -86,6 +95,7 @@ function renderMethods() {
 
 async function loadSource(name) {
   state.source = name;
+  $("sourceInfo").textContent = state.sourceInfo[name] || "";
   const d = await api(`/api/frames?source=${encodeURIComponent(name)}`);
   state.frames = d.frames;
   state.idx = (Number.isInteger(state._wantFrame) && state._wantFrame >= 0
@@ -114,8 +124,9 @@ async function infer() {
   $("viewport").classList.add("loading");
   $("compareOut").hidden = true;
   try {
-    const q = `source=${encodeURIComponent(state.source)}&name=${encodeURIComponent(name)}&method=${state.method}&conf=${state.conf}`;
+    const q = `source=${encodeURIComponent(state.source)}&name=${encodeURIComponent(name)}&method=${state.method}&conf=${state.conf}&ood=${state.ood ? 1 : 0}`;
     const r = await api(`/api/infer?${q}`);
+    renderOOD(r.ood);
     $("frameImg").src = r.overlay;
     $("frameDims").textContent = `${r.image_size.width}×${r.image_size.height}`;
     $("latencyHud").textContent = r.latency_ms;
@@ -132,6 +143,21 @@ async function infer() {
   } finally {
     $("viewport").classList.remove("loading");
     state.busy = false;
+  }
+}
+
+function renderOOD(ood) {
+  const el = $("oodBadge");
+  if (!ood) { el.hidden = true; return; }
+  el.hidden = false;
+  if (ood.flagged) {
+    el.textContent = "⚠ OOD · review";
+    el.className = "vp-tag ood-flag";
+    el.title = `Out-of-distribution (score ${ood.score} ≥ ${ood.threshold}, via ${ood.via}) — route to a human`;
+  } else {
+    el.textContent = "✓ in-distribution";
+    el.className = "vp-tag ood-ok";
+    el.title = `In-distribution (score ${ood.score} < ${ood.threshold}, via ${ood.via})`;
   }
 }
 

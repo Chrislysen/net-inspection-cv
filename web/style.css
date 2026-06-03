@@ -140,6 +140,19 @@ input[type=range]::-moz-range-thumb {
 }
 .method-explain:empty { display: none; }
 
+.src-info { margin-top: 8px; font-size: 11.5px; line-height: 1.45; color: var(--muted); }
+.src-info:empty { display: none; }
+
+.toggle {
+  display: flex; align-items: flex-start; gap: 9px; margin: 4px 0 18px;
+  font-size: 12px; line-height: 1.4; color: var(--text); cursor: pointer;
+}
+.toggle[hidden] { display: none; }
+.toggle input { margin-top: 2px; accent-color: var(--primary); width: 15px; height: 15px; }
+
+.vp-tag.ood-flag { background: #fdeede; color: #9a5b00; border: 1px solid #f0d9a8; }
+.vp-tag.ood-ok { background: #f0faf2; color: var(--ok); border: 1px solid #bfe3c6; }
+
 .note {
   margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border);
   font-size: 12px; line-height: 1.55; color: var(--muted);

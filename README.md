@@ -66,10 +66,13 @@ was adopted vs rejected and why) and a code-grounded
 ## Interactive console
 
 A localhost **inspection console** (FastAPI + a custom web UI) ties it all
-together — browse real SOLAQUA frames, switch detector (classical / anomaly /
-PatchCore / YOLO / **ensemble**), adjust confidence live, and compare methods, with
-a per-method explainer, detection table and latency. `python scripts/serve.py` then
-open `http://127.0.0.1:8000`.
+together and is built to be **self-explanatory**: each frame source carries a
+one-line "what am I looking at", each detector a plain-language explainer, and an
+**OOD-gate toggle** shows a live *in-distribution / review-needed* badge per frame
+(the deploy-time safety net). Browse real SOLAQUA frames, switch detector
+(classical / anomaly / PatchCore / YOLO / **ensemble**), adjust confidence live,
+and compare methods — with a detection table and latency. `python scripts/serve.py`
+then open `http://127.0.0.1:8000`.
 
 ![web console](docs/images/webapp_console.png)
 
@@ -91,6 +94,14 @@ open `http://127.0.0.1:8000`.
 **YOLOv8 detecting damage on real net (live `scripts/infer.py` output, confidences shown):**
 
 ![yolo detection](docs/images/yolo_detection_example.jpg)
+
+**Live stream (`scripts/live_inspect.py`) — real-time overlay with temporal confirmation + OOD gate:**
+
+![live inspect](docs/images/live_inspect_example.jpg)
+
+*Status bar shows method · confirmed-defect count · OOD verdict. Here the ensemble
+boxes a damage tear (0.96) and correctly ignores the instrument housing, while the
+**OOD gate flags this different-day frame for review** — the deploy-time safety net.*
 
 **YOLOv8 trained on synthetic damage composited onto real net, evaluated on a held-out clip:**
 
@@ -203,6 +214,21 @@ python scripts/infer.py --method yolo --yolo-weights models/yolo_damage_v1.pt --
 # fewer false alarms via temporal confirmation on a contiguous sequence:
 python scripts/run_temporal.py --method yolo --yolo-weights models/yolo_damage_v1.pt --source data/processed/frames --out outputs/review_temporal
 ```
+
+**1b. Live camera / ROV feed (real-time).** `live_inspect.py` runs any method on an
+**RTSP/HTTP IP camera, a USB webcam, or a video file**, confirms defects over time
+(one alert per *persisting* defect, not per frame), and flags out-of-distribution
+frames for human review:
+```powershell
+# RTSP/ROV stream, ensemble detector, live window + event log:
+python scripts/live_inspect.py --source rtsp://CAMERA_IP/stream --method ensemble \
+    --yolo-weights models/yolo_damage_v1.pt --seg-weights models/yolo_damage_seg_v3.pt \
+    --patchcore-model models/patchcore_normal_net --display --out outputs/live
+# USB webcam 0:  --source 0     # any video file:  --source clip.mp4
+```
+Emits `damage_confirmed` events (`events.jsonl`) with bbox, score and an `ood_review`
+flag. For a ROS-publishing ROV, swap the source for an `rclpy`/`rospy` image
+subscriber and call the same facade per message (see `solaqua.py` for the pattern).
 
 **2. Only have *normal*-net footage, want to flag anything unusual (label-free).**
 ```powershell
@@ -562,7 +588,7 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 - **Adversarial "is it cheating?" evaluation**: false positives on real undamaged net, different-day generalization, FROC curve.
 - **Temporal reasoning**: persistence tracking that removes ~70% of transient false alarms on real video.
 - **Segmentation** (YOLOv8-seg) for masks; **COCO ingestion adapter** (real labelled data drops in); **ONNX export + latency benchmark**.
-- **Interactive web console** (FastAPI + custom UI), Streamlit viewer, batch/video/bag runner, per-class evaluation, CI.
+- **Interactive web console** (FastAPI + custom UI) with self-explanatory source/method descriptions and a live **OOD-gate badge**; Streamlit viewer; batch/video/bag runner; **`live_inspect.py`** real-time RTSP/USB/ROV streaming with temporal confirmation + per-defect alerts; per-class evaluation; CI.
 - **Production-shaped serving:** path-traversal-safe, upload validation, structured logging + request IDs, `/health` `/ready` `/metrics`, no-leak error handling.
 - **Torch-free ONNX inference** (`onnx_infer.py`, parity-verified) + a **streaming pipeline** (`stream_inspect.py`) that emits one confirmed-damage alert per new track.
 - **Ops artifacts:** model card, deployment/SLO runbook, data-collection protocol, and a self-critical [production-readiness scorecard](reports/PRODUCTION_READINESS.md).
