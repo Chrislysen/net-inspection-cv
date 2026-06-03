@@ -544,6 +544,29 @@ and undamaged net — they characterise behaviour, not real-damage accuracy.
 Reproduce: `scripts/compare_anomaly_backbones.py` (results in
 `reports/results/ssl_dino/`).
 
+**Domain SSL pretraining — implemented, run, and honestly not yet worth it.** The
+"still-deferred GPU step" above is no longer deferred: `src/netinspect/ssl_pretrain.py`
+implements **SimCLR from scratch** (ResNet18 + NT-Xent contrastive loss, no SSL
+library) and pretrains a backbone *directly on the unlabelled SOLAQUA frames* (the
+508 training-day frames; the held-out day is excluded). Dropped into the same
+PatchCore pipeline, the domain-pretrained backbone is **worse** than both transfer
+baselines:
+
+| Backbone (same detector) | in-clip AUROC | different-day AUROC |
+|---|---|---|
+| ImageNet-supervised ResNet18 | 0.98 | 0.82 |
+| off-the-shelf DINOv2 ViT-S/14 | **1.00** | **0.93** |
+| **SOLAQUA-SimCLR ResNet18 (ours)** | 0.80 | 0.61 |
+
+The honest reading: **self-supervised learning needs scale**, and 508 frames from
+one site for 60 CPU epochs is nowhere near it — at this data budget you are far
+better off with off-the-shelf pretrained features. This is the expected result,
+reported rather than buried; it does **not** say domain SSL is a dead end, it says
+*it needs the data it was designed for*. The path to making it win is now a one-line
+change, not a research project: point `scripts/pretrain_ssl.py --device cuda` at the
+**full** SOLAQUA video (hours of footage ≈ 10⁴–10⁵ frames) with a long schedule.
+The experiment is built and runnable; the data scale is the remaining lever.
+
 ### 5.8 Closing the out-of-distribution gap — what worked, what didn't, what's left
 
 Pulling the robustness thread together, here is the honest ledger of *every*
@@ -560,7 +583,7 @@ lever tried or scoped to close the different-day gap, so the judgement is visibl
 | Real *multi-day* training | **Data-limited (but see `seg-gpu`)** | SOLAQUA's public feature has only **two days** (3 clips on 08‑22, 2 on 08‑20); 08‑20 is the held-out test, so a genuine third *day* does not exist to add. Notably, `seg-gpu` trained on the 3 *same-day* clips cut the nano's different-day FP from 18% to 11% and lifted recall to 0.98 — so much of the gap was **model capacity**, not only day-diversity. More real days/sites would still help and are required for validated real-damage performance. |
 | Hard-negative mining | **Scoped** | the compositor already injects unlabelled hard negatives; the next step is mining the *real* frames the model false-alarms on (e.g. instrument housings) and adding them — a cheap, targeted loop once a labelling pass exists. |
 | Domain normalisation (gray-world WB + CLAHE) | **Done — failed at test time** | measured (`scripts/eval_domain_norm.py`): normalising frames only at inference *hurt* (det v1 different-day FP **0% → 28%**, recall 0.98 → 0.86; seg neutral) — a train/test mismatch. To exploit it the normalisation must be in *both* training and inference (a retrain). Reported, not assumed. |
-| Self-supervised pretraining *on SOLAQUA* | **Deferred (GPU)** | off-the-shelf DINOv2 transfer was probed (§5.7); domain pretraining on the unlabelled frames is the GPU-bound next step. |
+| Self-supervised pretraining *on SOLAQUA* | **Done — needs more data** | SimCLR (from scratch, `ssl_pretrain.py`) pretrained a ResNet18 on the 508 unlabelled training-day frames. It **underperforms** ImageNet/DINOv2 transfer (AUROC 0.80/0.61 vs 0.98/0.82 and 1.00/0.93) — SSL needs scale; 508 frames isn't it. Built and runnable; scaling to the full SOLAQUA video (GPU) is the lever. |
 | Uncertainty / OOD gating | **Done** | `src/netinspect/ood_gate.py` — a PatchCore-score gate calibrated on in-distribution frames flags **6%** of training-clip frames, **0%** of same-site/other-clip, and **100%** of the different DAY for human review (`scripts/eval_ood_gate.py`). A not-yet-certified detector can then run safely: auto-handle familiar frames, defer exactly the unfamiliar ones. |
 
 **The deployable answer today** is the ensemble plus a calibrated high-confidence

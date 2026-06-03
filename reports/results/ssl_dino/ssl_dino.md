@@ -8,8 +8,9 @@ Same PatchCore detector, same normal training frames — only the patch **backbo
 
 | Backbone | in-clip | different-day |
 |---|---|---|
-| resnet18 | 0.984 | 0.994 |
-| dinov2 | 1.0 | 0.957 |
+| resnet18 | 0.984 | 0.824 |
+| dinov2 | 1.0 | 0.934 |
+| ssl-solaqua | 0.804 | 0.612 |
 
 ## Localisation of (synthetic) damage — boxes at the default threshold
 
@@ -19,14 +20,18 @@ Same PatchCore detector, same normal training frames — only the patch **backbo
 | resnet18 | different-day | 0.0 | 0.0 | 0.0 | 0.0 |
 | dinov2 | in-clip | 0.041 | 0.064 | 0.05 | 0.012 |
 | dinov2 | different-day | 0.0 | 0.0 | 0.0 | 0.0 |
+| ssl-solaqua | in-clip | 0.05 | 0.106 | 0.068 | 0.029 |
+| ssl-solaqua | different-day | 0.0 | 0.0 | 0.0 | 0.0 |
 
 ## False alarms on REAL UNDAMAGED net (default threshold)
 
 | Backbone | Set | Frames | Mean det/frame | FP frame rate |
 |---|---|---|---|---|
 | resnet18 | in-clip | 38 | 2.5 | 68% |
-| resnet18 | different-day | 80 | 2.475 | 100% |
+| resnet18 | different-day | 200 | 2.3 | 100% |
 | dinov2 | in-clip | 38 | 0.5 | 32% |
-| dinov2 | different-day | 80 | 1.0 | 100% |
+| dinov2 | different-day | 200 | 1.0 | 100% |
+| ssl-solaqua | in-clip | 38 | 4.5 | 84% |
+| ssl-solaqua | different-day | 200 | 1.05 | 100% |
 
-> DINOv2 here is pretrained on natural images, NOT on SOLAQUA — this measures transfer of published self-supervised features, not the deferred SOLAQUA-pretraining experiment. Damage is synthetic and the net is undamaged: this characterises behaviour, not real-damage performance.
+> Backbones: resnet18 = ImageNet-supervised; dinov2 = off-the-shelf self-supervised on natural images; ssl-solaqua = SimCLR pretrained ON the unlabelled SOLAQUA frames. Damage is synthetic and the net is undamaged: this characterises behaviour, not real-damage performance.

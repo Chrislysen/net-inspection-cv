@@ -31,6 +31,9 @@ def main() -> None:
     ap.add_argument("--images", required=True, help="Directory of normal frames")
     ap.add_argument("--out", required=True, help="Model path prefix (.npz)")
     ap.add_argument("--backbone", default="resnet18")
+    ap.add_argument("--backbone-weights", default=None,
+                    help="Path to self-supervised backbone weights (e.g. SOLAQUA SimCLR); "
+                         "default uses ImageNet-supervised weights")
     ap.add_argument("--coreset", type=int, default=4000)
     ap.add_argument("--threshold-factor", type=float, default=2.0)
     ap.add_argument("--threshold", type=float, default=None,
@@ -42,8 +45,8 @@ def main() -> None:
     if not images:
         print(f"No frames in {args.images}.")
         return
-    cfg = PatchCoreConfig(backbone=args.backbone, coreset_size=args.coreset,
-                          threshold_factor=args.threshold_factor)
+    cfg = PatchCoreConfig(backbone=args.backbone, backbone_weights=args.backbone_weights,
+                          coreset_size=args.coreset, threshold_factor=args.threshold_factor)
     model = fit([read_image(p) for p in images], cfg)
     if args.threshold is not None:
         model.threshold = float(args.threshold)

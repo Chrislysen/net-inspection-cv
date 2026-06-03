@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-58%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-61%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -36,7 +36,7 @@ tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
 | **Robustness work** | Caught a seg-model out-of-distribution regression (31% → **18%** via multi-clip training; stronger augmentation **failed** at 22%). A 200-frame re-check — which **corrected my own 1%→11% sampling artifact** — shows an honest **precision/recall trade-off** on the held-out day: a bigger **YOLOv8s-seg (A100)** = best recall **0.98** at 11% false alarms; the **det∧seg ensemble** = **0%** false alarms but ~0.57 recall. Plus an **OOD gate** (defers 100% of different-day frames to human review) and a *failed* test-time normalisation. Full ledger: [report §5.7–5.8](reports/SCALEAQ_PROTOTYPE_REPORT.md). |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **58 passing tests** · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **61 passing tests** · GitHub Actions CI · committed models. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
@@ -187,9 +187,13 @@ the **best recall (0.98)** at an 11% false-alarm cost. The honest conclusion is 
 (0–1% false alarms, lower recall) vs the **seg-gpu** end (0.98 recall, 11% false
 alarms) — chosen by which error costs more. (One flattering 1% number along the way
 turned out to be a small-sample artifact, re-checked on 200 frames and corrected.)
-Separately, a label-free **DINOv2-vs-ResNet** anomaly ablation
-(`reports/results/ssl_dino/`) found self-supervised features *competitive and
-cleaner* but **not** a free out-of-distribution win.
+Separately, a label-free **backbone ablation** for the anomaly detector
+(`reports/results/ssl_dino/`): off-the-shelf **DINOv2** features are competitive and
+cleaner than ImageNet-ResNet18 but not a free OOD win; and **domain SSL** — a
+**SimCLR ResNet18 I pretrained from scratch on the unlabelled SOLAQUA frames**
+(`ssl_pretrain.py`) — *underperforms* both (AUROC 0.80/0.61 vs 0.98/0.82 and
+1.00/0.93), an honest reminder that self-supervised learning needs scale (508 frames
+isn't it; the GPU path to the full video is built in).
 
 ## Usage cases
 
@@ -305,6 +309,7 @@ net-inspection-cv/
     anomaly.py                   normal-net anomaly model (patch Mahalanobis)
     patchcore.py                 foundation-model anomaly (pretrained-CNN PatchCore)
     dino_backbone.py             self-supervised DINOv2 backbone for PatchCore (SSL-vs-supervised ablation)
+    ssl_pretrain.py              from-scratch SimCLR — domain-pretrain a ResNet18 on unlabelled SOLAQUA
     ensemble.py                  det-proposes / seg-confirms agreement ensemble (det-v1 robustness + masks)
     ood_gate.py                  out-of-distribution gate — defer unfamiliar frames to human review
     temporal.py                  IoU tracker — confirm detections that persist
@@ -453,6 +458,11 @@ python scripts/train_patchcore.py --images data/processed/solaqua_frames_dense -
 python scripts/train_patchcore.py --images data/processed/solaqua_frames_dense --backbone dinov2_vits14 --out models/patchcore_dino_vits14
 python scripts/compare_anomaly_backbones.py --models resnet18=models/patchcore_resnet18 dinov2=models/patchcore_dino_vits14 --out reports/results/ssl_dino
 
+# Domain SSL: SimCLR-pretrain a ResNet18 on the UNLABELLED SOLAQUA frames (GPU=minutes),
+# then use that backbone in PatchCore vs ImageNet-supervised vs off-the-shelf DINOv2:
+python scripts/pretrain_ssl.py --frames data/processed/solaqua_frames_dense data/processed/solaqua_bag2 data/processed/solaqua_bag3 --epochs 400 --batch 256 --device cuda --out models/ssl_resnet18_solaqua.pt
+python scripts/train_patchcore.py --images data/processed/solaqua_frames_dense --backbone-weights models/ssl_resnet18_solaqua.pt --out models/patchcore_ssl_solaqua
+
 # Adversarial "is it cheating?" suite: FP on REAL undamaged net + different-day + FROC
 python scripts/adversarial_eval.py --yolo-weights models/yolo_damage_v1.pt --out reports/results/adversarial_yolo
 
@@ -556,7 +566,7 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 - **Production-shaped serving:** path-traversal-safe, upload validation, structured logging + request IDs, `/health` `/ready` `/metrics`, no-leak error handling.
 - **Torch-free ONNX inference** (`onnx_infer.py`, parity-verified) + a **streaming pipeline** (`stream_inspect.py`) that emits one confirmed-damage alert per new track.
 - **Ops artifacts:** model card, deployment/SLO runbook, data-collection protocol, and a self-critical [production-readiness scorecard](reports/PRODUCTION_READINESS.md).
-- Tests (58) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, **ONNX**, and the **self-supervised DINOv2 backbone**.
+- Tests (61) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, **ONNX**, the **DINOv2 backbone**, and **SimCLR pretraining**.
 
 **Placeholder / synthetic (clearly marked):**
 

@@ -38,6 +38,7 @@ _IMAGENET_STD = np.array([0.229, 0.224, 0.225], np.float32)
 @dataclass
 class PatchCoreConfig:
     backbone: str = "resnet18"        # torchvision model with layer2/layer3
+    backbone_weights: str | None = None  # path to SELF-SUPERVISED weights (else ImageNet)
     input_size: int = 224
     layers: tuple[str, ...] = ("layer2", "layer3")
     coreset_size: int = 4000          # memory-bank size after subsampling
@@ -63,8 +64,13 @@ class _FeatureExtractor:
     def __init__(self, cfg: PatchCoreConfig):
         torch, tv = _torch()
         from torchvision.models.feature_extraction import create_feature_extractor
-        weights = "DEFAULT"
-        model = getattr(tv.models, cfg.backbone)(weights=weights)
+        # SELF-SUPERVISED weights (e.g. SOLAQUA SimCLR) if given, else ImageNet-supervised.
+        model = getattr(tv.models, cfg.backbone)(weights=None if cfg.backbone_weights else "DEFAULT")
+        if cfg.backbone_weights:
+            sd = torch.load(cfg.backbone_weights, map_location="cpu")
+            missing, unexpected = model.load_state_dict(sd, strict=False)
+            LOGGER.info("Loaded SSL backbone %s (missing=%d unexpected=%d)",
+                        cfg.backbone_weights, len(missing), len(unexpected))
         model.eval()
         self.body = create_feature_extractor(model, return_nodes={ly: ly for ly in cfg.layers})
         self.cfg = cfg
@@ -124,13 +130,15 @@ class PatchCoreModel:
                  cfg=np.array([self.cfg.backbone, self.cfg.input_size,
                                ",".join(self.cfg.layers), self.cfg.coreset_size,
                                self.cfg.coreset_method, self.cfg.neighbourhood,
-                               self.cfg.threshold_factor], dtype=object))
+                               self.cfg.threshold_factor,
+                               self.cfg.backbone_weights or ""], dtype=object))
 
     @staticmethod
     def load(path: str | Path) -> "PatchCoreModel":
         d = np.load(Path(path).with_suffix(".npz"), allow_pickle=True)
         c = d["cfg"]
-        cfg = PatchCoreConfig(str(c[0]), int(c[1]), tuple(str(c[2]).split(",")),
+        bw = str(c[7]) if len(c) > 7 and str(c[7]) else None
+        cfg = PatchCoreConfig(str(c[0]), bw, int(c[1]), tuple(str(c[2]).split(",")),
                               int(c[3]), str(c[4]), int(c[5]), float(c[6]))
         return PatchCoreModel(d["bank"], tuple(int(x) for x in d["grid"]),
                               float(d["threshold"]), cfg, {})
@@ -166,7 +174,7 @@ def _get_extractor(cfg: PatchCoreConfig):
     (``dino_backbone.py``); anything else uses the torchvision CNN. Both expose
     the same ``extract`` contract, so ``fit``/``score_image`` are backbone-agnostic.
     """
-    key = (cfg.backbone, cfg.input_size, cfg.layers, cfg.neighbourhood)
+    key = (cfg.backbone, cfg.backbone_weights, cfg.input_size, cfg.layers, cfg.neighbourhood)
     if key not in _EXTRACTOR_CACHE:
         from .dino_backbone import DinoFeatureExtractor, is_dino_backbone
         _EXTRACTOR_CACHE[key] = (DinoFeatureExtractor(cfg) if is_dino_backbone(cfg.backbone)
