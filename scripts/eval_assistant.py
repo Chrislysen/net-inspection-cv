@@ -131,12 +131,19 @@ def main() -> None:
     ap.add_argument("--rescore", action="store_true",
                     help="Re-apply the current checks to saved results; calls no model")
     ap.add_argument("--backend", default="anthropic",
-                    choices=["anthropic", "ollama"],
+                    choices=["anthropic", "ollama", "openai", "openai-compat",
+                             "nous", "together", "groq", "vllm", "local-vllm",
+                             "modal"],
                     help="anthropic = Claude API; ollama = a local model")
     ap.add_argument("--effort", default="medium",
                     choices=["low", "medium", "high", "xhigh", "max"],
                     help="Anthropic only")
     ap.add_argument("--model", default=None, help="Override the model id")
+    ap.add_argument("--base-url", default=None,
+                    help="OpenAI-compatible endpoint (overrides the provider "
+                         "default). The API key is read from "
+                         "NETINSPECT_OPENAI_API_KEY and is never taken as an "
+                         "argument, so it stays out of shell history.")
     ap.add_argument("--only", default=None, help="Comma-separated case ids to run")
     ap.add_argument("--out", default="reports/results/assistant_eval")
     ap.add_argument("--dry-run", action="store_true",
@@ -186,6 +193,8 @@ def main() -> None:
     from netinspect.assistant import InspectionAssistant
 
     kwargs = {"backend": args.backend}
+    if args.base_url:
+        kwargs["base_url"] = args.base_url
     if args.backend == "anthropic":
         kwargs["effort"] = args.effort
     if args.model:
