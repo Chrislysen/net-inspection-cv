@@ -139,6 +139,110 @@ def make_figure(track, dets, sites, cov, clip, out_path):
     return out_path
 
 
+def make_figure_3d(track, sites, cov, clip, out_path):
+    """Where the camera actually flew, relative to the net wall.
+
+    The three axes are all measured, none reconstructed: along-track from visual
+    odometry, standoff from the net-plane sensor, depth from the pressure sensor.
+    The wall is drawn flat because that is what the data supports — see the
+    caption. This answers "where was the vehicle looking from", which is the
+    question that decides whether a clean result means anything.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    SURFACE, INK, INK_SOFT, NEUTRAL = "#fcfcfb", "#0b0b0b", "#52514e", "#b9b8ae"
+    PATH, ALARM, NET = "#2a78d6", "#eb6834", "#9aa79c"
+
+    along = np.array([p.along_m for p in track])
+    stand = np.array([p.standoff_m for p in track], dtype=float)
+    depth = np.array([p.depth_m if p.depth_m is not None else np.nan for p in track])
+    if not np.isfinite(depth).any():
+        depth = np.zeros_like(along)
+
+    fig = plt.figure(figsize=(13, 5.4), facecolor=SURFACE)
+    ax = fig.add_subplot(111, projection="3d", facecolor=SURFACE)
+    # A 3-D axes reserves a square region regardless of the box aspect, so the
+    # rect is overdrawn deliberately to squeeze out the dead space around a wide,
+    # flat scene.
+    ax.set_position([-0.11, -0.21, 1.16, 1.27])
+
+    d0, d1 = float(np.nanmin(depth)) - 0.2, float(np.nanmax(depth)) + 0.2
+    a0, a1 = float(along.min()), float(along.max())
+    s_max = max(1.0, float(np.nanmax(stand)) * 1.1)
+
+    # The pass is 5.5 m long, ~1 m deep in standoff and 0.6 m in depth. A cubic
+    # box would stretch the thin axes and make the flight look far more erratic
+    # than it was, so the box carries the real proportions.
+    ax.set_box_aspect(((a1 - a0), s_max * 1.6, (d1 - d0) * 2.2))
+
+    # The net wall at standoff 0: a faint surface so it reads as a solid boundary
+    # the vehicle is flying alongside, with mesh lines on top so it reads as
+    # netting rather than a pane of glass.
+    wa, wd = np.meshgrid(np.linspace(a0, a1, 2), np.linspace(d0, d1, 2))
+    ax.plot_surface(wa, np.zeros_like(wa), wd, color=NET, alpha=0.16,
+                    shade=False, zorder=0, linewidth=0)
+    for a in np.linspace(a0, a1, 34):
+        ax.plot([a, a], [0, 0], [d0, d1], color=NET, lw=0.7, alpha=0.8, zorder=1)
+    for d in np.linspace(d0, d1, 8):
+        ax.plot([a0, a1], [0, 0], [d, d], color=NET, lw=0.7, alpha=0.8, zorder=1)
+
+    # The flight path, and droplines showing the standoff held at each sample.
+    ax.plot(along, stand, depth, color=PATH, lw=2.0, zorder=6, label="ROV path")
+    for i in range(0, len(along), max(1, len(along) // 45)):
+        ax.plot([along[i], along[i]], [stand[i], 0], [depth[i], depth[i]],
+                color=PATH, lw=0.6, alpha=0.3, zorder=4)
+
+    # Sites live ON the wall, not on the path.
+    for s_ in sites:
+        z = s_.depth_m if s_.depth_m is not None else float(np.nanmean(depth))
+        ax.scatter([s_.along_m], [0], [z], s=40 + 7 * s_.sightings,
+                   facecolor="none", edgecolor=ALARM, linewidth=2.2, zorder=8)
+        if s_.sightings >= 3:
+            ax.text(s_.along_m, 0, z - 0.09, f"{s_.sightings}x", color=ALARM,
+                    fontsize=8.5, fontweight="bold", ha="center", zorder=9)
+    if sites:
+        ax.scatter([], [], [], facecolor="none", edgecolor=ALARM, linewidth=2.2,
+                   s=70, label=f"defect sites on the wall ({len(sites)})")
+    ax.plot([], [], color=NET, lw=1.0, label="net wall (standoff = 0)")
+
+    ax.set_xlabel("metres along the sweep", fontsize=9.5, color=INK_SOFT, labelpad=14)
+    ax.set_ylabel("standoff from net (m)", fontsize=9.5, color=INK_SOFT, labelpad=8)
+    ax.set_zlabel("depth (m)", fontsize=9.5, color=INK_SOFT, labelpad=2)
+    ax.set_xlim(a0, a1)
+    ax.set_ylim(s_max, 0)                    # net wall sits at the BACK, behind the path
+    ax.set_zlim(d1, d0)                      # deeper is down
+    ax.view_init(elev=20, azim=-58)
+    ax.grid(alpha=0.25)
+    for pane in (ax.xaxis, ax.yaxis, ax.zaxis):
+        pane.pane.set_facecolor(SURFACE)
+        pane.pane.set_edgecolor(NEUTRAL)
+        pane.pane.set_alpha(0.35)
+    ax.tick_params(colors=INK_SOFT, labelsize=8.5)
+    ax.zaxis.set_tick_params(pad=1)
+    fig.legend(*ax.get_legend_handles_labels(), frameon=False, fontsize=9,
+               loc="upper right", bbox_to_anchor=(0.985, 0.985), labelcolor=INK_SOFT)
+
+    fig.suptitle(f"Where the camera flew — {clip}", fontsize=13.5, color=INK,
+                 fontweight="bold", x=0.02, ha="left", y=0.97)
+    fig.text(0.02, 0.925,
+             f"All three axes are measured, none reconstructed: along-track from visual "
+             f"odometry, standoff from the net-plane sensor, depth from the pressure "
+             f"sensor.\nThe pass held {np.nanmin(stand):.2f}–{np.nanmax(stand):.2f} m off "
+             f"the net across {cov.along_extent_m:.1f} m at a near-constant "
+             f"{np.nanmean(depth):.1f} m depth — one horizontal band, not a whole pen.\n"
+             "The wall is drawn FLAT on purpose. Over this arc the deviation from a "
+             "straight line is inside USBL noise, so curving it would be inventing "
+             "geometry rather than measuring it.",
+             fontsize=8.8, color=INK_SOFT, ha="left", va="top", linespacing=1.5)
+
+    ensure_dir(out_path.parent)
+    fig.savefig(out_path, dpi=160, facecolor=SURFACE)
+    plt.close(fig)
+    return out_path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -150,6 +254,7 @@ def main() -> None:
                     help="metres within which sightings are the same physical site")
     ap.add_argument("--out", default="reports/results/inspection_maps")
     ap.add_argument("--figure", default="docs/images/inspection_map.png")
+    ap.add_argument("--figure-3d", default="docs/images/inspection_map_3d.png")
     ap.add_argument("--no-figure", action="store_true")
     args = ap.parse_args()
 
@@ -264,6 +369,8 @@ def main() -> None:
     if not args.no_figure and track:
         fig = make_figure(track, dets, sites, cov, args.clip, Path(args.figure))
         print(f"\nWrote {fig}")
+        fig3 = make_figure_3d(track, sites, cov, args.clip, Path(args.figure_3d))
+        print(f"Wrote {fig3}")
     print(f"Wrote {out_dir}/{args.clip}_map.json")
     print("\nCaveat: the inspected strip, not a pen. On SOLAQUA every mapped "
           "detection is a\nfalse positive — the net is undamaged.")

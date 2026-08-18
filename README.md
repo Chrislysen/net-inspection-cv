@@ -239,6 +239,32 @@ Three things here are not the typical approach:
   "we never looked there" are indistinguishable — the failure mode that makes a
   clean inspection report dangerous.
 
+### Where was the camera navigating?
+
+![where the camera flew](docs/images/inspection_map_3d.png)
+
+The same pass in three dimensions — and every axis is measured, none
+reconstructed: along-track from visual odometry, **standoff from the net-plane
+sensor**, depth from the pressure sensor. It shows the vehicle flying alongside
+the wall at **0.23–0.88 m** off the net, with sites pinned on the wall rather
+than on the path. That matters operationally, because standoff is what sets
+ground sampling distance: the same defect at 0.88 m is resolved at half the
+detail it is at 0.23 m, so *how* the pass was flown determines what the pass
+could possibly have found.
+
+**Why the wall is drawn flat, and what a real 3-D pen would take.** It would be
+easy — and dishonest — to wrap this strip onto a cylinder and call it a net
+model. Over this 5.5 m arc the deviation from a straight line sits inside USBL
+noise, so the pen radius simply is not in the data; fitting a cylinder would be
+inventing geometry rather than measuring it. Depth varies by only 0.15 m across
+the whole pass, so this is **one horizontal band at one depth**, not a pen. A
+genuine 3-D net model needs (a) a full circumnavigation so the curvature exceeds
+the noise, (b) passes stacked at multiple depths to cover the wall vertically,
+and (c) an **absolute anchor** — a USBL fix or a fiducial on the net — to
+register separate passes to each other. SOLAQUA has none of the three, so the
+code maps one pass honestly and the map format is per-pass, ready to compose
+when an anchor exists.
+
 **Why feature matching works here at all:** a net mesh is repetitive, which is
 normally fatal to feature matching. Biofouling supplies the non-repeating texture
 that saves it — measured on real SOLAQUA frames, **~1200 RANSAC inliers per
