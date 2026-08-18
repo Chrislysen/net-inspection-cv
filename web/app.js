@@ -28,8 +28,58 @@ const state = { sources: [], methods: [], method: "yolo", source: null,
 // slider position is honoured instead of dropped.
 let pendingFrame = null;
 
+/* ---- Authentication -------------------------------------------------------
+ * The service requires an API key on every /api route once NETINSPECT_API_KEY
+ * is set — which it must be for any bind other than loopback. Without the code
+ * below the console 401s on its first real request and reports "BACKEND
+ * UNREACHABLE", so the product would be either unauthenticated or unusable,
+ * with no configuration that is both secure and working.
+ *
+ * The key arrives once as ?key=… , is kept in sessionStorage, and is stripped
+ * from the address bar so it does not sit in browser history or get copied out
+ * of the URL bar into a chat message.
+ * ------------------------------------------------------------------------- */
+const auth = {
+  key: null,
+
+  load() {
+    const params = new URLSearchParams(location.search);
+    const fromUrl = params.get("key");
+    if (fromUrl) {
+      try { sessionStorage.setItem("netinspect_key", fromUrl); } catch (_) { /* private mode */ }
+      params.delete("key");
+      const rest = params.toString();
+      history.replaceState({}, "", location.pathname + (rest ? `?${rest}` : ""));
+      auth.key = fromUrl;
+      return;
+    }
+    try { auth.key = sessionStorage.getItem("netinspect_key"); } catch (_) { auth.key = null; }
+  },
+
+  headers(extra) {
+    // A custom header also lifts these out of the CORS "simple request" class,
+    // so a page on another origin cannot silently drive this API.
+    return auth.key ? { ...(extra || {}), "X-API-Key": auth.key } : (extra || {});
+  },
+
+  /* For <img src> and sendBeacon, where no header can be attached. */
+  url(path) {
+    if (!auth.key) return path;
+    return path + (path.includes("?") ? "&" : "?") + "key=" + encodeURIComponent(auth.key);
+  },
+};
+auth.load();
+
+class Unauthorized extends Error {}
+
+async function authFetch(path, opts) {
+  const r = await fetch(path, { ...(opts || {}), headers: auth.headers((opts || {}).headers) });
+  if (r.status === 401) throw new Unauthorized("401");
+  return r;
+}
+
 async function api(path) {
-  const r = await fetch(path);
+  const r = await authFetch(path);
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
   return r.json();
 }
@@ -122,8 +172,14 @@ async function boot() {
 
     await loadSource(wantSource || h.sources[0]);
   } catch (e) {
-    setStatus("LINK FAILED", "err");
-    $("vpReadout").textContent = "BACKEND UNREACHABLE — start scripts/serve.py";
+    if (e instanceof Unauthorized) {
+      setStatus("UNAUTHORIZED", "err");
+      $("vpReadout").textContent =
+        "AUTHENTICATION REQUIRED — open this console with ?key=YOUR_API_KEY";
+    } else {
+      setStatus("LINK FAILED", "err");
+      $("vpReadout").textContent = "BACKEND UNREACHABLE — start scripts/serve.py";
+    }
     console.error(e);
   }
 }
@@ -429,7 +485,7 @@ async function analyzeFile(file) {
     // Honour the checkbox rather than "on whenever a model exists" — a control
     // that is shown and ignored is worse than no control.
     const q = `method=${state.method}&conf=${state.conf}&ood=${state.ood ? 1 : 0}`;
-    const res = await fetch(`/api/analyze?${q}`, { method: "POST", body });
+    const res = await authFetch(`/api/analyze?${q}`, { method: "POST", body });
     if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
     const r = await res.json();
     if (!ticketValid(ticket)) return;
@@ -529,7 +585,7 @@ async function startLive() {
     const q = `source=${encodeURIComponent(source)}&method=${state.method}` +
               `&conf=${state.conf}&min_hits=${minHits}&ood=${state.ood ? 1 : 0}` +
               `&odometry=${odo ? 1 : 0}&standoff_m=0.6`;
-    const res = await fetch(`/api/live/start?${q}`, { method: "POST" });
+    const res = await authFetch(`/api/live/start?${q}`, { method: "POST" });
     if (!res.ok) {
       const detail = await res.json().catch(() => ({}));
       throw new Error(detail.detail || `HTTP ${res.status}`);
@@ -538,7 +594,7 @@ async function startLive() {
     $("liveStop").disabled = false;
     $("liveStats").hidden = false;
     // Cache-bust so a restart is not served the previous stream.
-    $("frameImg").src = `/api/live/stream?fps=12&t=${Date.now()}`;
+    $("frameImg").src = auth.url(`/api/live/stream?fps=12&t=${Date.now()}`);
     $("frameName").textContent = source;
     live.timer = setInterval(pollLive, 1000);
     pollLive();
@@ -562,7 +618,7 @@ async function restartLive() {
 
 async function stopLive() {
   clearInterval(live.timer); live.timer = null; live.running = false;
-  try { await fetch("/api/live/stop", { method: "POST" }); } catch (e) { /* already gone */ }
+  try { await authFetch("/api/live/stop", { method: "POST" }); } catch (e) { /* already gone */ }
   $("liveStart").disabled = false;
   $("liveStop").disabled = true;
   // Only blank the stage if Live still owns it; after a mode switch the new mode
@@ -734,7 +790,7 @@ function selectSite(id) {
   const hasCrop = net.scene.crops && net.scene.crops[String(id)];
   const img = $("siteCrop");
   img.hidden = !hasCrop;
-  if (hasCrop) img.src = `/api/scene/crop?clip=${encodeURIComponent(net.clip)}&site=${id}`;
+  if (hasCrop) img.src = auth.url(`/api/scene/crop?clip=${encodeURIComponent(net.clip)}&site=${id}`);
   $("siteWhere").innerHTML =
     `<b>Site ${id}</b> — ${s.sightings} sighting(s), ${s.evidence || ""}<br>` +
     `${s.placed.description}<br>` +
@@ -825,7 +881,7 @@ function wireModes() {
     };
   }
   window.addEventListener("beforeunload", () => {
-    if (live.running) navigator.sendBeacon("/api/live/stop");
+    if (live.running) navigator.sendBeacon(auth.url("/api/live/stop"));
   });
 }
 
