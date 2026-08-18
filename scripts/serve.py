@@ -33,12 +33,28 @@ webcam, an ``rtsp://`` URL for an ROV feed, or a path to a video file.
 
 Security
 --------
-Single-process and **unauthenticated** — a prototype console, not a hardened
-deployment. It binds ``127.0.0.1`` by default and should stay there: ``POST
-/api/live/start`` takes an arbitrary source string, so anyone who can reach the
-port can make the server open a file path or outbound stream URL. Put it behind
-authentication and validate the source against an allowlist before exposing it
-on a network.
+Enforced by :mod:`netinspect.security`, configured entirely from the environment
+so no secret ends up in a config file:
+
+* ``NETINSPECT_API_KEY`` — required on every ``/api`` and ``/predict`` route
+  except ``/api/health`` and ``/api/ready``, which stay open for load balancers.
+  Sent as ``X-API-Key``, ``Authorization: Bearer``, or ``?key=`` (the last lands
+  in access logs; it exists so the console can be opened from a link).
+* **Without a key the service refuses to bind anything but loopback.** Local
+  development still just works; publishing an unauthenticated inference endpoint
+  to a network is not something you can do by forgetting.
+* ``POST /api/live/start`` is **default-deny**. Camera indices are allowed, plus
+  files under ``NETINSPECT_MEDIA_ROOT`` (defaulting to the repo's ``data/``) and
+  URLs matching ``NETINSPECT_LIVE_ALLOW``. Private, loopback and link-local
+  addresses are refused even when a pattern matches, because ``169.254.169.254``
+  is how a stream opener becomes cloud-credential theft.
+* Uploads are capped by bytes *and* by pixel count, so a small PNG cannot
+  decompress into a gigabyte of RGB.
+* Concurrent inferences are bounded; excess requests queue and then 503 rather
+  than exhausting memory.
+* CORS is same-origin unless ``NETINSPECT_CORS_ORIGINS`` says otherwise.
+
+Still single-process: run it behind a reverse proxy for TLS and rate limiting.
 
 Predictions come from models trained on **synthetic** damage and require human
 review; recall on real damage is unmeasured.
@@ -49,6 +65,8 @@ at runtime.
 import argparse
 import base64
 import io
+import sys
+import threading
 import time
 import uuid
 from collections import defaultdict
@@ -57,6 +75,7 @@ from pathlib import Path
 import _common  # noqa: F401
 import numpy as np
 
+from netinspect import __version__
 from netinspect.classical_baseline import ClassicalConfig
 from netinspect.inference import NetInspector
 from netinspect.utils import get_logger, list_images, read_image
@@ -163,7 +182,7 @@ def _png_b64(image: np.ndarray) -> str:
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def build_app(inspector: NetInspector):
+def build_app(inspector: NetInspector, security=None):
     from contextlib import asynccontextmanager
 
     from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
@@ -187,10 +206,68 @@ def build_app(inspector: NetInspector):
         yield
         _stop_live()
 
-    app = FastAPI(title="net-inspection-cv console", version="0.4.0",
+    from netinspect.security import (
+        SecurityConfig,
+        SourceRejected,
+        apply_decoder_limits,
+        check_api_key,
+        check_image_size,
+        validate_live_source,
+    )
+
+    sec = security if security is not None else SecurityConfig.from_env()
+    if sec.media_root is None:
+        # Default to the repo's own data directory rather than the whole
+        # filesystem: the bundled clips keep working out of the box, and
+        # "C:/Windows/win.ini" still does not. Override with NETINSPECT_MEDIA_ROOT.
+        sec.media_root = (REPO / "data").resolve()
+    apply_decoder_limits(sec)
+
+    app = FastAPI(title="net-inspection-cv console", version=__version__,
                   lifespan=lifespan)
     sources = _available_sources()
     metrics = _Metrics()
+
+    # Same-origin by default. A wildcard here plus an unauthenticated API is how
+    # any page on the internet gets to drive your inference service.
+    if sec.cors_origins:
+        from fastapi.middleware.cors import CORSMiddleware
+        app.add_middleware(CORSMiddleware, allow_origins=list(sec.cors_origins),
+                           allow_credentials=True, allow_methods=["GET", "POST"],
+                           allow_headers=["*"])
+
+    # Inference is CPU- and memory-hungry, and nothing else bounds how many run
+    # at once. Without this a handful of concurrent requests can page a box to
+    # death; with it, they queue.
+    inference_slots = threading.BoundedSemaphore(sec.max_concurrency)
+
+    def _predict(img, **kw):
+        """Every inference goes through here, so the concurrency cap cannot be
+        bypassed by adding a route that forgets it."""
+        if not inference_slots.acquire(timeout=30):
+            raise HTTPException(503, "Server busy — too many concurrent inferences. "
+                                     "Retry shortly.")
+        try:
+            return inspector.predict(img, **kw)
+        finally:
+            inference_slots.release()
+
+    @app.middleware("http")
+    async def _authenticate(request: Request, call_next):
+        path = request.url.path
+        # Liveness must stay reachable for a load balancer, and the static
+        # console has to load before it can send a key.
+        open_paths = path in ("/api/health", "/api/ready") or not path.startswith(("/api", "/predict"))
+        if sec.auth_enabled and not open_paths:
+            supplied = (request.headers.get("x-api-key")
+                        or (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
+                        # Query-param keys land in access logs and browser
+                        # history; supported only so the console can be opened
+                        # from a link, and documented as the weaker option.
+                        or request.query_params.get("key"))
+            if not check_api_key(supplied, sec):
+                return JSONResponse({"error": "unauthorized"}, status_code=401)
+        return await call_next(request)
 
     @app.middleware("http")
     async def _observability(request: Request, call_next):
@@ -218,7 +295,15 @@ def build_app(inspector: NetInspector):
             raise HTTPException(413, f"Upload exceeds {MAX_UPLOAD_BYTES // (1024*1024)} MB")
         try:
             from PIL import Image
-            return np.asarray(Image.open(io.BytesIO(data)).convert("RGB"))
+            im = Image.open(io.BytesIO(data))
+            # Checked before decoding: a 16k-square PNG is a small file that
+            # expands to about a gigabyte of RGB.
+            check_image_size(im.width, im.height, sec)
+            return np.asarray(im.convert("RGB"))
+        except ValueError as exc:
+            raise HTTPException(413, str(exc))
+        except HTTPException:
+            raise
         except Exception:
             raise HTTPException(400, "Could not decode image")
 
@@ -255,6 +340,42 @@ def build_app(inspector: NetInspector):
             {"ready": "classical" in methods, "methods": methods},
             status_code=200 if "classical" in methods else 503)
 
+    @app.get("/api/version")
+    def version():
+        """Exactly what this deployment is running.
+
+        The first question during an incident is "which build is that", and a
+        version string alone does not answer it — the weights matter more than
+        the code. Model digests are included so a report can be tied to the
+        artefacts that produced it.
+        """
+        import hashlib
+        import subprocess
+
+        def _commit():
+            try:
+                return subprocess.run(["git", "rev-parse", "--short", "HEAD"],
+                                      cwd=REPO, capture_output=True, text=True,
+                                      timeout=2).stdout.strip() or None
+            except Exception:
+                return None
+
+        models = {}
+        model_dir = REPO / "models"
+        if model_dir.exists():
+            for f in sorted(model_dir.glob("*.pt")):
+                h = hashlib.sha256()
+                with open(f, "rb") as fh:
+                    for chunk in iter(lambda: fh.read(1 << 20), b""):
+                        h.update(chunk)
+                models[f.name] = {"sha256": h.hexdigest()[:16],
+                                  "bytes": f.stat().st_size}
+        return {"service": app.version, "commit": _commit(),
+                "python": sys.version.split()[0],
+                "methods": inspector.available_methods(),
+                "auth": sec.auth_enabled,
+                "models": models}
+
     @app.get("/api/metrics", response_class=PlainTextResponse)
     def metrics_endpoint():
         return metrics.prometheus()
@@ -276,7 +397,7 @@ def build_app(inspector: NetInspector):
               ood: bool = Query(False)):
         _validate_method(method)
         img = read_image(_resolve(source, name))
-        result = inspector.predict(img, method=method, conf=conf)
+        result = _predict(img, method=method, conf=conf)
         metrics.inferences[method] += 1
         vis = result.heatmap if result.heatmap is not None else overlay_boxes(img, preds=result.boxes)
         return JSONResponse({
@@ -297,7 +418,7 @@ def build_app(inspector: NetInspector):
                       conf: float = Query(0.25, ge=0.0, le=1.0)):
         _validate_method(method)
         img = await _read_upload(file)
-        r = inspector.predict(img, method=method, conf=conf)
+        r = _predict(img, method=method, conf=conf)
         metrics.inferences[method] += 1
         payload = r.to_dict()
         payload["disclaimer"] = "Prototype: proxy-trained model; human review required."
@@ -309,7 +430,7 @@ def build_app(inspector: NetInspector):
         from PIL import Image
         _validate_method(method)
         img = await _read_upload(file)
-        r = inspector.predict(img, method=method, conf=conf)
+        r = _predict(img, method=method, conf=conf)
         metrics.inferences[method] += 1
         vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
         buf = io.BytesIO(); Image.fromarray(vis).save(buf, format="PNG")
@@ -325,7 +446,7 @@ def build_app(inspector: NetInspector):
                       ood: bool = Query(True)):
         _validate_method(method)
         img = await _read_upload(file)
-        r = inspector.predict(img, method=method, conf=conf)
+        r = _predict(img, method=method, conf=conf)
         metrics.inferences[method] += 1
         vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
         return JSONResponse({
@@ -362,6 +483,10 @@ def build_app(inspector: NetInspector):
         from netinspect.live import LiveInspector, LiveSession
 
         _validate_method(method)
+        try:
+            source = validate_live_source(source, sec)
+        except SourceRejected as exc:
+            raise HTTPException(403, str(exc))
         _stop_live()
 
         ood_model = None
@@ -530,7 +655,15 @@ def main() -> None:
     LOGGER.info("Methods: %s", inspector.available_methods())
     LOGGER.info("Console: http://%s:%d", args.host, args.port)
     import uvicorn
-    uvicorn.run(build_app(inspector), host=args.host, port=args.port)
+
+    from netinspect.security import InsecureBinding, SecurityConfig, check_binding
+    sec = SecurityConfig.from_env()
+    try:
+        check_binding(args.host, sec)
+    except InsecureBinding as exc:
+        raise SystemExit(f"\n{exc}\n")
+    LOGGER.info("Security: %s", sec.describe())
+    uvicorn.run(build_app(inspector, security=sec), host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

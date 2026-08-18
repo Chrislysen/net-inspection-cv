@@ -126,3 +126,25 @@ jobs:
       # stubbed canvas so it cannot rot unnoticed between demos.
       - name: Renderer checks (headless canvas)
         run: node web/net3d.test.mjs
+
+  audit:
+    name: Dependency vulnerabilities
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Knowing a shipped dependency has a published CVE is not optional for
+      # something a farm would run on its own network. This reports rather than
+      # blocks: a transitive advisory with no fix available should not wedge the
+      # pipeline, but it must be visible in the run.
+      - name: pip-audit
+        continue-on-error: true
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          pip install -e ".[cv,ml,serve]"
+          pip-audit --strict --progress-spinner off || echo "::warning::pip-audit reported findings"

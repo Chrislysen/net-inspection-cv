@@ -36,7 +36,7 @@ LOGGER = get_logger()
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = REPO_ROOT / "scripts"
 
-VERSION = "0.1.0"
+from . import __version__ as VERSION
 
 # Commands that are a thin name over an existing script. Their arguments are
 # passed through untouched, which is why they bypass argparse entirely in

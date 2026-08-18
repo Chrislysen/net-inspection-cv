@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "net-inspection-cv"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Prototype computer-vision toolkit for aquaculture net damage detection"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,6 +39,13 @@ dev = ["pytest>=7.4", "pytest-cov>=5.0", "ruff>=0.6", "pre-commit>=3.7"]
 # same as nothing working, for anyone who did not write them.
 [project.scripts]
 netinspect = "netinspect.cli:main"
+
+# One source of truth for the version. It was previously restated in
+# pyproject, netinspect/__init__, cli.py and the FastAPI app — and had already
+# drifted, so `netinspect version` said 0.1.0 while /api/version said 0.4.0 and
+# no deployment could be identified from either.
+[tool.setuptools.dynamic]
+version = { attr = "netinspect.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
