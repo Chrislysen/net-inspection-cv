@@ -58,10 +58,11 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **Honesty check** | On real *undamaged* net the detector fires on **0%** of two same-day clips, **31%** of a third, and **1%** on a different day. An earlier version of this table reported only the two clean clips and the different day — the 31% clip was missing from the evaluation set, so the headline understated false alarms. Corrected, and the corrected result is the more useful one: **between-clip spread on a single day (0→31%) is ~30× the day effect (1%)**, so the scene, not the day, is what these models are sensitive to. Looking at the frames shows what the scene effect *is*: the detector fires on the **thin bright mooring cords** rigged around calibration markers, not on the mesh. |
 | **Robustness work** | Caught a seg-model out-of-distribution regression (31% → **18%** via multi-clip training; stronger augmentation **failed** at 22%). A 200-frame re-check — which **corrected my own 1%→11% sampling artifact** — shows an honest **precision/recall trade-off** on the held-out day: a bigger **YOLOv8s-seg (A100)** = best recall **0.98** at 11% false alarms; the **det∧seg ensemble** = **0%** false alarms but ~0.57 recall. Plus an **OOD gate** (defers 100% of different-day frames to human review) and a *failed* test-time normalisation. Full ledger: [report §5.7–5.8](reports/PROTOTYPE_REPORT.md). |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
+| **Localisation** | Detections are placed on the **net**, not the frame: metres along/across the sweep, depth, and size in mm, from visual odometry with **self-calibrating scale** (no chessboard — 1.36 mm/px at 1 m, implied 82° HFOV). Repeat sightings collapse **107 alerts → 6 distinct sites (18×)**, and the pass reports the bands it never photographed, so "clean" is distinguishable from "never looked". |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
 | **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable (Claude API or local Ollama), so the guardrail is **measured**, not asserted: boundary disclosure **100%** on two local 14B models, tool grounding 50–75%. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **301 passing tests** · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **326 passing tests** · GitHub Actions CI · committed models. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
@@ -202,6 +203,62 @@ desktop runner cannot drift apart.
 > A live feed from a real net **will** trip the OOD gate, and that is the correct
 > behaviour, not a bug. These models learned synthetic damage. Run in shadow mode
 > and fine-tune on real labels before anything alerts on its own.
+
+## Where is it? Net-frame localisation and coverage
+
+**Nobody can send a diver to "frame 1247".** Every detector in this repo — and
+most of the literature — reports damage in *frame* coordinates, which is not an
+actionable answer. This maps detections onto the **net itself**: metres along the
+sweep, metres across it, depth, and a physical size in millimetres.
+
+![inspection map](docs/images/inspection_map.png)
+
+```bash
+python scripts/map_inspection.py --clip 2024-08-22_14-29-05
+```
+
+**107 per-frame alerts became 6 distinct sites — 18× fewer things to look at**,
+one of them supported by 72 sightings from different viewpoints.
+
+Three things here are not the typical approach:
+
+- **Scale calibrates itself — no chessboard, no camera intrinsics.** Total visual
+  displacement over the pass is compared against the distance telemetry says the
+  vehicle travelled. On the reference clip: **1.36 mm/px at 1 m**, i.e. 0.83 mm/px
+  at the observed 0.61 m standoff. The check that this is measuring something real
+  rather than fitting noise is the **implied 82° horizontal field of view** — a
+  sane number for an underwater camera. Ground sampling distance is then
+  propagated per frame, so a detection seen from 1.4 m is not mistaken for the
+  same physical size as one seen from 0.6 m.
+- **Spatial confirmation, which is strictly stronger than temporal.** Temporal
+  tracking loses a defect the moment the camera pans away. A *position on the net*
+  survives the vehicle leaving and coming back, so repeat sightings from different
+  angles become evidence that a thing is real and distinct.
+- **Coverage is reported, so a clean result means something.** The map names the
+  bands of net the camera never photographed. Without that, "no damage found" and
+  "we never looked there" are indistinguishable — the failure mode that makes a
+  clean inspection report dangerous.
+
+**Why feature matching works here at all:** a net mesh is repetitive, which is
+normally fatal to feature matching. Biofouling supplies the non-repeating texture
+that saves it — measured on real SOLAQUA frames, **~1200 RANSAC inliers per
+consecutive pair at a 79% inlier ratio**.
+
+**Why vision and telemetry are split the way they are:** frame-to-frame, visual
+motion and integrated net-relative velocity correlate at only **r = +0.26** —
+too weak to fuse per frame without injecting noise. In aggregate they agree, so
+telemetry supplies **scale and anchoring** and vision supplies **motion**. That
+division is a measurement, not a design preference. The independent cross-check:
+visual path 6.29 m vs telemetry 5.88 m over the pass (**ratio 1.07**).
+
+> **What this is not.** It maps the inspected *strip*, not a pen. A 3-D model of a
+> whole net needs a full circumnavigation; one clip's arc is far too straight to
+> even recover the pen radius — over a 6 m sweep the deviation from a straight
+> line sits inside USBL noise, so fitting a cylinder to it would be inventing
+> geometry. Positions drift with distance from the start and are reported with an
+> error bar (~5% of distance travelled), never as exact points. And on SOLAQUA the
+> net is undamaged, so **every site mapped above is a false positive** — the map
+> is the mechanism; the damage is synthetic.
 
 ## Grounded assistant — and measuring whether the guardrail holds
 
@@ -419,6 +476,16 @@ Emits `damage_confirmed` events (`events.jsonl`) with bbox, score and an `ood_re
 flag. For a ROS-publishing ROV, swap the source for an `rclpy`/`rospy` image
 subscriber and call the same facade per message (see `solaqua.py` for the pattern).
 
+**1c. Turn a completed pass into a map (where is it, how big, what was missed).**
+```powershell
+python scripts/map_inspection.py --clip 2024-08-22_14-29-05
+python scripts/map_inspection.py --clip 2024-08-22_14-29-05 --method seg_gpu --merge-radius 0.4 --no-figure
+```
+Writes a map JSON with every detection placed in metres along/across the net,
+its size in mm, a drift estimate, the distinct sites repeat sightings collapse
+to, and the coverage gaps. Needs a frame index for the clip and its `_data.bag`
+telemetry (see §"Where is it?").
+
 **2. Only have *normal*-net footage, want to flag anything unusual (label-free).**
 ```powershell
 python scripts/train_patchcore.py --images data/processed/normal_frames --out models/patchcore_mynet
@@ -534,12 +601,23 @@ net-inspection-cv/
     ensemble.py                  det-proposes / seg-confirms agreement ensemble (det-v1 robustness + masks)
     ood_gate.py                  out-of-distribution gate — defer unfamiliar frames to human review
     temporal.py                  IoU tracker — confirm detections that persist
+    mapping.py                   net-frame localisation: visual odometry, self-calibrating scale, coverage
+    live.py                      real-time camera/RTSP/ROV capture + inference (threaded, drops stale frames)
     compose.py                   composite photorealistic damage + hard negatives onto REAL frames
     inference.py                 unified facade over all methods (used everywhere)
+    onnx_infer.py                ONNX Runtime inference path
     evaluate.py                  detection / segmentation / image-level metrics
     visualize.py                 overlays, comparisons, galleries
     video.py                     video frame extraction
     solaqua.py                   SOLAQUA client + ROS-bag camera & sonar extraction
+    telemetry.py                 13 canonical ROV streams from the data bags, sensor-suite drift normalised
+    frame_sync.py                recover frame timestamps and join frames to telemetry on the bag clock
+    envelope.py                  operating-envelope gate — when is a frame's verdict trustworthy
+    image_quality.py             per-frame capture quality (sharpness, contrast, brightness, saturation)
+    sites.py                     Fiskeridirektoratet locality register
+    ocean.py                     MET Norway ocean forecast + cod thermal optimum
+    warehouse.py                 DuckDB view layer over every artifact
+    assistant/                   grounded tool-calling Q&A: evidence ledger, tools, backends, eval suite
     coco.py                      COCO -> YOLO adapter (real labelled data drop-in)
     synthetic.py                 placeholder data generator (testing only)
     utils.py                     IO, geometry, optional-dependency handling
