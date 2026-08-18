@@ -222,7 +222,8 @@ const live = { timer: null, running: false };
 
 function setMode(mode) {
   state.mode = mode;
-  for (const [id, m] of [["modeBrowse", "browse"], ["modeDrop", "drop"], ["modeLive", "live"]]) {
+  for (const [id, m] of [["modeBrowse", "browse"], ["modeDrop", "drop"],
+                         ["modeLive", "live"], ["modeNet", "net"]]) {
     const b = $(id);
     if (!b) continue;
     b.classList.toggle("active", m === mode);
@@ -232,8 +233,21 @@ function setMode(mode) {
   show("browsePanel", mode === "browse");
   show("dropPanel", mode === "drop");
   show("livePanel", mode === "live");
-  if (mode !== "live" && live.running) stopLive();
+  show("netPanel", mode === "net");
+
+  // The 3-D stage replaces the frame image rather than sitting beside it, so
+  // the viewport always shows exactly one thing.
+  show("netCanvas", mode === "net");
+  const img = $("frameImg");
+  if (img) img.hidden = mode === "net";
+  show("siteOut", mode === "net" && !!net.scene);
+
+  if (mode !== "live" && live.running && !$("netLiveWire")?.checked) stopLive();
   if (mode === "browse" && state.frames && state.frames.length) infer();
+  if (mode === "net" && net.view) {
+    net.view.resize();
+    if (!net.scene) loadNetClips();
+  }
 }
 
 /* ---- Drop ---------------------------------------------------------------- */
@@ -308,8 +322,12 @@ async function startLive() {
   $("liveStart").disabled = true;
   $("liveNote").hidden = true;
   try {
+    // Odometry only runs when the 3-D view actually wants positions; it costs a
+    // feature match per frame and buys nothing if nobody is placing the result.
+    const odo = $("netLiveWire") && $("netLiveWire").checked;
     const q = `source=${encodeURIComponent(source)}&method=${state.method}` +
-              `&conf=${state.conf}&min_hits=${minHits}&ood=${state.oodAvailable ? 1 : 0}`;
+              `&conf=${state.conf}&min_hits=${minHits}&ood=${state.oodAvailable ? 1 : 0}` +
+              `&odometry=${odo ? 1 : 0}&standoff_m=0.6`;
     const res = await fetch(`/api/live/start?${q}`, { method: "POST" });
     if (!res.ok) {
       const detail = await res.json().catch(() => ({}));
@@ -371,14 +389,168 @@ async function pollLive() {
           `<div class="d-bbox">frame ${e.frame} · [${(e.bbox || []).join(", ")}]</div></div>` +
           `<div class="d-score">${(e.score ?? 0).toFixed ? e.score.toFixed(2) : e.score}</div></div>`).join("")
       : '<div class="det-empty">NO CONFIRMED EVENTS YET</div>';
+    pushLiveSites(s);
   } catch (e) { console.error(e); }
 }
 
+/* ---- Net 3D --------------------------------------------------------------
+ * An inspection map is a table of metres from wherever the pass began, which
+ * is precise and unusable. This puts it on the cage next to the feed barge, so
+ * "3.1 m along" becomes "just clockwise of the barge, 1.7 m down" — and one
+ * click shows the picture, which is what decides whether it is worth a trip.
+ *
+ * The renderer draws the declared shell and the measured data differently on
+ * purpose (see net3d.js); this module's job is to keep that distinction true in
+ * the numbers it displays alongside.
+ * ------------------------------------------------------------------------- */
+const net = { view: null, scene: null, clip: null, liveSites: [], liveSeen: new Set() };
+
+function netParams() {
+  const v = (id, dflt) => {
+    const el = $(id);
+    const n = el ? parseFloat(el.value) : NaN;
+    return Number.isFinite(n) ? n : dflt;
+  };
+  return new URLSearchParams({
+    clip: net.clip || "",
+    circumference_m: v("penCirc", 160),
+    cylinder_depth_m: v("penCyl", 15),
+    cone_depth_m: v("penCone", 10),
+    barge_bearing_deg: v("penBarge", 0),
+    start_bearing_deg: v("penStart", 0),
+    clockwise: ($("penDir") || {}).value === "0" ? "false" : "true",
+  });
+}
+
+async function loadScene() {
+  if (!net.clip) return;
+  try {
+    const s = await api(`/api/scene?${netParams()}`);
+    net.scene = s;
+    net.view.setScene(s);
+    renderSites(s);
+    renderNetCoverage(s);
+    $("vpReadout").textContent =
+      `${s.sites.length} SITE(S) · ${s.coverage.ring_percent}% OF THE RING · ` +
+      `${s.coverage.area_percent}% OF THE NET`;
+    $("frameName").textContent = `${s.clip} on a ${s.pen.circumference_m} m cage`;
+    $("frameDims").textContent = `${s.pen.net_area_m2} m² net`;
+    $("vpMethod").textContent = `${s.method || "map"} · 3D`;
+    $("vpMethod").className = "vp-tag";
+  } catch (e) {
+    $("vpReadout").textContent = "NO MAP FOR THIS PASS — run scripts/map_inspection.py";
+    console.error(e);
+  }
+}
+
+function renderNetCoverage(s) {
+  const el = $("netCoverage");
+  if (!el) return;
+  el.hidden = false;
+  // The honest headline: a pass that sounds thorough in metres is a rounding
+  // error of a real cage. Leading with it is the point, not a footnote.
+  el.innerHTML =
+    `<b>${s.coverage.area_percent}%</b> of this cage was looked at` +
+    `<span>${s.coverage.swept_area_m2} m² swept of ${s.coverage.net_area_m2} m² of netting · ` +
+    `${s.coverage.ring_percent}% of the ring · ~${s.coverage.passes_to_cover_ring} passes ` +
+    `to circle it once, at this depth alone.</span>`;
+}
+
+function renderSites(s) {
+  $("siteOut").hidden = false;
+  const list = $("siteList");
+  if (!s.sites.length) { list.innerHTML = '<div class="det-empty">NO SITES</div>'; return; }
+  list.innerHTML = s.sites.map((k) =>
+    `<div class="det-row site-row" data-site="${k.site_id}">` +
+    `<div><div class="d-class">site ${k.site_id} · ${k.sightings}× · ${k.evidence || ""}</div>` +
+    `<div class="d-bbox">${k.placed.description}</div></div>` +
+    `<div class="d-score">${Math.round(k.median_width_mm)}×${Math.round(k.median_height_mm)} mm</div></div>`
+  ).join("");
+  for (const row of list.querySelectorAll(".site-row")) {
+    row.onclick = () => selectSite(parseInt(row.dataset.site, 10));
+  }
+}
+
+function selectSite(id) {
+  const s = net.scene && net.scene.sites.find((k) => k.site_id === id);
+  if (!s) return;
+  net.view.flyTo(id);
+  for (const row of document.querySelectorAll(".site-row")) {
+    row.classList.toggle("sel", parseInt(row.dataset.site, 10) === id);
+  }
+  const detail = $("siteDetail");
+  detail.hidden = false;
+  const hasCrop = net.scene.crops && net.scene.crops[String(id)];
+  const img = $("siteCrop");
+  img.hidden = !hasCrop;
+  if (hasCrop) img.src = `/api/scene/crop?clip=${encodeURIComponent(net.clip)}&site=${id}`;
+  $("siteWhere").innerHTML =
+    `<b>Site ${id}</b> — ${s.sightings} sighting(s), ${s.evidence || ""}<br>` +
+    `${s.placed.description}<br>` +
+    `<span class="muted">~${Math.round(s.median_width_mm)}×${Math.round(s.median_height_mm)} mm · ` +
+    `bearing ${s.placed.bearing_deg}° · ${s.placed.section}</span>` +
+    `<span class="warn-line">Sightings evidence a distinct object, not damage. ` +
+    `On SOLAQUA the net is undamaged, so this is a false positive.</span>`;
+}
+
+async function loadNetClips() {
+  try {
+    const r = await api("/api/maps");
+    const sel = $("netClip");
+    sel.innerHTML = r.maps.length
+      ? r.maps.map((m) => `<option value="${m}">${m}</option>`).join("")
+      : '<option value="">— no maps found —</option>';
+    net.clip = r.maps[0] || null;
+    if (net.clip) await loadScene();
+  } catch (e) { console.error(e); }
+}
+
+/* Live wiring: a confirmed defect gets an along-track position from the live
+ * session's own odometry, which is placed on the cage exactly like a mapped
+ * site. Positions are dashed in the view because live scale rests on a
+ * declared standoff rather than telemetry. */
+function pushLiveSites(status) {
+  if (!net.view || !$("netLiveWire").checked || !net.scene) return;
+  const geom = net.scene.pen;
+  for (const e of (status.recent_events || [])) {
+    if (net.liveSeen.has(e.track_id)) continue;
+    if (e.along_m === null || e.along_m === undefined) continue;
+    net.liveSeen.add(e.track_id);
+    const bearing = (geom.start_bearing_deg +
+      (geom.clockwise ? 1 : -1) * 360 * e.along_m / geom.circumference_m) * Math.PI / 180;
+    const r = geom.radius_m;
+    const depth = e.depth_m || 0;
+    net.liveSites.push({ id: `live-${e.track_id}`, hits: e.hits || 1,
+                         p: { x: r * Math.sin(bearing), y: r * Math.cos(bearing), z: -depth } });
+  }
+  if (net.liveSites.length) net.view.setLive(net.liveSites);
+  const note = $("netLiveNote");
+  note.hidden = false;
+  note.textContent = net.liveSites.length
+    ? `${net.liveSites.length} live defect(s) placed. Live positions use a declared ` +
+      `standoff for scale, not telemetry — treat them as approximate.`
+    : "Live wiring on. Confirmed defects will appear once the session reports positions.";
+}
+
+function wireNet() {
+  const canvas = $("netCanvas");
+  if (!canvas || !window.NET3D) return;
+  net.view = NET3D.create(canvas, { onSelect: selectSite });
+  window.addEventListener("resize", () => { if (state.mode === "net") net.view.resize(); });
+  const reload = debounce(loadScene, 250);
+  for (const id of ["penCirc", "penCyl", "penCone", "penBarge", "penStart"]) {
+    if ($(id)) $(id).oninput = reload;
+  }
+  if ($("penDir")) $("penDir").onchange = loadScene;
+  if ($("netClip")) $("netClip").onchange = (e) => { net.clip = e.target.value; loadScene(); };
+}
+
 function wireModes() {
-  const b = $("modeBrowse"), d = $("modeDrop"), l = $("modeLive");
+  const b = $("modeBrowse"), d = $("modeDrop"), l = $("modeLive"), n = $("modeNet");
   if (b) b.onclick = () => setMode("browse");
   if (d) d.onclick = () => setMode("drop");
   if (l) l.onclick = () => setMode("live");
+  if (n) n.onclick = () => setMode("net");
   if ($("liveStart")) $("liveStart").onclick = startLive;
   if ($("liveStop")) $("liveStop").onclick = stopLive;
   if ($("minHits")) $("minHits").oninput = (e) => { $("minHitsVal").textContent = e.target.value; };
@@ -389,4 +561,5 @@ function wireModes() {
 
 wireModes();
 wireDrop();
+wireNet();
 setMode("browse");

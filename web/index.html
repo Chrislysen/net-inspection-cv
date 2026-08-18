@@ -40,6 +40,7 @@
       <button class="mode active" id="modeBrowse" role="tab" aria-selected="true">Browse</button>
       <button class="mode" id="modeDrop" role="tab" aria-selected="false">Drop</button>
       <button class="mode" id="modeLive" role="tab" aria-selected="false">Live</button>
+      <button class="mode" id="modeNet" role="tab" aria-selected="false">Net 3D</button>
     </div>
 
     <div id="browsePanel">
@@ -106,6 +107,53 @@
       <p class="note" id="liveNote" hidden></p>
     </div>
 
+    <div id="netPanel" hidden>
+      <div class="field">
+        <label for="netClip">Inspection pass</label>
+        <select id="netClip"></select>
+        <p class="src-info">Produced by <code>scripts/map_inspection.py</code>. Drag to
+          orbit, scroll to zoom, click a marker to see what it actually looks like.</p>
+      </div>
+
+      <div class="field">
+        <label>Cage — <span class="declared-chip">declared, not measured</span></label>
+        <div class="grid2">
+          <label class="mini">Circumference (m)
+            <input type="number" id="penCirc" value="160" min="20" max="1000" step="10" />
+          </label>
+          <label class="mini">Wall depth (m)
+            <input type="number" id="penCyl" value="15" min="0" max="60" step="1" />
+          </label>
+          <label class="mini">Cone depth (m)
+            <input type="number" id="penCone" value="10" min="0" max="60" step="1" />
+          </label>
+          <label class="mini">Barge bearing (°)
+            <input type="number" id="penBarge" value="0" min="0" max="359" step="5" />
+          </label>
+          <label class="mini">Pass start (°)
+            <input type="number" id="penStart" value="0" min="0" max="359" step="5" />
+          </label>
+          <label class="mini">Direction
+            <select id="penDir">
+              <option value="1" selected>clockwise</option>
+              <option value="0">anticlockwise</option>
+            </select>
+          </label>
+        </div>
+        <p class="note">Nothing in one clip identifies a pen radius, so these come
+          from you, not the footage. The shell is drawn dashed and muted for that
+          reason; only the band and the sites are measured.</p>
+      </div>
+
+      <div class="coverage-callout" id="netCoverage" hidden></div>
+
+      <label class="toggle">
+        <input type="checkbox" id="netLiveWire" />
+        <span>Wire the live feed in — confirmed defects appear on the cage</span>
+      </label>
+      <p class="note" id="netLiveNote" hidden></p>
+    </div>
+
     <div class="field">
       <label>Detection method</label>
       <div class="method-grid" id="methodGrid"></div>
@@ -140,6 +188,7 @@
     <div class="stage" id="viewport">
       <div class="progress"></div>
       <img id="frameImg" alt="inspection frame" />
+      <canvas id="netCanvas" hidden aria-label="Interactive 3-D cage model"></canvas>
       <div class="readout" id="vpReadout">—</div>
       <div class="drop-overlay" id="dropOverlay" hidden><span>Drop to analyse</span></div>
     </div>
@@ -155,6 +204,15 @@
     </div>
     <div class="det-head">Detections</div>
     <div class="det-list" id="detList"><div class="det-empty">No detections</div></div>
+
+    <div id="siteOut" hidden>
+      <div class="det-head">Sites on the cage</div>
+      <div class="site-detail" id="siteDetail" hidden>
+        <img id="siteCrop" alt="closest look at the selected site" />
+        <div id="siteWhere"></div>
+      </div>
+      <div class="det-list" id="siteList"></div>
+    </div>
     <div class="compare-out" id="compareOut" hidden>
       <div class="det-head">Method comparison</div>
       <div id="compareRows"></div>
@@ -167,6 +225,7 @@
   reported figures are proxy results, not validated real-world performance.
 </footer>
 
+<script src="net3d.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

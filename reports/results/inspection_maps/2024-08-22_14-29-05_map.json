@@ -3,6 +3,14 @@
   "method": "det_v1",
   "conf": 0.25,
   "frames": 186,
+  "site_crops": {
+    "4": "site_4.jpg",
+    "5": "site_5.jpg",
+    "6": "site_6.jpg",
+    "2": "site_2.jpg",
+    "1": "site_1.jpg",
+    "3": "site_3.jpg"
+  },
   "motion": {
     "pairs": 185,
     "matched": 185,
@@ -49,6 +57,13 @@
       "span_m": 1.086,
       "first_frame": "2024-08-22_14-29-05_video_000800.jpg",
       "last_frame": "2024-08-22_14-29-05_video_001152.jpg",
+      "best_frame": "2024-08-22_14-29-05_video_000920.jpg",
+      "best_bbox": [
+        393,
+        650,
+        422,
+        720
+      ],
       "evidence": "strong \u2014 seen from many viewpoints",
       "description": "site 4: 3.13 m along, +0.01 m across, 1.7 m depth \u00b7 72 sightings \u00b7 ~53\u00d750 mm \u00b7 strong \u2014 seen from many viewpoints"
     },
@@ -65,6 +80,13 @@
       "span_m": 0.306,
       "first_frame": "2024-08-22_14-29-05_video_001088.jpg",
       "last_frame": "2024-08-22_14-29-05_video_001328.jpg",
+      "best_frame": "2024-08-22_14-29-05_video_001176.jpg",
+      "best_bbox": [
+        726,
+        250,
+        775,
+        291
+      ],
       "evidence": "strong \u2014 seen from many viewpoints",
       "description": "site 5: 4.00 m along, +0.20 m across, 1.7 m depth \u00b7 27 sightings \u00b7 ~65\u00d750 mm \u00b7 strong \u2014 seen from many viewpoints"
     },
@@ -81,6 +103,13 @@
       "span_m": 0.467,
       "first_frame": "2024-08-22_14-29-05_video_001536.jpg",
       "last_frame": "2024-08-22_14-29-05_video_001552.jpg",
+      "best_frame": "2024-08-22_14-29-05_video_001536.jpg",
+      "best_bbox": [
+        1243,
+        327,
+        1280,
+        589
+      ],
       "evidence": "moderate \u2014 seen in several frames",
       "description": "site 6: 5.03 m along, +0.12 m across, 1.7 m depth \u00b7 4 sightings \u00b7 ~274\u00d7294 mm \u00b7 moderate \u2014 seen in several frames"
     },
@@ -97,6 +126,13 @@
       "span_m": 0.016,
       "first_frame": "2024-08-22_14-29-05_video_000480.jpg",
       "last_frame": "2024-08-22_14-29-05_video_000488.jpg",
+      "best_frame": "2024-08-22_14-29-05_video_000488.jpg",
+      "best_bbox": [
+        431,
+        683,
+        469,
+        719
+      ],
       "evidence": "weak \u2014 one or two frames only",
       "description": "site 2: 1.49 m along, -0.20 m across, 1.6 m depth \u00b7 2 sightings \u00b7 ~31\u00d729 mm \u00b7 weak \u2014 one or two frames only"
     },
@@ -113,6 +149,13 @@
       "span_m": 0.0,
       "first_frame": "2024-08-22_14-29-05_video_000240.jpg",
       "last_frame": "2024-08-22_14-29-05_video_000240.jpg",
+      "best_frame": "2024-08-22_14-29-05_video_000240.jpg",
+      "best_bbox": [
+        1260,
+        541,
+        1279,
+        669
+      ],
       "evidence": "weak \u2014 one or two frames only",
       "description": "site 1: -0.04 m along, -0.17 m across, 1.6 m depth \u00b7 1 sightings \u00b7 ~16\u00d7112 mm \u00b7 weak \u2014 one or two frames only"
     },
@@ -129,6 +172,13 @@
       "span_m": 0.0,
       "first_frame": "2024-08-22_14-29-05_video_000488.jpg",
       "last_frame": "2024-08-22_14-29-05_video_000488.jpg",
+      "best_frame": "2024-08-22_14-29-05_video_000488.jpg",
+      "best_bbox": [
+        800,
+        670,
+        816,
+        714
+      ],
       "evidence": "weak \u2014 one or two frames only",
       "description": "site 3: 1.20 m along, -0.19 m across, 1.6 m depth \u00b7 1 sightings \u00b7 ~13\u00d736 mm \u00b7 weak \u2014 one or two frames only"
     }
@@ -144,6 +194,12 @@
       "height_mm": 111.5,
       "score": 0.3141583204269409,
       "drift_m": 0.0264,
+      "bbox": [
+        1260,
+        541,
+        1279,
+        669
+      ],
       "description": "-0.04 m along the sweep, -0.17 m across, 1.6 m depth (\u00b10.03 m) \u00b7 16\u00d7112 mm"
     },
     {
@@ -156,6 +212,12 @@
       "height_mm": 28.5,
       "score": 0.5541952848434448,
       "drift_m": 0.0869,
+      "bbox": [
+        404,
+        684,
+        443,
+        720
+      ],
       "description": "1.48 m along the sweep, -0.21 m across, 1.6 m depth (\u00b10.09 m) \u00b7 31\u00d728 mm"
     },
     {
@@ -168,6 +230,12 @@
       "height_mm": 29.8,
       "score": 0.6164956092834473,
       "drift_m": 0.0884,
+      "bbox": [
+        431,
+        683,
+        469,
+        719
+      ],
       "description": "1.49 m along the sweep, -0.19 m across, 1.6 m depth (\u00b10.09 m) \u00b7 31\u00d730 mm"
     },
     {
@@ -180,6 +248,12 @@
       "height_mm": 36.0,
       "score": 0.26739248633384705,
       "drift_m": 0.0884,
+      "bbox": [
+        800,
+        670,
+        816,
+        714
+      ],
       "description": "1.20 m along the sweep, -0.19 m across, 1.6 m depth (\u00b10.09 m) \u00b7 13\u00d736 mm"
     },
     {
@@ -192,6 +266,12 @@
       "height_mm": 8.8,
       "score": 0.3281274139881134,
       "drift_m": 0.1501,
+      "bbox": [
+        351,
+        392,
+        437,
+        404
+      ],
       "description": "2.66 m along the sweep, -0.03 m across, 1.7 m depth (\u00b10.15 m) \u00b7 65\u00d79 mm"
     },
     {
@@ -204,6 +284,12 @@
       "height_mm": 12.1,
       "score": 0.3829006850719452,
       "drift_m": 0.1521,
+      "bbox": [
+        51,
+        376,
+        120,
+        392
+      ],
       "description": "2.92 m along the sweep, -0.05 m across, 1.7 m depth (\u00b10.15 m) \u00b7 52\u00d712 mm"
     },
     {
@@ -216,6 +302,12 @@
       "height_mm": 31.2,
       "score": 0.3463694155216217,
       "drift_m": 0.1547,
+      "bbox": [
+        24,
+        378,
+        196,
+        420
+      ],
       "description": "2.94 m along the sweep, -0.04 m across, 1.8 m depth (\u00b10.15 m) \u00b7 126\u00d731 mm"
     },
     {
@@ -228,6 +320,12 @@
       "height_mm": 11.6,
       "score": 0.28113263845443726,
       "drift_m": 0.1547,
+      "bbox": [
+        125,
+        405,
+        197,
+        421
+      ],
       "description": "2.90 m along the sweep, -0.05 m across, 1.8 m depth (\u00b10.15 m) \u00b7 52\u00d712 mm"
     },
     {
@@ -240,6 +338,12 @@
       "height_mm": 44.1,
       "score": 0.282172292470932,
       "drift_m": 0.1566,
+      "bbox": [
+        452,
+        334,
+        487,
+        396
+      ],
       "description": "2.71 m along the sweep, -0.03 m across, 1.7 m depth (\u00b10.16 m) \u00b7 25\u00d744 mm"
     },
     {
@@ -252,6 +356,12 @@
       "height_mm": 31.0,
       "score": 0.28188925981521606,
       "drift_m": 0.1598,
+      "bbox": [
+        144,
+        352,
+        318,
+        394
+      ],
       "description": "2.95 m along the sweep, -0.04 m across, 1.7 m depth (\u00b10.16 m) \u00b7 130\u00d731 mm"
     },
     {
@@ -264,6 +374,12 @@
       "height_mm": 11.8,
       "score": 0.35105806589126587,
       "drift_m": 0.1615,
+      "bbox": [
+        270,
+        394,
+        359,
+        408
+      ],
       "description": "2.94 m along the sweep, -0.05 m across, 1.7 m depth (\u00b10.16 m) \u00b7 72\u00d712 mm"
     },
     {
@@ -276,6 +392,12 @@
       "height_mm": 35.8,
       "score": 0.37746933102607727,
       "drift_m": 0.1669,
+      "bbox": [
+        314,
+        376,
+        478,
+        421
+      ],
       "description": "2.98 m along the sweep, -0.03 m across, 1.7 m depth (\u00b10.17 m) \u00b7 131\u00d736 mm"
     },
     {
@@ -288,6 +410,12 @@
       "height_mm": 17.8,
       "score": 0.48260337114334106,
       "drift_m": 0.1681,
+      "bbox": [
+        455,
+        404,
+        515,
+        426
+      ],
       "description": "2.93 m along the sweep, -0.04 m across, 1.7 m depth (\u00b10.17 m) \u00b7 49\u00d718 mm"
     },
     {
@@ -300,6 +428,12 @@
       "height_mm": 34.9,
       "score": 0.4682145118713379,
       "drift_m": 0.1681,
+      "bbox": [
+        354,
+        382,
+        514,
+        425
+      ],
       "description": "2.98 m along the sweep, -0.04 m across, 1.7 m depth (\u00b10.17 m) \u00b7 130\u00d735 mm"
     },
     {
@@ -312,6 +446,12 @@
       "height_mm": 17.2,
       "score": 0.3084920346736908,
       "drift_m": 0.1681,
+      "bbox": [
+        374,
+        403,
+        515,
+        424
+      ],
       "description": "2.97 m along the sweep, -0.04 m across, 1.7 m depth (\u00b10.17 m) \u00b7 115\u00d717 mm"
     },
     {
@@ -324,6 +464,12 @@
       "height_mm": 38.3,
       "score": 0.28148773312568665,
       "drift_m": 0.1681,
+      "bbox": [
+        452,
+        379,
+        514,
+        426
+      ],
       "description": "2.94 m along the sweep, -0.04 m across, 1.7 m depth (\u00b10.17 m) \u00b7 51\u00d738 mm"
     },
     {
@@ -336,6 +482,12 @@
       "height_mm": 77.5,
       "score": 0.4862748682498932,
       "drift_m": 0.1687,
+      "bbox": [
+        75,
+        227,
+        120,
+        327
+      ],
       "description": "3.24 m along the sweep, +0.07 m across, 1.7 m depth (\u00b10.17 m) \u00b7 35\u00d778 mm"
     },
     {
@@ -348,6 +500,12 @@
       "height_mm": 35.3,
       "score": 0.3188883066177368,
       "drift_m": 0.1687,
+      "bbox": [
+        375,
+        382,
+        541,
+        428
+      ],
       "description": "2.96 m along the sweep, -0.04 m across, 1.7 m depth (\u00b10.17 m) \u00b7 129\u00d735 mm"
     },
     {
@@ -360,6 +518,12 @@
       "height_mm": 18.5,
       "score": 0.2918090224266052,
       "drift_m": 0.1687,
+      "bbox": [
+        397,
+        405,
+        540,
+        428
+      ],
       "description": "2.95 m along the sweep, -0.04 m across, 1.7 m depth (\u00b10.17 m) \u00b7 111\u00d718 mm"
     },
     {
@@ -372,6 +536,12 @@
       "height_mm": 43.2,
       "score": 0.267487108707428,
       "drift_m": 0.1687,
+      "bbox": [
+        743,
+        365,
+        771,
+        421
+      ],
       "description": "2.73 m along the sweep, -0.03 m across, 1.7 m depth (\u00b10.17 m) \u00b7 22\u00d743 mm"
     },
     {
@@ -384,6 +554,12 @@
       "height_mm": 82.3,
       "score": 0.7146007418632507,
       "drift_m": 0.169,
+      "bbox": [
+        72,
+        221,
+        120,
+        324
+      ],
       "description": "3.25 m along the sweep, +0.07 m across, 1.7 m depth (\u00b10.17 m) \u00b7 38\u00d782 mm"
     },
     {
@@ -396,6 +572,12 @@
       "height_mm": 7.0,
       "score": 0.3687692880630493,
       "drift_m": 0.169,
+      "bbox": [
+        824,
+        346,
+        885,
+        355
+      ],
       "description": "2.64 m along the sweep, +0.00 m across, 1.7 m depth (\u00b10.17 m) \u00b7 49\u00d77 mm"
     },
     {
@@ -408,6 +590,12 @@
       "height_mm": 35.1,
       "score": 0.295425146818161,
       "drift_m": 0.169,
+      "bbox": [
+        484,
+        375,
+        548,
+        419
+      ],
       "description": "2.91 m along the sweep, -0.03 m across, 1.7 m depth (\u00b10.17 m) \u00b7 51\u00d735 mm"
     },
     {
@@ -420,6 +608,12 @@
       "height_mm": 90.6,
       "score": 0.44059544801712036,
       "drift_m": 0.1722,
+      "bbox": [
+        131,
+        188,
+        187,
+        294
+      ],
       "description": "3.29 m along the sweep, +0.09 m across, 1.7 m depth (\u00b10.17 m) \u00b7 48\u00d791 mm"
     },
     {
@@ -432,6 +626,12 @@
       "height_mm": 13.7,
       "score": 0.43185752630233765,
       "drift_m": 0.1722,
+      "bbox": [
+        485,
+        363,
+        599,
+        379
+      ],
       "description": "2.96 m along the sweep, -0.02 m across, 1.7 m depth (\u00b10.17 m) \u00b7 98\u00d714 mm"
     },
     {
@@ -444,6 +644,12 @@
       "height_mm": 60.8,
       "score": 0.7525514364242554,
       "drift_m": 0.1738,
+      "bbox": [
+        393,
+        650,
+        422,
+        720
+      ],
       "description": "3.11 m along the sweep, -0.29 m across, 1.7 m depth (\u00b10.17 m) \u00b7 25\u00d761 mm"
     },
     {
@@ -456,6 +662,12 @@
       "height_mm": 15.2,
       "score": 0.3186468482017517,
       "drift_m": 0.1738,
+      "bbox": [
+        566,
+        356,
+        627,
+        373
+      ],
       "description": "2.95 m along the sweep, -0.01 m across, 1.7 m depth (\u00b10.17 m) \u00b7 53\u00d715 mm"
     },
     {
@@ -468,6 +680,12 @@
       "height_mm": 23.1,
       "score": 0.4545854926109314,
       "drift_m": 0.1746,
+      "bbox": [
+        510,
+        352,
+        655,
+        380
+      ],
       "description": "2.97 m along the sweep, -0.01 m across, 1.7 m depth (\u00b10.17 m) \u00b7 122\u00d723 mm"
     },
     {
@@ -480,6 +698,12 @@
       "height_mm": 48.8,
       "score": 0.34722277522087097,
       "drift_m": 0.1746,
+      "bbox": [
+        418,
+        662,
+        442,
+        720
+      ],
       "description": "3.10 m along the sweep, -0.28 m across, 1.7 m depth (\u00b10.17 m) \u00b7 20\u00d749 mm"
     },
     {
@@ -492,6 +716,12 @@
       "height_mm": 27.4,
       "score": 0.3197193443775177,
       "drift_m": 0.1746,
+      "bbox": [
+        593,
+        348,
+        656,
+        380
+      ],
       "description": "2.94 m along the sweep, -0.01 m across, 1.7 m depth (\u00b10.17 m) \u00b7 53\u00d727 mm"
     },
     {
@@ -504,6 +734,12 @@
       "height_mm": 41.2,
       "score": 0.5342636108398438,
       "drift_m": 0.1756,
+      "bbox": [
+        446,
+        671,
+        469,
+        720
+      ],
       "description": "3.10 m along the sweep, -0.29 m across, 1.7 m depth (\u00b10.18 m) \u00b7 20\u00d741 mm"
     },
     {
@@ -516,6 +752,12 @@
       "height_mm": 84.9,
       "score": 0.5142772793769836,
       "drift_m": 0.1756,
+      "bbox": [
+        216,
+        205,
+        268,
+        304
+      ],
       "description": "3.29 m along the sweep, +0.09 m across, 1.7 m depth (\u00b10.18 m) \u00b7 44\u00d785 mm"
     },
     {
@@ -528,6 +770,12 @@
       "height_mm": 82.3,
       "score": 0.6459589004516602,
       "drift_m": 0.1775,
+      "bbox": [
+        260,
+        207,
+        313,
+        303
+      ],
       "description": "3.29 m along the sweep, +0.09 m across, 1.7 m depth (\u00b10.18 m) \u00b7 46\u00d782 mm"
     },
     {
@@ -540,6 +788,12 @@
       "height_mm": 40.0,
       "score": 0.39474231004714966,
       "drift_m": 0.1775,
+      "bbox": [
+        594,
+        348,
+        732,
+        395
+      ],
       "description": "2.96 m along the sweep, -0.01 m across, 1.7 m depth (\u00b10.18 m) \u00b7 118\u00d740 mm"
     },
     {
@@ -552,6 +806,12 @@
       "height_mm": 30.5,
       "score": 0.38892853260040283,
       "drift_m": 0.1775,
+      "bbox": [
+        646,
+        358,
+        731,
+        393
+      ],
       "description": "2.94 m along the sweep, -0.02 m across, 1.7 m depth (\u00b10.18 m) \u00b7 73\u00d730 mm"
     },
     {
@@ -564,6 +824,12 @@
       "height_mm": 42.4,
       "score": 0.2685137093067169,
       "drift_m": 0.1775,
+      "bbox": [
+        488,
+        670,
+        514,
+        720
+      ],
       "description": "3.10 m along the sweep, -0.29 m across, 1.7 m depth (\u00b10.18 m) \u00b7 22\u00d742 mm"
     },
     {
@@ -576,6 +842,12 @@
       "height_mm": 30.3,
       "score": 0.40026506781578064,
       "drift_m": 0.1793,
+      "bbox": [
+        711,
+        344,
+        770,
+        382
+      ],
       "description": "2.94 m along the sweep, -0.01 m across, 1.7 m depth (\u00b10.18 m) \u00b7 48\u00d730 mm"
     },
     {
@@ -588,6 +860,12 @@
       "height_mm": 48.2,
       "score": 0.3752254843711853,
       "drift_m": 0.1793,
+      "bbox": [
+        527,
+        660,
+        553,
+        720
+      ],
       "description": "3.10 m along the sweep, -0.28 m across, 1.7 m depth (\u00b10.18 m) \u00b7 22\u00d748 mm"
     },
     {
@@ -600,6 +878,12 @@
       "height_mm": 159.5,
       "score": 0.3040144741535187,
       "drift_m": 0.1793,
+      "bbox": [
+        480,
+        208,
+        614,
+        404
+      ],
       "description": "3.09 m along the sweep, +0.04 m across, 1.7 m depth (\u00b10.18 m) \u00b7 110\u00d7160 mm"
     },
     {
@@ -612,6 +896,12 @@
       "height_mm": 42.4,
       "score": 0.28128722310066223,
       "drift_m": 0.1793,
+      "bbox": [
+        962,
+        319,
+        983,
+        371
+      ],
       "description": "2.75 m along the sweep, +0.00 m across, 1.7 m depth (\u00b10.18 m) \u00b7 17\u00d742 mm"
     },
     {
@@ -624,6 +914,12 @@
       "height_mm": 58.4,
       "score": 0.6934165358543396,
       "drift_m": 0.1808,
+      "bbox": [
+        567,
+        650,
+        596,
+        720
+      ],
       "description": "3.10 m along the sweep, -0.29 m across, 1.7 m depth (\u00b10.18 m) \u00b7 24\u00d758 mm"
     },
     {
@@ -636,6 +932,12 @@
       "height_mm": 85.0,
       "score": 0.5008378624916077,
       "drift_m": 0.1808,
+      "bbox": [
+        339,
+        185,
+        390,
+        286
+      ],
       "description": "3.28 m along the sweep, +0.09 m across, 1.7 m depth (\u00b10.18 m) \u00b7 44\u00d785 mm"
     },
     {
@@ -648,6 +950,12 @@
       "height_mm": 50.8,
       "score": 0.39775440096855164,
       "drift_m": 0.1817,
+      "bbox": [
+        591,
+        657,
+        633,
+        720
+      ],
       "description": "3.09 m along the sweep, -0.28 m across, 1.7 m depth (\u00b10.18 m) \u00b7 34\u00d751 mm"
     },
     {
@@ -660,6 +968,12 @@
       "height_mm": 81.7,
       "score": 0.3859008848667145,
       "drift_m": 0.1817,
+      "bbox": [
+        358,
+        193,
+        412,
+        293
+      ],
       "description": "3.27 m along the sweep, +0.09 m across, 1.7 m depth (\u00b10.18 m) \u00b7 44\u00d782 mm"
     },
     {
@@ -672,6 +986,12 @@
       "height_mm": 18.2,
       "score": 0.2785288989543915,
       "drift_m": 0.1817,
+      "bbox": [
+        769,
+        353,
+        837,
+        375
+      ],
       "description": "2.93 m along the sweep, -0.01 m across, 1.7 m depth (\u00b10.18 m) \u00b7 56\u00d718 mm"
     },
     {
@@ -684,6 +1004,12 @@
       "height_mm": 81.9,
       "score": 0.6811935901641846,
       "drift_m": 0.1829,
+      "bbox": [
+        388,
+        205,
+        442,
+        302
+      ],
       "description": "3.27 m along the sweep, +0.09 m across, 1.7 m depth (\u00b10.18 m) \u00b7 45\u00d782 mm"
     },
     {
@@ -696,6 +1022,12 @@
       "height_mm": 40.1,
       "score": 0.3917076587677002,
       "drift_m": 0.1829,
+      "bbox": [
+        615,
+        672,
+        660,
+        720
+      ],
       "description": "3.09 m along the sweep, -0.28 m across, 1.7 m depth (\u00b10.18 m) \u00b7 38\u00d740 mm"
     },
     {
@@ -708,6 +1040,12 @@
       "height_mm": 83.6,
       "score": 0.42971643805503845,
       "drift_m": 0.1846,
+      "bbox": [
+        438,
+        213,
+        487,
+        318
+      ],
       "description": "3.26 m along the sweep, +0.09 m across, 1.7 m depth (\u00b10.18 m) \u00b7 39\u00d784 mm"
     },
     {
@@ -720,6 +1058,12 @@
       "height_mm": 88.1,
       "score": 0.5859899520874023,
       "drift_m": 0.1867,
+      "bbox": [
+        482,
+        224,
+        539,
+        327
+      ],
       "description": "3.27 m along the sweep, +0.10 m across, 1.7 m depth (\u00b10.19 m) \u00b7 49\u00d788 mm"
     },
     {
@@ -732,6 +1076,12 @@
       "height_mm": 87.9,
       "score": 0.4392585754394531,
       "drift_m": 0.1867,
+      "bbox": [
+        742,
+        324,
+        821,
+        427
+      ],
       "description": "3.04 m along the sweep, +0.01 m across, 1.7 m depth (\u00b10.19 m) \u00b7 68\u00d788 mm"
     },
     {
@@ -744,6 +1094,12 @@
       "height_mm": 78.9,
       "score": 0.5569730401039124,
       "drift_m": 0.1874,
+      "bbox": [
+        497,
+        231,
+        551,
+        329
+      ],
       "description": "3.26 m along the sweep, +0.10 m across, 1.7 m depth (\u00b10.19 m) \u00b7 43\u00d779 mm"
     },
     {
@@ -756,6 +1112,12 @@
       "height_mm": 19.2,
       "score": 0.25074732303619385,
       "drift_m": 0.1874,
+      "bbox": [
+        48,
+        268,
+        172,
+        292
+      ],
       "description": "3.59 m along the sweep, +0.10 m across, 1.7 m depth (\u00b10.19 m) \u00b7 100\u00d719 mm"
     },
     {
@@ -768,6 +1130,12 @@
       "height_mm": 79.6,
       "score": 0.7044586539268494,
       "drift_m": 0.1902,
+      "bbox": [
+        522,
+        220,
+        578,
+        319
+      ],
       "description": "3.28 m along the sweep, +0.14 m across, 1.7 m depth (\u00b10.19 m) \u00b7 45\u00d780 mm"
     },
     {
@@ -780,6 +1148,12 @@
       "height_mm": 32.6,
       "score": 0.37260738015174866,
       "drift_m": 0.1902,
+      "bbox": [
+        832,
+        351,
+        994,
+        392
+      ],
       "description": "2.99 m along the sweep, +0.05 m across, 1.7 m depth (\u00b10.19 m) \u00b7 130\u00d733 mm"
     },
     {
@@ -792,6 +1166,12 @@
       "height_mm": 10.7,
       "score": 0.2981342375278473,
       "drift_m": 0.1902,
+      "bbox": [
+        183,
+        313,
+        204,
+        326
+      ],
       "description": "3.57 m along the sweep, +0.09 m across, 1.7 m depth (\u00b10.19 m) \u00b7 17\u00d711 mm"
     },
     {
@@ -804,6 +1184,12 @@
       "height_mm": 90.1,
       "score": 0.5720754861831665,
       "drift_m": 0.1938,
+      "bbox": [
+        525,
+        194,
+        672,
+        304
+      ],
       "description": "3.31 m along the sweep, +0.14 m across, 1.7 m depth (\u00b10.19 m) \u00b7 120\u00d790 mm"
     },
     {
@@ -816,6 +1202,12 @@
       "height_mm": 87.9,
       "score": 0.664232075214386,
       "drift_m": 0.1971,
+      "bbox": [
+        690,
+        197,
+        762,
+        302
+      ],
       "description": "3.27 m along the sweep, +0.12 m across, 1.7 m depth (\u00b10.20 m) \u00b7 59\u00d788 mm"
     },
     {
@@ -828,6 +1220,12 @@
       "height_mm": 99.4,
       "score": 0.47432857751846313,
       "drift_m": 0.1971,
+      "bbox": [
+        599,
+        181,
+        761,
+        300
+      ],
       "description": "3.31 m along the sweep, +0.13 m across, 1.7 m depth (\u00b10.20 m) \u00b7 134\u00d799 mm"
     },
     {
@@ -840,6 +1238,12 @@
       "height_mm": 86.5,
       "score": 0.7265430092811584,
       "drift_m": 0.1988,
+      "bbox": [
+        758,
+        196,
+        823,
+        306
+      ],
       "description": "3.26 m along the sweep, +0.12 m across, 1.7 m depth (\u00b10.20 m) \u00b7 52\u00d786 mm"
     },
     {
@@ -852,6 +1256,12 @@
       "height_mm": 95.6,
       "score": 0.6639290452003479,
       "drift_m": 0.1988,
+      "bbox": [
+        659,
+        185,
+        823,
+        306
+      ],
       "description": "3.30 m along the sweep, +0.12 m across, 1.7 m depth (\u00b10.20 m) \u00b7 129\u00d796 mm"
     },
     {
@@ -864,6 +1274,12 @@
       "height_mm": 83.5,
       "score": 0.6889896988868713,
       "drift_m": 0.2009,
+      "bbox": [
+        795,
+        209,
+        860,
+        310
+      ],
       "description": "3.26 m along the sweep, +0.12 m across, 1.7 m depth (\u00b10.20 m) \u00b7 54\u00d784 mm"
     },
     {
@@ -876,6 +1292,12 @@
       "height_mm": 87.6,
       "score": 0.6586106419563293,
       "drift_m": 0.2023,
+      "bbox": [
+        821,
+        208,
+        889,
+        312
+      ],
       "description": "3.27 m along the sweep, +0.13 m across, 1.7 m depth (\u00b10.20 m) \u00b7 57\u00d788 mm"
     },
     {
@@ -888,6 +1310,12 @@
       "height_mm": 100.2,
       "score": 0.31569790840148926,
       "drift_m": 0.2023,
+      "bbox": [
+        726,
+        192,
+        888,
+        310
+      ],
       "description": "3.31 m along the sweep, +0.13 m across, 1.7 m depth (\u00b10.20 m) \u00b7 137\u00d7100 mm"
     },
     {
@@ -900,6 +1328,12 @@
       "height_mm": 10.1,
       "score": 0.35486066341400146,
       "drift_m": 0.2032,
+      "bbox": [
+        445,
+        265,
+        522,
+        277
+      ],
       "description": "3.60 m along the sweep, +0.11 m across, 1.7 m depth (\u00b10.20 m) \u00b7 63\u00d710 mm"
     },
     {
@@ -912,6 +1346,12 @@
       "height_mm": 98.6,
       "score": 0.5597463846206665,
       "drift_m": 0.2045,
+      "bbox": [
+        813,
+        194,
+        975,
+        315
+      ],
       "description": "3.28 m along the sweep, +0.12 m across, 1.7 m depth (\u00b10.20 m) \u00b7 132\u00d799 mm"
     },
     {
@@ -924,6 +1364,12 @@
       "height_mm": 92.9,
       "score": 0.2877299189567566,
       "drift_m": 0.2045,
+      "bbox": [
+        897,
+        206,
+        974,
+        320
+      ],
       "description": "3.25 m along the sweep, +0.12 m across, 1.7 m depth (\u00b10.20 m) \u00b7 63\u00d793 mm"
     },
     {
@@ -936,6 +1382,12 @@
       "height_mm": 100.5,
       "score": 0.7192310690879822,
       "drift_m": 0.2073,
+      "bbox": [
+        864,
+        184,
+        1029,
+        305
+      ],
       "description": "3.29 m along the sweep, +0.12 m across, 1.7 m depth (\u00b10.21 m) \u00b7 137\u00d7100 mm"
     },
     {
@@ -948,6 +1400,12 @@
       "height_mm": 179.8,
       "score": 0.4001072943210602,
       "drift_m": 0.2104,
+      "bbox": [
+        1265,
+        334,
+        1279,
+        547
+      ],
       "description": "3.07 m along the sweep, -0.05 m across, 1.7 m depth (\u00b10.21 m) \u00b7 12\u00d7180 mm"
     },
     {
@@ -960,6 +1418,12 @@
       "height_mm": 49.1,
       "score": 0.3562760055065155,
       "drift_m": 0.2104,
+      "bbox": [
+        278,
+        267,
+        338,
+        325
+      ],
       "description": "3.89 m along the sweep, +0.07 m across, 1.7 m depth (\u00b10.21 m) \u00b7 50\u00d749 mm"
     },
     {
@@ -972,6 +1436,12 @@
       "height_mm": 86.0,
       "score": 0.2933461368083954,
       "drift_m": 0.2104,
+      "bbox": [
+        907,
+        194,
+        1064,
+        296
+      ],
       "description": "3.31 m along the sweep, +0.11 m across, 1.7 m depth (\u00b10.21 m) \u00b7 133\u00d786 mm"
     },
     {
@@ -984,6 +1454,12 @@
       "height_mm": 162.8,
       "score": 0.28913041949272156,
       "drift_m": 0.2104,
+      "bbox": [
+        1267,
+        395,
+        1279,
+        588
+      ],
       "description": "3.07 m along the sweep, -0.09 m across, 1.7 m depth (\u00b10.21 m) \u00b7 10\u00d7163 mm"
     },
     {
@@ -996,6 +1472,12 @@
       "height_mm": 97.3,
       "score": 0.5461330413818359,
       "drift_m": 0.2115,
+      "bbox": [
+        856,
+        180,
+        1002,
+        290
+      ],
       "description": "3.34 m along the sweep, +0.14 m across, 1.7 m depth (\u00b10.21 m) \u00b7 129\u00d797 mm"
     },
     {
@@ -1008,6 +1490,12 @@
       "height_mm": 92.9,
       "score": 0.5041846632957458,
       "drift_m": 0.2145,
+      "bbox": [
+        859,
+        187,
+        996,
+        291
+      ],
       "description": "3.37 m along the sweep, +0.19 m across, 1.7 m depth (\u00b10.21 m) \u00b7 123\u00d793 mm"
     },
     {
@@ -1020,6 +1508,12 @@
       "height_mm": 88.1,
       "score": 0.43309909105300903,
       "drift_m": 0.2173,
+      "bbox": [
+        921,
+        195,
+        1059,
+        292
+      ],
       "description": "3.37 m along the sweep, +0.20 m across, 1.7 m depth (\u00b10.22 m) \u00b7 126\u00d788 mm"
     },
     {
@@ -1032,6 +1526,12 @@
       "height_mm": 101.3,
       "score": 0.6261478662490845,
       "drift_m": 0.2212,
+      "bbox": [
+        995,
+        185,
+        1144,
+        291
+      ],
       "description": "3.35 m along the sweep, +0.21 m across, 1.7 m depth (\u00b10.22 m) \u00b7 142\u00d7101 mm"
     },
     {
@@ -1044,6 +1544,12 @@
       "height_mm": 46.7,
       "score": 0.40008974075317383,
       "drift_m": 0.2316,
+      "bbox": [
+        590,
+        256,
+        665,
+        300
+      ],
       "description": "3.98 m along the sweep, +0.17 m across, 1.7 m depth (\u00b10.23 m) \u00b7 80\u00d747 mm"
     },
     {
@@ -1056,6 +1562,12 @@
       "height_mm": 49.8,
       "score": 0.3716273903846741,
       "drift_m": 0.2359,
+      "bbox": [
+        666,
+        252,
+        723,
+        296
+      ],
       "description": "4.00 m along the sweep, +0.17 m across, 1.7 m depth (\u00b10.24 m) \u00b7 64\u00d750 mm"
     },
     {
@@ -1068,6 +1580,12 @@
       "height_mm": 49.1,
       "score": 0.2512231171131134,
       "drift_m": 0.2359,
+      "bbox": [
+        1216,
+        203,
+        1280,
+        247
+      ],
       "description": "3.38 m along the sweep, +0.23 m across, 1.7 m depth (\u00b10.24 m) \u00b7 71\u00d749 mm"
     },
     {
@@ -1080,6 +1598,12 @@
       "height_mm": 45.8,
       "score": 0.5187410712242126,
       "drift_m": 0.2379,
+      "bbox": [
+        694,
+        249,
+        742,
+        290
+      ],
       "description": "4.01 m along the sweep, +0.19 m across, 1.7 m depth (\u00b10.24 m) \u00b7 55\u00d746 mm"
     },
     {
@@ -1092,6 +1616,12 @@
       "height_mm": 35.8,
       "score": 0.25876641273498535,
       "drift_m": 0.2379,
+      "bbox": [
+        626,
+        257,
+        743,
+        289
+      ],
       "description": "4.04 m along the sweep, +0.19 m across, 1.7 m depth (\u00b10.24 m) \u00b7 130\u00d736 mm"
     },
     {
@@ -1104,6 +1634,12 @@
       "height_mm": 69.2,
       "score": 0.2579132616519928,
       "drift_m": 0.2379,
+      "bbox": [
+        1234,
+        209,
+        1279,
+        271
+      ],
       "description": "3.41 m along the sweep, +0.22 m across, 1.7 m depth (\u00b10.24 m) \u00b7 50\u00d769 mm"
     },
     {
@@ -1116,6 +1652,12 @@
       "height_mm": 45.4,
       "score": 0.31937557458877563,
       "drift_m": 0.2392,
+      "bbox": [
+        633,
+        247,
+        755,
+        286
+      ],
       "description": "4.06 m along the sweep, +0.21 m across, 1.7 m depth (\u00b10.24 m) \u00b7 139\u00d745 mm"
     },
     {
@@ -1128,6 +1670,12 @@
       "height_mm": 47.8,
       "score": 0.27985668182373047,
       "drift_m": 0.2392,
+      "bbox": [
+        697,
+        246,
+        755,
+        288
+      ],
       "description": "4.02 m along the sweep, +0.21 m across, 1.7 m depth (\u00b10.24 m) \u00b7 66\u00d748 mm"
     },
     {
@@ -1140,6 +1688,12 @@
       "height_mm": 50.7,
       "score": 0.4854263961315155,
       "drift_m": 0.2401,
+      "bbox": [
+        703,
+        242,
+        760,
+        284
+      ],
       "description": "4.03 m along the sweep, +0.23 m across, 1.7 m depth (\u00b10.24 m) \u00b7 68\u00d751 mm"
     },
     {
@@ -1152,6 +1706,12 @@
       "height_mm": 48.9,
       "score": 0.29434430599212646,
       "drift_m": 0.2401,
+      "bbox": [
+        644,
+        243,
+        760,
+        284
+      ],
       "description": "4.06 m along the sweep, +0.23 m across, 1.7 m depth (\u00b10.24 m) \u00b7 137\u00d749 mm"
     },
     {
@@ -1164,6 +1724,12 @@
       "height_mm": 109.7,
       "score": 0.25018203258514404,
       "drift_m": 0.2401,
+      "bbox": [
+        744,
+        193,
+        761,
+        286
+      ],
       "description": "4.00 m along the sweep, +0.25 m across, 1.7 m depth (\u00b10.24 m) \u00b7 20\u00d7110 mm"
     },
     {
@@ -1176,6 +1742,12 @@
       "height_mm": 48.7,
       "score": 0.7741239666938782,
       "drift_m": 0.2414,
+      "bbox": [
+        726,
+        250,
+        775,
+        291
+      ],
       "description": "4.03 m along the sweep, +0.23 m across, 1.7 m depth (\u00b10.24 m) \u00b7 57\u00d749 mm"
     },
     {
@@ -1188,6 +1760,12 @@
       "height_mm": 51.2,
       "score": 0.472705215215683,
       "drift_m": 0.2434,
+      "bbox": [
+        747,
+        254,
+        801,
+        298
+      ],
       "description": "4.04 m along the sweep, +0.23 m across, 1.7 m depth (\u00b10.24 m) \u00b7 63\u00d751 mm"
     },
     {
@@ -1200,6 +1778,12 @@
       "height_mm": 50.6,
       "score": 0.4414384961128235,
       "drift_m": 0.2461,
+      "bbox": [
+        797,
+        254,
+        848,
+        297
+      ],
       "description": "4.04 m along the sweep, +0.23 m across, 1.7 m depth (\u00b10.25 m) \u00b7 60\u00d751 mm"
     },
     {
@@ -1212,6 +1796,12 @@
       "height_mm": 50.9,
       "score": 0.5564898252487183,
       "drift_m": 0.248,
+      "bbox": [
+        838,
+        254,
+        888,
+        297
+      ],
       "description": "4.02 m along the sweep, +0.23 m across, 1.7 m depth (\u00b10.25 m) \u00b7 58\u00d751 mm"
     },
     {
@@ -1224,6 +1814,12 @@
       "height_mm": 53.0,
       "score": 0.5938506126403809,
       "drift_m": 0.2494,
+      "bbox": [
+        866,
+        252,
+        920,
+        297
+      ],
       "description": "4.02 m along the sweep, +0.23 m across, 1.7 m depth (\u00b10.25 m) \u00b7 64\u00d753 mm"
     },
     {
@@ -1236,6 +1832,12 @@
       "height_mm": 48.0,
       "score": 0.5271094441413879,
       "drift_m": 0.251,
+      "bbox": [
+        889,
+        251,
+        946,
+        292
+      ],
       "description": "4.02 m along the sweep, +0.23 m across, 1.7 m depth (\u00b10.25 m) \u00b7 67\u00d748 mm"
     },
     {
@@ -1248,6 +1850,12 @@
       "height_mm": 105.6,
       "score": 0.2654450833797455,
       "drift_m": 0.251,
+      "bbox": [
+        919,
+        205,
+        947,
+        294
+      ],
       "description": "4.00 m along the sweep, +0.26 m across, 1.7 m depth (\u00b10.25 m) \u00b7 34\u00d7106 mm"
     },
     {
@@ -1260,6 +1868,12 @@
       "height_mm": 47.3,
       "score": 0.3990369141101837,
       "drift_m": 0.2527,
+      "bbox": [
+        914,
+        248,
+        977,
+        288
+      ],
       "description": "4.02 m along the sweep, +0.24 m across, 1.7 m depth (\u00b10.25 m) \u00b7 74\u00d747 mm"
     },
     {
@@ -1272,6 +1886,12 @@
       "height_mm": 50.2,
       "score": 0.34105199575424194,
       "drift_m": 0.2541,
+      "bbox": [
+        937,
+        241,
+        999,
+        283
+      ],
       "description": "4.02 m along the sweep, +0.24 m across, 1.7 m depth (\u00b10.25 m) \u00b7 74\u00d750 mm"
     },
     {
@@ -1284,6 +1904,12 @@
       "height_mm": 45.5,
       "score": 0.4613395035266876,
       "drift_m": 0.2548,
+      "bbox": [
+        978,
+        247,
+        1033,
+        286
+      ],
       "description": "3.99 m along the sweep, +0.24 m across, 1.7 m depth (\u00b10.25 m) \u00b7 65\u00d746 mm"
     },
     {
@@ -1296,6 +1922,12 @@
       "height_mm": 48.3,
       "score": 0.3628876507282257,
       "drift_m": 0.2559,
+      "bbox": [
+        998,
+        252,
+        1079,
+        293
+      ],
       "description": "3.98 m along the sweep, +0.22 m across, 1.7 m depth (\u00b10.26 m) \u00b7 94\u00d748 mm"
     },
     {
@@ -1308,6 +1940,12 @@
       "height_mm": 52.7,
       "score": 0.34699752926826477,
       "drift_m": 0.2596,
+      "bbox": [
+        1102,
+        237,
+        1179,
+        284
+      ],
       "description": "3.95 m along the sweep, +0.21 m across, 1.7 m depth (\u00b10.26 m) \u00b7 87\u00d753 mm"
     },
     {
@@ -1320,6 +1958,12 @@
       "height_mm": 104.5,
       "score": 0.43536293506622314,
       "drift_m": 0.261,
+      "bbox": [
+        1132,
+        183,
+        1220,
+        276
+      ],
       "description": "3.94 m along the sweep, +0.24 m across, 1.7 m depth (\u00b10.26 m) \u00b7 98\u00d7104 mm"
     },
     {
@@ -1332,6 +1976,12 @@
       "height_mm": 48.0,
       "score": 0.302986204624176,
       "drift_m": 0.261,
+      "bbox": [
+        1141,
+        233,
+        1213,
+        276
+      ],
       "description": "3.94 m along the sweep, +0.21 m across, 1.7 m depth (\u00b10.26 m) \u00b7 80\u00d748 mm"
     },
     {
@@ -1344,6 +1994,12 @@
       "height_mm": 274.3,
       "score": 0.3927988111972809,
       "drift_m": 0.2618,
+      "bbox": [
+        1243,
+        302,
+        1280,
+        548
+      ],
       "description": "3.87 m along the sweep, +0.02 m across, 1.7 m depth (\u00b10.26 m) \u00b7 41\u00d7274 mm"
     },
     {
@@ -1356,6 +2012,12 @@
       "height_mm": 273.6,
       "score": 0.36621105670928955,
       "drift_m": 0.2689,
+      "bbox": [
+        1236,
+        211,
+        1280,
+        465
+      ],
       "description": "4.03 m along the sweep, +0.12 m across, 1.7 m depth (\u00b10.27 m) \u00b7 47\u00d7274 mm"
     },
     {
@@ -1368,6 +2030,12 @@
       "height_mm": 183.9,
       "score": 0.49735912680625916,
       "drift_m": 0.2702,
+      "bbox": [
+        1250,
+        231,
+        1279,
+        402
+      ],
       "description": "4.05 m along the sweep, +0.16 m across, 1.7 m depth (\u00b10.27 m) \u00b7 31\u00d7184 mm"
     },
     {
@@ -1380,6 +2048,12 @@
       "height_mm": 280.7,
       "score": 0.3877190947532654,
       "drift_m": 0.3106,
+      "bbox": [
+        1243,
+        327,
+        1280,
+        589
+      ],
       "description": "4.81 m along the sweep, +0.05 m across, 1.7 m depth (\u00b10.31 m) \u00b7 39\u00d7281 mm"
     },
     {
@@ -1392,6 +2066,12 @@
       "height_mm": 301.9,
       "score": 0.3505982756614685,
       "drift_m": 0.312,
+      "bbox": [
+        828,
+        201,
+        1142,
+        486
+      ],
       "description": "5.12 m along the sweep, +0.15 m across, 1.7 m depth (\u00b10.31 m) \u00b7 333\u00d7302 mm"
     },
     {
@@ -1404,6 +2084,12 @@
       "height_mm": 298.8,
       "score": 0.3220389783382416,
       "drift_m": 0.312,
+      "bbox": [
+        1027,
+        292,
+        1280,
+        574
+      ],
       "description": "4.94 m along the sweep, +0.05 m across, 1.7 m depth (\u00b10.31 m) \u00b7 267\u00d7299 mm"
     },
     {
@@ -1416,6 +2102,12 @@
       "height_mm": 290.0,
       "score": 0.2845143973827362,
       "drift_m": 0.3134,
+      "bbox": [
+        719,
+        111,
+        987,
+        388
+      ],
       "description": "5.25 m along the sweep, +0.22 m across, 1.7 m depth (\u00b10.31 m) \u00b7 281\u00d7290 mm"
     }
   ],

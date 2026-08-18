@@ -41,7 +41,8 @@ from typing import Any, Callable, Iterator
 
 import numpy as np
 
-from .utils import BBox, get_logger, require
+from .mapping import MM_PER_PX_AT_1M
+from .utils import BBox, get_logger, optional_import, require
 
 LOGGER = get_logger()
 
@@ -174,6 +175,9 @@ class LiveFrame:
     ood: bool | None = None
     ood_score: float | None = None
     method: str = ""
+    # Distance travelled along the net since the session started, when odometry
+    # is on. None means "not tracked" — never 0.0, which would read as "here".
+    along_m: float | None = None
 
     @property
     def has_confirmed(self) -> bool:
@@ -218,13 +222,22 @@ class LiveInspector:
 
     def __init__(self, inspector: Any, method: str = "yolo", conf: float = 0.25,
                  min_hits: int = 3, max_age: int = 5, ood_model: Any = None,
-                 draw: bool = True, ood_every: int = 1):
+                 draw: bool = True, ood_every: int = 1,
+                 odometry: bool = False, standoff_m: float = 0.6):
         from .temporal import TemporalConfig, Tracker
 
         self.inspector = inspector
         self.method = method
         self.conf = conf
         self.draw = draw
+        # Live odometry places a confirmed defect on the net instead of only in
+        # a frame. Scale comes from a DECLARED standoff, because a bare camera
+        # feed carries no telemetry — so a position is only as good as that
+        # number, and every consumer is told so rather than left to assume.
+        self.odometry = bool(odometry)
+        self.standoff_m = float(standoff_m)
+        self.along_m: float | None = 0.0 if odometry else None
+        self._prev_gray = None
         self.tracker = Tracker(TemporalConfig(min_hits=min_hits, max_age=max_age))
         self.ood_model = ood_model
         self.ood_every = max(1, int(ood_every))
@@ -256,6 +269,9 @@ class LiveInspector:
                     LOGGER.debug("OOD scoring failed on frame %d: %s", index, exc)
         self._processed += 1
 
+        if self.odometry:
+            self._advance_odometry(frame_rgb)
+
         image = frame_rgb
         if self.draw:
             image = (result.heatmap if result.heatmap is not None
@@ -263,7 +279,36 @@ class LiveInspector:
         return LiveFrame(index=index, timestamp=time.time(), image=image,
                          raw_detections=list(result.boxes), confirmed=list(confirmed),
                          latency_ms=latency, ood=ood_flag, ood_score=ood_score,
-                         method=self.method)
+                         method=self.method, along_m=self.along_m)
+
+    def _advance_odometry(self, frame_rgb: np.ndarray) -> None:
+        """Integrate along-track travel from feature motion between frames.
+
+        Reuses :mod:`netinspect.mapping` rather than a second implementation, so
+        a live position and an offline one are produced by the same code. An
+        unmatchable pair contributes nothing instead of guessing — the position
+        stalls, which is visible, rather than drifting invisibly.
+        """
+        from .mapping import ScaleCalibration, estimate_motion
+
+        cv2 = optional_import("cv2")
+        if cv2 is None:
+            self.odometry = False
+            LOGGER.warning("Live odometry needs OpenCV; disabling it for this session.")
+            return
+        gray = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2GRAY)
+        if self._prev_gray is not None:
+            try:
+                motion = estimate_motion(self._prev_gray, gray)
+            except Exception as exc:              # never let odometry kill the feed
+                LOGGER.debug("Live odometry failed: %s", exc)
+                motion = None
+            if motion is not None:
+                mm_per_px = ScaleCalibration(
+                    MM_PER_PX_AT_1M, 1.0, 0, 0, 0,
+                    note="live: declared standoff").mm_per_px(self.standoff_m)
+                self.along_m = (self.along_m or 0.0) + abs(motion.dx_px) * mm_per_px / 1000.0
+        self._prev_gray = gray
 
     def run(self, source: LiveSource, max_frames: int | None = None,
             every_n: int = 1) -> Iterator[LiveFrame]:
@@ -410,6 +455,11 @@ class LiveSession:
                 "score": round(box.score, 3),
                 "bbox": [int(box.x1), int(box.y1), int(box.x2), int(box.y2)],
                 "ood": frame.ood,
+                # Where on the net, not just which frame — None when odometry
+                # is off, so a consumer can tell "not tracked" from "at 0 m".
+                "along_m": (round(frame.along_m, 3)
+                            if frame.along_m is not None else None),
+                "hits": getattr(box, "hits", 1),
             })
             if self.on_event:
                 self.on_event(frame)
@@ -439,6 +489,10 @@ class LiveSession:
             "events": len(self.events),
             "recent_events": list(self.events)[-10:],
             "ood": frame.ood if frame else None,
+            "odometry": self.inspector.odometry,
+            "along_m": (round(self.inspector.along_m, 2)
+                        if self.inspector.along_m is not None else None),
+            "standoff_m": self.inspector.standoff_m if self.inspector.odometry else None,
             "error": self.error,
             "disclaimer": (
                 "Prototype: models were trained on SYNTHETIC damage. Treat live "

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-301%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-358%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -58,11 +58,11 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **Honesty check** | On real *undamaged* net the detector fires on **0%** of two same-day clips, **31%** of a third, and **1%** on a different day. An earlier version of this table reported only the two clean clips and the different day — the 31% clip was missing from the evaluation set, so the headline understated false alarms. Corrected, and the corrected result is the more useful one: **between-clip spread on a single day (0→31%) is ~30× the day effect (1%)**, so the scene, not the day, is what these models are sensitive to. Looking at the frames shows what the scene effect *is*: the detector fires on the **thin bright mooring cords** rigged around calibration markers, not on the mesh. |
 | **Robustness work** | Caught a seg-model out-of-distribution regression (31% → **18%** via multi-clip training; stronger augmentation **failed** at 22%). A 200-frame re-check — which **corrected my own 1%→11% sampling artifact** — shows an honest **precision/recall trade-off** on the held-out day: a bigger **YOLOv8s-seg (A100)** = best recall **0.98** at 11% false alarms; the **det∧seg ensemble** = **0%** false alarms but ~0.57 recall. Plus an **OOD gate** (defers 100% of different-day frames to human review) and a *failed* test-time normalisation. Full ledger: [report §5.7–5.8](reports/PROTOTYPE_REPORT.md). |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
-| **Localisation** | Detections are placed on the **net**, not the frame: metres along/across the sweep, depth, and size in mm, from visual odometry with **self-calibrating scale** (no chessboard — 1.36 mm/px at 1 m, implied 82° HFOV). Repeat sightings collapse **107 alerts → 6 distinct sites (18×)**, and the pass reports the bands it never photographed, so "clean" is distinguishable from "never looked". |
+| **Localisation** | Detections are placed on the **net**, not the frame: metres along/across the sweep, depth, and size in mm, from visual odometry with **self-calibrating scale** (no chessboard — 1.36 mm/px at 1 m, implied 82° HFOV). Repeat sightings collapse **107 alerts → 6 distinct sites (18×)**, and the pass reports the bands it never photographed, so "clean" is distinguishable from "never looked". An **interactive 3-D cage** in the console (cylinder + cone + feed barge, no 3-D library) places each site relative to that landmark and shows the photograph behind it — and puts the pass in proportion: **0.14% of a 4,589 m² net**. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
 | **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable (Claude API or local Ollama), so the guardrail is **measured**, not asserted: boundary disclosure **100%** on two local 14B models, tool grounding 50–75%. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **326 passing tests** · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **358 passing tests** (+15 headless renderer checks) · GitHub Actions CI · committed models. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
@@ -264,6 +264,60 @@ and (c) an **absolute anchor** — a USBL fix or a fiducial on the net — to
 register separate passes to each other. SOLAQUA has none of the three, so the
 code maps one pass honestly and the map format is per-pass, ready to compose
 when an anchor exists.
+
+### The interactive cage — open the console and click a defect
+
+The map and the 3-D pass above are static figures. The console turns them into
+something you can fly around: **`python scripts/serve.py` → the Net 3D tab.**
+
+![the 3-D cage view](docs/images/net3d_console.svg)
+
+*Both panels are drawn by the console's own renderer, exported headlessly
+(`node web/net3d.render.mjs`) so the figure cannot drift from the code. Top: the
+whole cage, with the inspected band a sliver on the north wall and the feed
+barge moored alongside. Bottom: flown to the best-evidenced site.*
+
+Drag to orbit, scroll to zoom, **click a marker to see the actual photograph of
+what was detected**, and the camera flies to that panel of the net. A real
+Norwegian sea cage is modelled — a floating collar, a cylindrical net wall, and
+the **cone** that tapers to the centre weight — with the **feed barge** moored
+alongside as the landmark everything is described against. So a site does not
+read as "3.1 m along the sweep" but as:
+
+> *3 m clockwise around the ring from the feed barge, 1.7 m deep on the wall.*
+
+Cage dimensions (circumference, wall depth, cone depth, barge bearing, the
+bearing the pass started at) are yours to set in the panel — a pen is a
+purchased object with a stated circumference, so the operator knows them even
+though the footage never will.
+
+**The rendering enforces the honesty, it does not just caption it.** Declared
+geometry — the cage shell, the barge — is drawn thin, muted and **dashed**.
+Measured geometry — the swept band, the defect sites — is **solid and
+saturated**. The two never share a colour or a line weight, so the picture
+cannot quietly imply a net was reconstructed when it was not. That rule is
+covered by a test, not just a convention: `node web/net3d.test.mjs` asserts the
+shell is dashed and the band is filled, and CI runs it.
+
+The viewer is ~450 lines of hand-rolled canvas 3-D with **no dependency** — no
+WebGL library, nothing from a CDN — so the console still works offline on a
+boat.
+
+**And it changes the headline.** Placing 5.5 m of swept net on a real 160 m cage
+turns a result that sounds thorough into one that is honest:
+
+> **0.14%** of the cage was looked at — 6.3 m² swept of **4,589 m²** of netting
+> (wall + cone) · 3.4% of the ring · **~30 passes to circle it once**, at this
+> depth alone.
+
+That number is the strongest argument in the repo for why a single clean pass is
+not a clean net, and it only exists because the pass is placed on a whole cage.
+
+**Live wiring.** Tick *"wire the live feed in"* before starting a live session
+and the same visual odometry runs on the incoming stream, so a **confirmed**
+defect is placed on the cage as it is found — drawn dashed, because live scale
+rests on a declared standoff rather than telemetry. Positions are as good as
+that number and the UI says so.
 
 **Why feature matching works here at all:** a net mesh is repetitive, which is
 normally fatal to feature matching. Biofouling supplies the non-repeating texture
@@ -629,6 +683,7 @@ net-inspection-cv/
     temporal.py                  IoU tracker — confirm detections that persist
     mapping.py                   net-frame localisation: visual odometry, self-calibrating scale, coverage
     live.py                      real-time camera/RTSP/ROV capture + inference (threaded, drops stale frames)
+    netmodel.py                  place a measured strip on a declared sea cage; coverage vs the whole net
     compose.py                   composite photorealistic damage + hard negatives onto REAL frames
     inference.py                 unified facade over all methods (used everywhere)
     onnx_infer.py                ONNX Runtime inference path
@@ -649,6 +704,7 @@ net-inspection-cv/
     utils.py                     IO, geometry, optional-dependency handling
   scripts/                       CLI entry points (see below)
   web/                           interactive console (index.html / style.css / app.js)
+                                 + net3d.js (3-D cage viewer), net3d.test.mjs, net3d.render.mjs
   streamlit_app.py               alternative interactive viewer
   models/                        committed prototype models (.pt/.npz/.onnx) + NOTICE
   .github/workflows/ci.yml       CI: run tests on push/PR

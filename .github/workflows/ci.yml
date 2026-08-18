@@ -108,3 +108,21 @@ jobs:
               sys.exit(1)
           print("all README images present")
           PY
+
+  webgl:
+    name: 3-D cage renderer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      # The renderer is the one place where a bug produces a picture rather than
+      # an error: a mirrored, inside-out or near-plane-smeared scene still looks
+      # like something. These checks run the projection headlessly against a
+      # stubbed canvas so it cannot rot unnoticed between demos.
+      - name: Renderer checks (headless canvas)
+        run: node web/net3d.test.mjs

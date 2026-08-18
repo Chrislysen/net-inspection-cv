@@ -355,7 +355,10 @@ def build_app(inspector: NetInspector):
                    conf: float = Query(0.25, ge=0.0, le=1.0),
                    min_hits: int = Query(3, ge=1, le=30),
                    ood: bool = Query(False),
-                   loop: bool = Query(True, description="Loop video files")):
+                   loop: bool = Query(True, description="Loop video files"),
+                   odometry: bool = Query(False, description="Track along-net travel"),
+                   standoff_m: float = Query(0.6, gt=0.0, le=10.0,
+                                             description="Declared standoff; sets live scale")):
         from netinspect.live import LiveInspector, LiveSession
 
         _validate_method(method)
@@ -369,7 +372,8 @@ def build_app(inspector: NetInspector):
                 LOGGER.warning("OOD gate unavailable for live: %s", exc)
 
         live = LiveInspector(inspector, method=method, conf=conf,
-                             min_hits=min_hits, ood_model=ood_model)
+                             min_hits=min_hits, ood_model=ood_model,
+                             odometry=odometry, standoff_m=standoff_m)
         session = LiveSession(source, live, loop_files=loop)
         try:
             session.start()
@@ -428,6 +432,72 @@ def build_app(inspector: NetInspector):
             frames(),
             media_type=f"multipart/x-mixed-replace; boundary={boundary}",
             headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
+
+    # ---------------------------------------------------------------- #
+    # Net model: place a mapped pass on a schematic cage
+    #
+    # The cage is DECLARED (the operator knows their pen; the footage cannot
+    # tell us its radius) while the strip and the sites are MEASURED. The
+    # response keeps the two apart in a `provenance` block and the UI renders
+    # them differently, so the picture cannot quietly imply we reconstructed a
+    # net we did not.
+    # ---------------------------------------------------------------- #
+    MAPS_DIR = REPO / "reports" / "results" / "inspection_maps"
+
+    def _load_map(clip: str) -> dict:
+        safe = Path(clip).name
+        p = (MAPS_DIR / f"{safe}_map.json").resolve()
+        if MAPS_DIR.resolve() != p.parent or not p.exists():
+            raise HTTPException(404, f"No inspection map for {safe!r}. "
+                                     "Run scripts/map_inspection.py first.")
+        import json
+        return json.loads(p.read_text(encoding="utf-8"))
+
+    @app.get("/api/maps")
+    def maps():
+        if not MAPS_DIR.exists():
+            return {"maps": []}
+        return {"maps": sorted(p.name[: -len("_map.json")]
+                               for p in MAPS_DIR.glob("*_map.json"))}
+
+    @app.get("/api/scene")
+    def scene(clip: str = Query(...),
+              circumference_m: float = Query(160.0, gt=1.0, le=1000.0),
+              cylinder_depth_m: float = Query(15.0, ge=0.0, le=200.0),
+              cone_depth_m: float = Query(10.0, ge=0.0, le=200.0),
+              start_bearing_deg: float = Query(0.0, ge=-360.0, le=360.0),
+              barge_bearing_deg: float = Query(0.0, ge=-360.0, le=360.0),
+              clockwise: bool = Query(True)):
+        from netinspect.netmodel import PenGeometry, build_scene
+
+        data = _load_map(clip)
+        try:
+            geom = PenGeometry(circumference_m=circumference_m,
+                               cylinder_depth_m=cylinder_depth_m,
+                               cone_depth_m=cone_depth_m,
+                               start_bearing_deg=start_bearing_deg,
+                               barge_bearing_deg=barge_bearing_deg,
+                               clockwise=clockwise)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
+
+        out = build_scene(sites=data.get("sites", []), track=data.get("track", []),
+                          coverage=data.get("coverage", {}), geom=geom)
+        out["clip"] = data.get("clip", clip)
+        out["method"] = data.get("method")
+        out["crops"] = data.get("site_crops", {})
+        out["caveats"] = data.get("caveats", [])
+        out["telemetry_check"] = data.get("telemetry_check", {})
+        return JSONResponse(out)
+
+    @app.get("/api/scene/crop")
+    def scene_crop(clip: str = Query(...), site: int = Query(..., ge=1)):
+        """The clearest look at one site — what makes a coordinate judgeable."""
+        base = (MAPS_DIR / f"{Path(clip).name}_crops").resolve()
+        p = (base / f"site_{int(site)}.jpg").resolve()
+        if base != p.parent or not p.exists():
+            raise HTTPException(404, "No crop for that site")
+        return FileResponse(p, media_type="image/jpeg")
 
     if WEB_DIR.exists():
         app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")

@@ -332,6 +332,7 @@ class LocalisedDetection:
     height_mm: float
     score: float
     drift_m: float
+    bbox: list[int] | None = None    # pixels in its own frame, for cropping back
 
     def describe(self) -> str:
         depth = f", {self.depth_m:.1f} m depth" if self.depth_m is not None else ""
@@ -375,7 +376,8 @@ def localise_detections(track: Sequence[TrackPoint], detections_by_frame: dict,
                 depth_m=pt.depth_m,
                 width_mm=round((x2 - x1) * pt.mm_per_px, 1),
                 height_mm=round((y2 - y1) * pt.mm_per_px, 1),
-                score=float(det.get("score", 0.0)), drift_m=pt.drift_m))
+                score=float(det.get("score", 0.0)), drift_m=pt.drift_m,
+                bbox=[int(x1), int(y1), int(x2), int(y2)]))
     return out
 
 
@@ -402,6 +404,10 @@ class DefectSite:
     span_m: float                       # spatial spread of its sightings
     first_frame: str
     last_frame: str
+    # The single clearest look at this site. A position tells an operator where
+    # to go; this is what lets them decide whether it is worth going.
+    best_frame: str = ""
+    best_bbox: list[int] | None = None
 
     @property
     def evidence(self) -> str:
@@ -478,6 +484,7 @@ def cluster_sites(detections: Sequence[LocalisedDetection], radius_m: float = 0.
         p = np.array([[m.along_m, m.across_m] for m in members])
         centre = p.mean(axis=0)
         depths = [m.depth_m for m in members if m.depth_m is not None]
+        best = max(members, key=lambda m: m.score)
         sites.append(DefectSite(
             site_id=sid,
             along_m=round(float(centre[0]), 3), across_m=round(float(centre[1]), 3),
@@ -488,7 +495,8 @@ def cluster_sites(detections: Sequence[LocalisedDetection], radius_m: float = 0.
             median_width_mm=round(float(np.median([m.width_mm for m in members])), 1),
             median_height_mm=round(float(np.median([m.height_mm for m in members])), 1),
             span_m=round(float(np.hypot(*(p.max(axis=0) - p.min(axis=0)))), 3),
-            first_frame=members[0].frame, last_frame=members[-1].frame))
+            first_frame=members[0].frame, last_frame=members[-1].frame,
+            best_frame=best.frame, best_bbox=best.bbox))
     return sorted(sites, key=lambda s: -s.sightings)
 
 
