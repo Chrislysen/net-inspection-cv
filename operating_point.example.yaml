@@ -1,0 +1,46 @@
+# The acceptance contract: what a model must achieve before it may be deployed.
+#
+# Keep this in version control next to your data pipeline and point the release
+# gate at it:
+#
+#     netinspect gate --data data/mysite --weights runs/.../best.pt \
+#                     --operating-point operating_point.yaml
+#
+# The gate exits non-zero when any check fails, so CI can refuse to promote a
+# model without anyone having to remember to look.
+#
+# Write these numbers BEFORE you evaluate. A threshold chosen after seeing the
+# result is not a gate, it is a description.
+
+# Confidence threshold the model runs at in production. Get this from
+# `netinspect calibrate` on your own validation split — the repo default of 0.25
+# was tuned on SOLAQUA footage and does not transfer to your site.
+conf: 0.25
+
+# IoU used when matching a detection to a labelled defect.
+iou: 0.5
+
+# --- the two numbers that decide adoption ---------------------------------- #
+
+# Fraction of CLEAN frames allowed to raise an alert. This is the trust budget:
+# exceed it and crews stop looking at the alerts, at which point recall is
+# irrelevant. 0.05 means one false alarm per twenty clean frames.
+max_false_alarm_rate: 0.05
+
+# Fraction of frames containing real damage that must be caught. Set this from
+# what the inspection is for: a pre-harvest integrity check tolerates less miss
+# than a routine weekly sweep.
+min_recall: 0.80
+
+# Optional. Share of alerting frames that really contained damage. Leave unset
+# unless you have a specific reason — with rare defects, precision is dominated
+# by prevalence rather than by the model.
+# min_precision: 0.50
+
+# --- refusing to certify on too little data -------------------------------- #
+#
+# A rate computed over a handful of frames is noise wearing a percentage sign.
+# The gate fails when either class is thinner than this, rather than reporting a
+# confident-looking number nobody should act on.
+min_clean_frames: 50
+min_damaged_frames: 50

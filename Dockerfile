@@ -1,38 +1,52 @@
-# Containerised FastAPI inference service for the net-inspection prototype.
+# Net-inspection toolkit — CPU image.
 #
-# Build:  docker build -t net-inspection-cv .
-# Run:    docker run -p 8000:8000 net-inspection-cv
-#         # then: curl -F file=@frame.jpg "http://localhost:8000/predict?method=yolo"
+#   docker build -t netinspect .
+#   docker run --rm -p 8000:8000 netinspect                    # the console
+#   docker run --rm -v "$PWD/mydata:/data" netinspect \
+#       netinspect onboard /data/raw --out /data/prepared      # your own footage
 #
-# Ships with the committed prototype models (classical needs none; anomaly and
-# YOLO use models/). This serves a PROTOTYPE — predictions are not validated on
-# real damage and require human review.
-FROM python:3.12-slim
+# CPU by design: it runs anywhere, and inference is the common case. For
+# training, start from a CUDA base (e.g. pytorch/pytorch:2.4.0-cuda12.1-cudnn9-runtime)
+# and install the same extras — nothing else changes.
+#
+# STATUS: written but NOT BUILT — no Docker daemon was available in the
+# environment where this was authored, so treat it as a starting point that has
+# never been executed rather than a verified artifact. The CI pipeline does not
+# build it either. Everything it installs is exercised by the test suite; the
+# layer ordering and the apt package list are the parts nobody has confirmed.
+FROM python:3.12-slim AS base
 
-# OpenCV runtime needs libGL / glib even with the headless wheel.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        libgl1 libglib2.0-0 && \
-    rm -rf /var/lib/apt/lists/*
+# opencv-python-headless still needs libGL's transitive deps for some codecs,
+# and git is needed only if you install from a checkout with submodules.
+RUN apt-get update && apt-get install --no-install-recommends -y \
+        libglib2.0-0 libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    # Ultralytics otherwise tries to write config into a read-only home.
+    YOLO_CONFIG_DIR=/tmp/ultralytics \
+    MPLCONFIGDIR=/tmp/matplotlib
 
 WORKDIR /app
 
-# Install deps first for better layer caching.
+# Dependency layer first, so source edits do not re-resolve the whole stack.
 COPY pyproject.toml README.md ./
-COPY src ./src
-RUN pip install --no-cache-dir -e ".[cv,ml,serve,export]"
+COPY src/netinspect/__init__.py src/netinspect/__init__.py
+RUN pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision \
+    && pip install ".[cv,ml,serve,export]"
 
-# App code + web console + committed prototype models.
-COPY scripts ./scripts
-COPY configs ./configs
-COPY web ./web
-COPY models ./models
+COPY . .
+RUN pip install --no-deps -e .
+
+# Fails the build if the package cannot even introspect itself.
+RUN netinspect version && netinspect doctor > /dev/null
 
 EXPOSE 8000
-# Liveness/readiness: the service exposes /api/ready (503 until ready).
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/ready').status==200 else 1)"
-CMD ["python", "scripts/serve.py", \
-     "--host", "0.0.0.0", "--port", "8000", \
-     "--anomaly-model", "models/anomaly_normal_net", \
-     "--patchcore-model", "models/patchcore_normal_net", \
-     "--yolo-weights", "models/yolo_damage_v1.pt"]
+
+# Bind 0.0.0.0 so the port is reachable from outside the container. The service
+# is UNAUTHENTICATED — put it behind an authenticating proxy before exposing it
+# anywhere but a laptop, and note that /api/live/start takes an arbitrary source
+# string, so anyone who can reach the port can make the server open a stream.
+CMD ["netinspect", "serve", "--host", "0.0.0.0", "--port", "8000"]
