@@ -70,7 +70,13 @@ def _delegate(script: str, args: Sequence[str]) -> int:
               "The full toolkit lives in the source checkout; install it with "
               "`pip install -e .` from a clone.", file=sys.stderr)
         return 2
-    argv = sys.argv
+    # runpy.run_path does NOT put the script's directory on sys.path, unlike
+    # `python scripts/serve.py`. Every one of these scripts opens with
+    # `import _common`, which lives in scripts/, so without this line all six
+    # wrapped commands died with ModuleNotFoundError — including `netinspect
+    # serve`, which is the Dockerfile's CMD.
+    argv, path_backup = sys.argv, list(sys.path)
+    sys.path.insert(0, str(SCRIPTS))
     sys.argv = [str(path), *args]
     try:
         runpy.run_path(str(path), run_name="__main__")
@@ -79,6 +85,7 @@ def _delegate(script: str, args: Sequence[str]) -> int:
         return int(exc.code or 0)
     finally:
         sys.argv = argv
+        sys.path[:] = path_backup
 
 
 def _load_split(split_dir: Path):

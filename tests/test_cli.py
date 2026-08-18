@@ -143,6 +143,32 @@ def test_every_wrapped_command_names_a_script_that_exists():
         assert (cli.SCRIPTS / script).exists(), f"{name} -> missing {script}"
 
 
+@pytest.mark.parametrize("command", sorted(cli.WRAPPED))
+def test_every_wrapped_command_actually_runs(command, capsys):
+    """Executes the delegation for real instead of monkeypatching it away.
+
+    Regression, and the reason this test exists in this form: runpy.run_path
+    does not put the script's directory on sys.path the way `python
+    scripts/x.py` does, so every wrapped script died on its opening
+    `import _common`. All six commands — the entire documented front door, and
+    the Dockerfile's CMD — were broken. The previous test replaced _delegate
+    with a stub, so it passed while nothing worked.
+    """
+    code = cli.main([command, "--help"])
+    out = capsys.readouterr()
+    assert "ModuleNotFoundError" not in out.err
+    assert "usage:" in out.out.lower(), f"{command} --help produced no usage text"
+    assert code == 0
+
+
+def test_delegation_leaves_sys_path_and_argv_as_it_found_them():
+    import sys
+    before_path, before_argv = list(sys.path), list(sys.argv)
+    cli.main(["map", "--help"])
+    assert sys.path == before_path
+    assert sys.argv == before_argv
+
+
 # --------------------------------------------------------------------------- #
 # gate wiring (the model itself is exercised in test_acceptance)
 # --------------------------------------------------------------------------- #
