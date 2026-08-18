@@ -78,6 +78,23 @@ largest, and the rest is easy to miss in a README this long:
 | **Grounded assistant** | tool-calling Q&A over the real artifacts, guarded by an evidence ledger, with the guardrail **measured** rather than asserted → [assistant](#grounded-assistant--and-measuring-whether-the-guardrail-holds) |
 | **Decision support** | inspection-validity report, site planning from the locality register × ocean forecast, and a release gate that exits non-zero → [use it on your own footage](#use-it-on-your-own-footage) |
 
+### It runs. Here it is running.
+
+![temporal confirmation, live](docs/images/temporal_confirmation.gif)
+
+Real SOLAQUA ROV footage, the shipped detector, 44 consecutive frames. **Left:**
+every frame scored on its own. **Right:** the same stream, where a detection must
+survive 3 frames before it becomes an alert. **80 raw detections become 24** — a
+70% cut — and because this net is undamaged, *every* box on the left is a false
+alarm and the right-hand panel going quiet is the system working.
+
+Look at what it fires on: the thin bright **mooring cords** rigged around the
+calibration markers. Not the mesh. That is the whole false-alarm story in one
+loop, and finding it is why the headline number in this README was corrected
+downwards rather than up.
+
+*Regenerate: `python scripts/make_temporal_gif.py`*
+
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
 [`scripts/`](scripts/), the full write-up in
 [`reports/PROTOTYPE_REPORT.md`](reports/PROTOTYPE_REPORT.md),
@@ -282,6 +299,14 @@ when an anchor exists.
 
 The map and the 3-D pass above are static figures. The console turns them into
 something you can fly around: **`python scripts/serve.py` → the Net 3D tab.**
+
+![the cage, turning](docs/images/cage_orbit.gif)
+
+*A full orbit of the console's 3-D view, rendered by the viewer itself
+(`python scripts/make_cage_gif.py`) rather than screen-recorded — so it cannot
+drift from the code. The **dashed** cage is declared by the operator; the
+**solid** band and the orange sites are measured from the footage. The inspected
+band really is that small: 5.5 m of a 160 m ring.*
 
 ![the 3-D cage view](docs/images/net3d_console.svg)
 
@@ -719,6 +744,9 @@ net-inspection-cv/
     synthetic.py                 placeholder data generator (testing only)
     utils.py                     IO, geometry, optional-dependency handling
   scripts/                       CLI entry points (see below)
+                                 incl. make_cage_gif.py / make_temporal_gif.py /
+                                 make_workflow_figure.py — every README figure and
+                                 animation regenerates from the code it documents
   web/                           interactive console (index.html / style.css / app.js)
                                  + net3d.js (3-D cage viewer), net3d.test.mjs, net3d.render.mjs
   streamlit_app.py               alternative interactive viewer
@@ -769,6 +797,15 @@ netinspect calibrate --data data/mysite --weights runs/detect/train/weights/best
 netinspect gate      --data data/mysite --weights runs/detect/train/weights/best.pt \
                      --operating-point operating_point.yaml
 ```
+
+![the release gate, run for real](docs/images/workflow_cli.png)
+
+*Captured from live runs against the labelled dataset in this repo
+(`python scripts/make_workflow_figure.py`). Same model, same data, both
+outcomes: at default thresholds the gate **refuses** because 5 clean frames
+cannot support a false-alarm rate, and exits 1. Told explicitly that 5 is
+acceptable, it passes — 24 of 24 damaged frames caught, 0 of 5 clean frames
+alarmed. The exit code is the point: CI can act on it.*
 
 **`onboard`** takes whatever your annotation tool exports — YOLO `.txt`, COCO
 `.json`, Pascal VOC `.xml`, or images with no labels at all — detects the format,
