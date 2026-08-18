@@ -34,6 +34,23 @@ DEFAULT_OLLAMA_MODEL = "qwen3:14b"
 OLLAMA_HOST = "http://localhost:11434"
 MAX_TOOL_ROUNDS = 8
 
+# Any OpenAI-compatible endpoint. Configured from the environment only — a key
+# passed as an argument lands in shell history and in `ps` output.
+ENV_OPENAI_API_KEY = "NETINSPECT_OPENAI_API_KEY"
+ENV_OPENAI_BASE_URL = "NETINSPECT_OPENAI_BASE_URL"
+ENV_OPENAI_MODEL = "NETINSPECT_OPENAI_MODEL"
+DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
+DEFAULT_OPENAI_MODEL = "gpt-4o-mini"
+
+# Endpoints this shape is known to cover, for the error messages and the docs.
+KNOWN_OPENAI_COMPATIBLE = {
+    "nous": "https://inference-api.nousresearch.com/v1",
+    "openai": "https://api.openai.com/v1",
+    "together": "https://api.together.xyz/v1",
+    "groq": "https://api.groq.com/openai/v1",
+    "local-vllm": "http://localhost:8000/v1",
+}
+
 
 @dataclass
 class Turn:
@@ -228,6 +245,138 @@ class OllamaBackend:
         return Turn(text, tools_used, "max_rounds", usage, MAX_TOOL_ROUNDS)
 
 
+class OpenAICompatBackend:
+    """Any endpoint speaking the OpenAI ``/chat/completions`` shape.
+
+    One implementation covers Nous Research, OpenAI, Together, Groq, Fireworks,
+    and — the case that motivated it — a model you host yourself, since vLLM and
+    TGI both expose this API. A vLLM served on Modal is just a base URL here.
+
+    That matters for the measurement this module exists to support. The eval
+    answers "do different models honour the guardrail?", and until now it could
+    only ask two families. A self-hosted or third-party endpoint is a third
+    independent answer, which is worth more than a second frontier model.
+
+    Differences from the Ollama shape, all of them small and all of them places
+    a naive copy would break: responses arrive under ``choices[0].message``,
+    token counts are ``usage.prompt_tokens``/``completion_tokens``, and a tool
+    result **must** carry the ``tool_call_id`` it answers — omit it and strict
+    servers reject the whole conversation.
+
+    The key is read from the environment and never logged. It is not accepted as
+    a command-line argument, because arguments end up in shell history and
+    process listings.
+    """
+
+    name = "openai"
+
+    def __init__(self, model: str | None = None, base_url: str | None = None,
+                 api_key: str | None = None, timeout: int = 300,
+                 temperature: float = 0.0, env: dict[str, str] | None = None):
+        import os
+
+        env = os.environ if env is None else env
+        self.base_url = (base_url or env.get(ENV_OPENAI_BASE_URL)
+                         or DEFAULT_OPENAI_BASE_URL).rstrip("/")
+        self.model = model or env.get(ENV_OPENAI_MODEL) or DEFAULT_OPENAI_MODEL
+        self._key = api_key or env.get(ENV_OPENAI_API_KEY) or ""
+        if not self._key:
+            raise RuntimeError(
+                f"No API key. Set {ENV_OPENAI_API_KEY} in your shell (not on the "
+                f"command line), plus {ENV_OPENAI_BASE_URL} if you are not using "
+                f"{DEFAULT_OPENAI_BASE_URL} — e.g. "
+                "https://inference-api.nousresearch.com/v1 for Nous, or your own "
+                "vLLM/Modal endpoint.")
+        self.timeout = timeout
+        self.temperature = temperature
+        self.tools = ollama_tools()          # the OpenAI function-calling schema
+
+    def _post(self, payload: dict) -> dict:
+        req = urllib.request.Request(
+            f"{self.base_url}/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json",
+                     "Authorization": f"Bearer {self._key}"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", "replace")[:400]
+            if exc.code in (401, 403):
+                raise RuntimeError(
+                    f"HTTP {exc.code} from {self.base_url} — the key was rejected. "
+                    f"Check {ENV_OPENAI_API_KEY} matches the endpoint.") from exc
+            if "tool" in detail.lower() and exc.code == 400:
+                raise RuntimeError(
+                    f"{self.model!r} appears not to support tool calling on this "
+                    f"endpoint. HTTP 400: {detail}") from exc
+            raise RuntimeError(f"HTTP {exc.code} from {self.base_url}: {detail}") from exc
+        except urllib.error.URLError as exc:
+            raise RuntimeError(f"Cannot reach {self.base_url} ({exc.reason}).") from exc
+
+    @staticmethod
+    def _arguments(call: dict) -> dict:
+        args = (call.get("function") or {}).get("arguments", {})
+        if isinstance(args, str):
+            try:
+                return json.loads(args)
+            except json.JSONDecodeError:
+                LOGGER.warning("Unparseable tool arguments: %r", args)
+                return {}
+        return args or {}
+
+    def run(self, system: str, question: str,
+            history: list[dict] | None = None) -> Turn:
+        messages: list[dict[str, Any]] = [{"role": "system", "content": system}]
+        messages.extend(history or [])
+        messages.append({"role": "user", "content": question})
+
+        tools_used: list[str] = []
+        usage = {"input_tokens": 0, "output_tokens": 0}
+        text = ""
+
+        for round_no in range(1, MAX_TOOL_ROUNDS + 1):
+            data = self._post({
+                "model": self.model, "messages": messages, "tools": self.tools,
+                "temperature": self.temperature, "stream": False,
+            })
+            u = data.get("usage") or {}
+            usage["input_tokens"] += int(u.get("prompt_tokens") or 0)
+            usage["output_tokens"] += int(u.get("completion_tokens") or 0)
+
+            choices = data.get("choices") or []
+            if not choices:
+                raise RuntimeError(f"No choices in response from {self.base_url}")
+            choice = choices[0]
+            msg = choice.get("message") or {}
+            said = (msg.get("content") or "").strip()
+            if said:
+                text = said
+
+            calls = msg.get("tool_calls") or []
+            if not calls:
+                return Turn(text, tools_used, choice.get("finish_reason") or "stop",
+                            usage, round_no)
+
+            messages.append(msg)
+            for call in calls:
+                name = (call.get("function") or {}).get("name", "")
+                tools_used.append(name)
+                result = call_tool(name, self._arguments(call))
+                messages.append({
+                    "role": "tool",
+                    # Required by strict servers; the id ties the result to its call.
+                    "tool_call_id": call.get("id", ""),
+                    "name": name,
+                    "content": result,
+                })
+
+        LOGGER.warning("OpenAI-compatible backend hit the %d-round tool cap",
+                       MAX_TOOL_ROUNDS)
+        return Turn(text, tools_used, "max_rounds", usage, MAX_TOOL_ROUNDS)
+
+
 def make_backend(kind: str = "anthropic", model: str | None = None,
                  **kwargs) -> Backend:
     """Construct a backend by name."""
@@ -238,9 +387,24 @@ def make_backend(kind: str = "anthropic", model: str | None = None,
         kwargs.pop("effort", None)      # Anthropic-only knob
         kwargs.pop("max_tokens", None)
         return OllamaBackend(model=model or DEFAULT_OLLAMA_MODEL, **kwargs)
-    raise ValueError(f"Unknown backend {kind!r}; choose 'anthropic' or 'ollama'")
+    if kind in ("openai", "openai-compat", "nous", "together", "groq",
+                "vllm", "local-vllm", "modal"):
+        kwargs.pop("effort", None)
+        kwargs.pop("max_tokens", None)
+        # A named provider only preselects the base URL; the key still comes
+        # from the environment.
+        if kind in KNOWN_OPENAI_COMPATIBLE and "base_url" not in kwargs:
+            kwargs["base_url"] = KNOWN_OPENAI_COMPATIBLE[kind]
+        return OpenAICompatBackend(model=model, **kwargs)
+    raise ValueError(
+        f"Unknown backend {kind!r}. Choose 'anthropic', 'ollama', or an "
+        f"OpenAI-compatible endpoint: {', '.join(sorted(KNOWN_OPENAI_COMPATIBLE))}, "
+        "'modal', 'vllm', 'openai-compat'.")
 
 
 __all__ = ["Backend", "Turn", "AnthropicBackend", "OllamaBackend", "make_backend",
+           "OpenAICompatBackend", "KNOWN_OPENAI_COMPATIBLE",
+           "ENV_OPENAI_API_KEY", "ENV_OPENAI_BASE_URL", "ENV_OPENAI_MODEL",
+           "DEFAULT_OPENAI_BASE_URL", "DEFAULT_OPENAI_MODEL",
            "DEFAULT_ANTHROPIC_MODEL", "DEFAULT_OLLAMA_MODEL", "OLLAMA_HOST",
            "MAX_TOOL_ROUNDS"]
