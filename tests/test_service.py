@@ -187,3 +187,91 @@ def test_live_start_status_and_stop_round_trip(client, tmp_path):
     finally:
         assert client.post("/api/live/stop").json() == {"stopped": True}
     assert client.get("/api/live/status").json()["running"] is False
+
+
+# --------------------------------------------------------------------------- #
+# Net model endpoints
+#
+# The contract worth testing is not "returns 200" — it is that a response can
+# never let a client mistake the declared cage shell for measured geometry.
+# --------------------------------------------------------------------------- #
+def _has_map(client) -> bool:
+    return bool(client.get("/api/maps").json()["maps"])
+
+
+def test_maps_lists_available_passes(client):
+    body = client.get("/api/maps").json()
+    assert isinstance(body["maps"], list)
+
+
+def test_scene_marks_the_cage_as_declared_not_measured(client):
+    if not _has_map(client):
+        pytest.skip("no inspection map built; run scripts/map_inspection.py")
+    clip = client.get("/api/maps").json()["maps"][0]
+    s = client.get("/api/scene", params={"clip": clip}).json()
+    assert s["pen"]["declared"] is True
+    assert s["barge"]["declared"] is True
+    assert s["provenance"]["declared"] and s["provenance"]["measured"]
+    assert "not measured" in s["pen"]["note"].lower()
+
+
+def test_scene_reports_coverage_against_the_whole_cage(client):
+    if not _has_map(client):
+        pytest.skip("no inspection map built")
+    clip = client.get("/api/maps").json()["maps"][0]
+    s = client.get("/api/scene", params={"clip": clip}).json()
+    cov = s["coverage"]
+    # A single pass is a sliver of a real cage, and the API must say so rather
+    # than reporting only the flattering absolute number.
+    assert 0.0 < cov["area_percent"] < 100.0
+    assert cov["net_area_m2"] > cov["swept_area_m2"]
+    assert cov["passes_to_cover_ring"] >= 1
+
+
+def test_a_bigger_cage_makes_the_same_pass_a_smaller_fraction(client):
+    if not _has_map(client):
+        pytest.skip("no inspection map built")
+    clip = client.get("/api/maps").json()["maps"][0]
+    small = client.get("/api/scene", params={"clip": clip, "circumference_m": 90}).json()
+    big = client.get("/api/scene", params={"clip": clip, "circumference_m": 200}).json()
+    assert big["coverage"]["area_percent"] < small["coverage"]["area_percent"]
+
+
+def test_moving_the_barge_changes_where_sites_are_reported_to_be(client):
+    if not _has_map(client):
+        pytest.skip("no inspection map built")
+    clip = client.get("/api/maps").json()["maps"][0]
+    a = client.get("/api/scene", params={"clip": clip, "barge_bearing_deg": 0}).json()
+    b = client.get("/api/scene", params={"clip": clip, "barge_bearing_deg": 180}).json()
+    if not a["sites"]:
+        pytest.skip("map has no sites")
+    assert (a["sites"][0]["placed"]["arc_from_barge_m"]
+            != b["sites"][0]["placed"]["arc_from_barge_m"])
+
+
+def test_scene_rejects_an_impossible_cage(client):
+    if not _has_map(client):
+        pytest.skip("no inspection map built")
+    clip = client.get("/api/maps").json()["maps"][0]
+    r = client.get("/api/scene", params={"clip": clip,
+                                        "cylinder_depth_m": 0, "cone_depth_m": 0})
+    assert r.status_code == 400
+
+
+def test_scene_refuses_an_unknown_or_traversing_clip(client):
+    assert client.get("/api/scene", params={"clip": "nope"}).status_code == 404
+    assert client.get("/api/scene",
+                      params={"clip": "../../../etc/passwd"}).status_code == 404
+
+
+def test_site_crop_is_served_and_path_traversal_is_refused(client):
+    if not _has_map(client):
+        pytest.skip("no inspection map built")
+    clip = client.get("/api/maps").json()["maps"][0]
+    s = client.get("/api/scene", params={"clip": clip}).json()
+    if s["crops"]:
+        site = int(next(iter(s["crops"])))
+        ok = client.get("/api/scene/crop", params={"clip": clip, "site": site})
+        assert ok.status_code == 200 and ok.headers["content-type"] == "image/jpeg"
+    bad = client.get("/api/scene/crop", params={"clip": "../secrets", "site": 1})
+    assert bad.status_code == 404

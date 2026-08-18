@@ -243,6 +243,33 @@ def make_figure_3d(track, sites, cov, clip, out_path):
     return out_path
 
 
+def save_site_crops(sites, frame_dir, out_dir, pad=64):
+    """Save the clearest look at each site, so a position can be judged not just visited.
+
+    A map tells an operator where to go. Whether it is worth going is a question
+    only the picture answers — and on this data the honest answer is usually
+    "no, that is a mooring cord", which is exactly why the crop belongs next to
+    the coordinate.
+    """
+    from PIL import Image
+
+    out_dir = ensure_dir(out_dir)
+    written = {}
+    for s in sites:
+        if not s.best_frame or not s.best_bbox:
+            continue
+        src = Path(frame_dir) / s.best_frame
+        if not src.exists():
+            continue
+        with Image.open(src) as im:
+            x1, y1, x2, y2 = s.best_bbox
+            box = (max(0, x1 - pad), max(0, y1 - pad),
+                   min(im.width, x2 + pad), min(im.height, y2 + pad))
+            im.convert("RGB").crop(box).save(out_dir / f"site_{s.site_id}.jpg", quality=88)
+        written[s.site_id] = f"site_{s.site_id}.jpg"
+    return written
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -306,9 +333,13 @@ def main() -> None:
     cov = M.coverage(track, (w, h))
     check = M.validate_against_telemetry(track, float(np.nansum(tele_step)))
 
+    out_dir = ensure_dir(args.out)
+    crops = save_site_crops(sites, FRAME_DIRS[args.clip], out_dir / f"{args.clip}_crops")
+
     payload = {
         "clip": args.clip, "method": args.method, "conf": args.conf,
         "frames": len(track),
+        "site_crops": crops,
         "motion": {"pairs": len(motions), "matched": len(matched),
                    "mean_inlier_ratio": round(float(np.mean(
                        [m.inlier_ratio for m in matched])), 3) if matched else None},
@@ -332,7 +363,6 @@ def main() -> None:
             "still a false positive.",
         ],
     }
-    out_dir = ensure_dir(args.out)
     write_json(payload, out_dir / f"{args.clip}_map.json")
 
     print("\n" + "=" * 78)

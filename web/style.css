@@ -313,3 +313,64 @@ input[type=range]::-moz-range-thumb {
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 #liveNote { color: var(--accent); }
+
+/* ---- Net 3D --------------------------------------------------------------
+ * The declared/measured distinction is a design rule, not a caption: the chip
+ * marks operator-supplied inputs, and the coverage callout leads with the
+ * fraction of the cage actually inspected rather than burying it.
+ * ------------------------------------------------------------------------- */
+/* Absolute rather than a flex child: .stage centres its children, so a plain
+   height:100% canvas would not stretch to fill it. */
+#netCanvas {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  background: linear-gradient(180deg, #f7fafb 0%, #e9f0f3 55%, #dfe9ee 100%);
+  cursor: grab; touch-action: none;
+}
+#netCanvas:active { cursor: grabbing; }
+
+.declared-chip {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  padding: 1px 6px; border-radius: 3px; text-transform: uppercase;
+  background: #eef1ee; color: #6b7a6e; border: 1px dashed #b3bfb5;
+}
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mini {
+  display: flex; flex-direction: column; gap: 3px;
+  font-size: 11px; color: var(--muted); font-weight: 500;
+}
+.mini input, .mini select {
+  font-family: var(--mono); font-size: 12px; padding: 5px 6px;
+  border: 1px solid var(--border-strong); border-radius: 4px; background: #fff;
+  color: var(--text); width: 100%;
+}
+
+.coverage-callout {
+  margin: 12px 0; padding: 10px 12px; border-radius: 5px;
+  background: var(--accent-soft); border-left: 3px solid var(--accent);
+}
+.coverage-callout b {
+  display: block; font-family: var(--mono); font-size: 18px; color: var(--accent);
+}
+.coverage-callout span {
+  display: block; margin-top: 3px; font-size: 11px; color: var(--muted);
+  line-height: 1.45;
+}
+
+.site-row { cursor: pointer; }
+.site-row:hover { border-left-color: var(--primary); background: var(--primary-soft); }
+.site-row.sel { border-left-color: var(--primary); background: var(--primary-soft); }
+
+.site-detail {
+  margin-bottom: 10px; padding: 10px; border: 1px solid var(--border);
+  border-radius: 5px; background: #fff; font-size: 12px; line-height: 1.5;
+}
+.site-detail img {
+  width: 100%; max-height: 190px; object-fit: contain; display: block;
+  margin-bottom: 8px; border-radius: 4px; background: #0d1a1f;
+}
+.site-detail .muted { color: var(--muted-2); font-size: 11px; }
+.site-detail .warn-line {
+  display: block; margin-top: 7px; padding-top: 7px; font-size: 11px;
+  border-top: 1px solid var(--border); color: var(--accent);
+}
