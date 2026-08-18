@@ -2,9 +2,32 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-263%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-301%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
+
+> ### 🐟 Open-source computer vision for fish-farm net inspection
+>
+> Free, MIT-licensed tooling for **net-damage inspection in aquaculture**, built on
+> Norwegian open data and released for anyone working on *oppdrettsfisk* along the
+> coast — farmers, ROV operators, suppliers and researchers alike.
+>
+> Why nets specifically: across 305 Norwegian escape incidents from 2010–2018,
+> **holes in nets accounted for 75% of all escaped fish** and 44% of incidents
+> (SINTEF 2019:00669), and SINTEF's first-listed countermeasure is verbatim
+> *"hyppig og god inspeksjon av not"* — frequent, good net inspection. Escaped
+> farmed fish is a shared environmental problem, so the tooling for catching it
+> earlier should be shared too.
+>
+> Built entirely on public sources: **SOLAQUA** ROV footage (SINTEF Ocean,
+> CC BY-SA 4.0), the **Fiskeridirektoratet** locality register and **MET Norway**
+> ocean forecasts — all NLOD/CC-licensed, none requiring a key. Contributions,
+> corrections and real labelled damage data are all very welcome.
+>
+> **What this is not:** a validated product. Every damage number here comes from
+> *synthetic* damage; performance on real holes has never been measured, and the
+> repository says so everywhere it matters. It is a working pipeline and an
+> evaluation discipline, offered as a starting point rather than an answer.
 
 A research-grade computer-vision toolkit for **detecting possible damage (holes,
 tears, abnormal regions) in aquaculture fish-farm net imagery**, built as an
@@ -38,7 +61,7 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
 | **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable (Claude API or local Ollama), so the guardrail is **measured**, not asserted: boundary disclosure **100%** on two local 14B models, tool grounding 50–75%. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **263 passing tests** · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **301 passing tests** · GitHub Actions CI · committed models. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
@@ -136,6 +159,49 @@ then open `http://127.0.0.1:8000`.
 
 *(Shown: YOLO flagging 4 damage regions on composited-on-real net. On real
 **undamaged** frames it correctly shows zero — consistent with the adversarial eval.)*
+
+The console has three input modes:
+
+| mode | what it does |
+|---|---|
+| **Browse** | Step through the bundled real SOLAQUA frames and composited test sets. |
+| **Drop** | **Drag any image anywhere onto the window** — it runs the selected detector and returns the overlay, the detections and the OOD verdict in one round trip. |
+| **Live** | Point it at a real camera and watch inference in real time. |
+
+### Live: connect a real camera or ROV feed
+
+Enter `0` for the first USB camera, an `rtsp://…` URL for an IP camera or ROV
+feed, or a path to a video file (which can loop, so a recorded clip stands in for
+a camera). Annotated frames arrive in the browser as **MJPEG** — no plugin, no
+client-side decoding, and a page refresh just reconnects.
+
+```bash
+python scripts/serve.py          # then open the Live tab
+python scripts/live_inspect.py --source 0 --display          # or headless/desktop
+python scripts/live_inspect.py --source rtsp://CAM/stream --method ensemble --out outputs/live
+```
+
+Both paths drive the same `netinspect.live` module, so the browser and the
+desktop runner cannot drift apart.
+
+**What makes it real-time rather than just "runs on video":**
+
+- **Capture and inference run on separate threads, and stale frames are dropped.**
+  A camera delivers frames on its own schedule; a model does not. The inference
+  thread always takes the *newest* frame and discards the backlog. Measured on a
+  1280×720 clip: 1359 frames captured, 138 inferred, **1219 dropped**, 22.5 fps,
+  38 ms latency. A single-loop design would instead have shown smooth video of a
+  steadily older world.
+- **One alert per persisting defect, not one per frame.** Temporal confirmation
+  requires a detection to survive N frames. On the 31%-false-alarm clip above,
+  that reduces 40 frames of flicker to **zero** confirmed alerts.
+- **Unfamiliar frames are flagged, not silently scored.** The OOD gate marks a
+  new site or camera for human review instead of producing confident boxes on a
+  domain nothing here was characterised on.
+
+> A live feed from a real net **will** trip the OOD gate, and that is the correct
+> behaviour, not a bug. These models learned synthetic damage. Run in shadow mode
+> and fine-tune on real labels before anything alerts on its own.
 
 ## Grounded assistant — and measuring whether the guardrail holds
 

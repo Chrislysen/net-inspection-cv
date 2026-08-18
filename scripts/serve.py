@@ -17,15 +17,31 @@ Endpoints
 * ``GET  /api/infer``         — run a method on a server-side frame -> JSON
 * ``POST /predict``           — multipart image upload -> JSON detections
 * ``POST /predict/overlay``   — multipart image upload -> overlay PNG
+* ``POST /api/analyze``       — drop an image -> overlay + detections + OOD, one call
+* ``POST /api/live/start``    — open a camera / RTSP / video source and start inferring
+* ``GET  /api/live/stream``   — annotated frames as multipart MJPEG
+* ``GET  /api/live/status``   — fps, latency, dropped frames, confirmed events
+* ``POST /api/live/stop``     — release the source
 
 Run
 ---
     python scripts/serve.py            # auto-loads committed models in models/
     # open http://127.0.0.1:8000
 
-Still single-process and unauthenticated — a prototype service, not a hardened
-public deployment. Predictions are from synthetic/proxy-trained models and
-require human review.
+Then drag an image onto the console, or open the Live tab and enter ``0`` for a
+webcam, an ``rtsp://`` URL for an ROV feed, or a path to a video file.
+
+Security
+--------
+Single-process and **unauthenticated** — a prototype console, not a hardened
+deployment. It binds ``127.0.0.1`` by default and should stay there: ``POST
+/api/live/start`` takes an arbitrary source string, so anyone who can reach the
+port can make the server open a file path or outbound stream URL. Put it behind
+authentication and validate the source against an allowlist before exposing it
+on a network.
+
+Predictions come from models trained on **synthetic** damage and require human
+review; recall on real damage is unmeasured.
 
 Note: no ``from __future__ import annotations`` — FastAPI resolves annotations
 at runtime.
@@ -148,11 +164,31 @@ def _png_b64(image: np.ndarray) -> str:
 
 
 def build_app(inspector: NetInspector):
+    from contextlib import asynccontextmanager
+
     from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
     from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse, Response
     from fastapi.staticfiles import StaticFiles
 
-    app = FastAPI(title="net-inspection-cv console", version="0.3.0")
+    # A live session owns a camera handle and two threads, so it must be
+    # released on shutdown — otherwise a reload leaves the device locked.
+    live_state: dict = {"session": None}
+
+    def _stop_live():
+        session = live_state.get("session")
+        if session is not None:
+            try:
+                session.stop()
+            finally:
+                live_state["session"] = None
+
+    @asynccontextmanager
+    async def lifespan(_app):
+        yield
+        _stop_live()
+
+    app = FastAPI(title="net-inspection-cv console", version="0.4.0",
+                  lifespan=lifespan)
     sources = _available_sources()
     metrics = _Metrics()
 
@@ -278,6 +314,120 @@ def build_app(inspector: NetInspector):
         vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
         buf = io.BytesIO(); Image.fromarray(vis).save(buf, format="PNG")
         return Response(content=buf.getvalue(), media_type="image/png")
+
+    # ---------------------------------------------------------------- #
+    # Drop-to-analyse: one round trip returns overlay, detections and the
+    # OOD verdict together, so the UI never has to stitch two responses.
+    # ---------------------------------------------------------------- #
+    @app.post("/api/analyze")
+    async def analyze(file: UploadFile = File(...), method: str = Query("yolo"),
+                      conf: float = Query(0.25, ge=0.0, le=1.0),
+                      ood: bool = Query(True)):
+        _validate_method(method)
+        img = await _read_upload(file)
+        r = inspector.predict(img, method=method, conf=conf)
+        metrics.inferences[method] += 1
+        vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
+        return JSONResponse({
+            "filename": Path(file.filename or "upload").name,
+            "method": method, "conf": conf,
+            "latency_ms": round(r.elapsed_ms, 1), "count": len(r.boxes),
+            "ood": _ood_status(inspector, img) if ood else None,
+            "image_size": {"width": img.shape[1], "height": img.shape[0]},
+            "detections": [
+                {"class": b.class_name, "score": round(b.score, 3),
+                 "bbox": [int(b.x1), int(b.y1), int(b.x2), int(b.y2)]}
+                for b in r.boxes],
+            "overlay": _png_b64(vis), "is_heatmap": r.heatmap is not None,
+            "disclaimer": ("Prototype: model trained on SYNTHETIC damage. "
+                           "Human review required; recall on real damage is unmeasured."),
+        })
+
+    # ---------------------------------------------------------------- #
+    # Live camera / ROV feed
+    #
+    # One session at a time, deliberately: a second concurrent stream would
+    # contend for the same model and make both slower and neither real-time.
+    # ---------------------------------------------------------------- #
+    @app.post("/api/live/start")
+    def live_start(source: str = Query(..., description="0 for webcam, an RTSP/HTTP URL, or a video path"),
+                   method: str = Query("yolo"),
+                   conf: float = Query(0.25, ge=0.0, le=1.0),
+                   min_hits: int = Query(3, ge=1, le=30),
+                   ood: bool = Query(False),
+                   loop: bool = Query(True, description="Loop video files")):
+        from netinspect.live import LiveInspector, LiveSession
+
+        _validate_method(method)
+        _stop_live()
+
+        ood_model = None
+        if ood:
+            try:
+                ood_model = inspector._patchcore()      # noqa: SLF001 - same package
+            except Exception as exc:
+                LOGGER.warning("OOD gate unavailable for live: %s", exc)
+
+        live = LiveInspector(inspector, method=method, conf=conf,
+                             min_hits=min_hits, ood_model=ood_model)
+        session = LiveSession(source, live, loop_files=loop)
+        try:
+            session.start()
+        except Exception as exc:
+            raise HTTPException(400, str(exc))
+        live_state["session"] = session
+        return JSONResponse(session.status())
+
+    @app.post("/api/live/stop")
+    def live_stop():
+        running = live_state.get("session") is not None
+        _stop_live()
+        return {"stopped": running}
+
+    @app.get("/api/live/status")
+    def live_status():
+        session = live_state.get("session")
+        return JSONResponse(session.status() if session else {"running": False})
+
+    @app.get("/api/live/stream")
+    def live_stream(fps: float = Query(12.0, gt=0.0, le=60.0)):
+        """Annotated frames as multipart MJPEG — an <img> tag renders it directly.
+
+        MJPEG rather than WebRTC or a websocket because it needs no client-side
+        decoding, survives a page refresh, and degrades gracefully: if inference
+        is slower than the requested rate, the same annotated frame is re-sent
+        rather than a backlog being replayed.
+        """
+        from fastapi.responses import StreamingResponse
+        from PIL import Image
+
+        session = live_state.get("session")
+        if session is None:
+            raise HTTPException(409, "No live session. POST /api/live/start first.")
+
+        boundary = "netinspectframe"
+        interval = 1.0 / fps
+
+        def frames():
+            while True:
+                s = live_state.get("session")
+                if s is None or not s.running:
+                    break
+                frame = s.latest()
+                if frame is not None:
+                    buf = io.BytesIO()
+                    Image.fromarray(frame.image).save(buf, format="JPEG", quality=80)
+                    payload = buf.getvalue()
+                    yield (f"--{boundary}\r\nContent-Type: image/jpeg\r\n"
+                           f"Content-Length: {len(payload)}\r\n\r\n").encode()
+                    yield payload
+                    yield b"\r\n"
+                time.sleep(interval)
+
+        return StreamingResponse(
+            frames(),
+            media_type=f"multipart/x-mixed-replace; boundary={boundary}",
+            headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"})
 
     if WEB_DIR.exists():
         app.mount("/", StaticFiles(directory=str(WEB_DIR), html=True), name="web")

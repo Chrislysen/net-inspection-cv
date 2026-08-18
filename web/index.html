@@ -36,6 +36,13 @@
   <aside class="card controls">
     <h2 class="card-title">Controls</h2>
 
+    <div class="modes" role="tablist" aria-label="Input mode">
+      <button class="mode active" id="modeBrowse" role="tab" aria-selected="true">Browse</button>
+      <button class="mode" id="modeDrop" role="tab" aria-selected="false">Drop</button>
+      <button class="mode" id="modeLive" role="tab" aria-selected="false">Live</button>
+    </div>
+
+    <div id="browsePanel">
     <div class="field">
       <label for="sourceSelect">Frame source</label>
       <select id="sourceSelect"></select>
@@ -49,6 +56,54 @@
         <button class="btn" id="prevBtn">‹ Prev</button>
         <button class="btn" id="nextBtn">Next ›</button>
       </div>
+    </div>
+    </div><!-- /browsePanel -->
+
+    <div id="dropPanel" hidden>
+      <div class="field">
+        <label>Your own image</label>
+        <div class="dropzone" id="dropZone" tabindex="0" role="button"
+             aria-label="Drop an image here or click to choose one">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none"
+               stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+          </svg>
+          <b>Drop an image</b>
+          <span>or click to choose · PNG / JPEG</span>
+        </div>
+        <input type="file" id="fileInput" accept="image/png,image/jpeg" hidden />
+        <p class="note">Runs the selected method on your frame. An image from a
+          different site or camera will usually trip the OOD gate — that is the
+          gate working, not a bug.</p>
+      </div>
+    </div>
+
+    <div id="livePanel" hidden>
+      <div class="field">
+        <label for="liveSource">Camera or stream</label>
+        <input type="text" id="liveSource" value="0"
+               placeholder="0 · rtsp://host/stream · path/to/video.mp4" />
+        <p class="src-info">
+          <b>0</b> = first USB camera · <b>rtsp://…</b> = IP camera or ROV feed ·
+          or a path to a video file on the server.
+        </p>
+      </div>
+      <div class="field">
+        <label>Confirm after <span class="muted" id="minHitsVal">3</span> frames</label>
+        <input type="range" id="minHits" min="1" max="10" step="1" value="3" />
+        <p class="src-info">A defect must persist this many frames before it
+          becomes an event — one alert per defect, not one per frame.</p>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" id="liveStart">Start</button>
+        <button class="btn" id="liveStop" disabled>Stop</button>
+      </div>
+      <div class="live-stats" id="liveStats" hidden>
+        <div class="stat"><b id="liveFps">0</b><span>infer fps</span></div>
+        <div class="stat"><b id="liveDropped">0</b><span>dropped</span></div>
+        <div class="stat"><b id="liveEvents">0</b><span>events</span></div>
+      </div>
+      <p class="note" id="liveNote" hidden></p>
     </div>
 
     <div class="field">
@@ -86,6 +141,7 @@
       <div class="progress"></div>
       <img id="frameImg" alt="inspection frame" />
       <div class="readout" id="vpReadout">—</div>
+      <div class="drop-overlay" id="dropOverlay" hidden><span>Drop to analyse</span></div>
     </div>
   </section>
 

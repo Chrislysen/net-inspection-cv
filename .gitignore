@@ -41,3 +41,8 @@ reports/assets/
 # Per-operator planning output names a company; regenerate with
 # scripts/site_planner.py --operator <NAME> --forecast
 reports/results/site_planning/
+
+# Coverage artifacts
+.coverage
+.coverage.*
+htmlcov/
