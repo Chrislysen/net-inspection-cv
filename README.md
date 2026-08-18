@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-420%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-454%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -62,8 +62,9 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
 | **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable (Claude API or local Ollama), so the guardrail is **measured**, not asserted: boundary disclosure **100%** on two local 14B models, tool grounding 50–75%. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **420 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **454 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
 | **Adoption** | One CLI (`netinspect doctor / onboard / train / calibrate / gate / serve / live / map`). **`onboard`** ingests YOLO, COCO, VOC or bare images, audits them, and splits **grouped by clip** so video frames cannot straddle a split — plus perceptual hashing to catch the same footage exported twice. It refuses bad input rather than proceeding. **`calibrate`** picks the threshold on *your* validation split against a false-alarm budget. **`gate`** measures against a version-controlled operating point and **exits non-zero**, failing closed when a rate is not measurable. |
+| **Security** | Secure by default: **refuses to bind anything but loopback without an API key**, so an unauthenticated endpoint cannot be published by forgetting. `POST /api/live/start` is **default-deny** (camera indices, an allowlisted media root, glob-matched stream URLs) and blocks private/link-local hosts even when a pattern matches — closing an SSRF path to cloud instance metadata. Plus decompression-bomb limits, a bounded inference concurrency, same-origin CORS, and `/api/version` with per-model SHA-256 digests. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
@@ -788,6 +789,51 @@ fires on everything has perfect recall.
 > synthetic damage and their recall on real holes has never been measured. Run
 > `netinspect gate` against your own labelled footage; if it fails, that is the
 > tool working. Shadow-mode first, then alerting.
+
+### Running it on a network
+
+The service is **secure by default and refuses to be published insecurely**.
+
+```bash
+export NETINSPECT_API_KEY=$(openssl rand -hex 24)
+export NETINSPECT_LIVE_ALLOW='rtsp://cam-*.farm.local/*'
+export NETINSPECT_MEDIA_ROOT=/srv/inspection/clips
+netinspect serve --host 0.0.0.0
+```
+
+Without a key it will **not bind anything but loopback** — local development
+still just works, but publishing an unauthenticated inference endpoint is not
+something you can do by forgetting:
+
+```
+Refusing to bind 0.0.0.0 without authentication.
+Set NETINSPECT_API_KEY to a secret, or bind 127.0.0.1 for local use.
+```
+
+`POST /api/live/start` used to take a free-form source string and hand it to
+OpenCV — a read of any file the process could open and an outbound request to
+anywhere the host could reach. It is now **default-deny**: camera indices, files
+under `NETINSPECT_MEDIA_ROOT`, and URLs matching `NETINSPECT_LIVE_ALLOW`.
+Private, loopback and link-local addresses are refused *even when a pattern
+matches*, because `169.254.169.254` is the standard route from "can reach an
+internal endpoint" to "has your cloud credentials".
+
+| variable | effect |
+|---|---|
+| `NETINSPECT_API_KEY` | required on every `/api` and `/predict` route (`/api/health`, `/api/ready` stay open for load balancers) |
+| `NETINSPECT_LIVE_ALLOW` | comma-separated glob patterns of permitted stream URLs |
+| `NETINSPECT_MEDIA_ROOT` | directory live video files may be opened from |
+| `NETINSPECT_CORS_ORIGINS` | comma-separated origins; same-origin only if unset |
+| `NETINSPECT_MAX_PIXELS` | decompression-bomb ceiling (default 50 MP) |
+| `NETINSPECT_MAX_CONCURRENCY` | simultaneous inferences before requests queue, then 503 |
+
+`GET /api/version` reports the service version, the git commit, and a **SHA-256
+digest of every model file** — so an inspection report can be tied to the exact
+artefacts that produced it, which a version string alone cannot do.
+
+Still needed for a hardened deployment, and deliberately not faked here: TLS and
+rate limiting via a reverse proxy, and a lock file for reproducible builds. It is
+single-process, so the in-memory metrics do not aggregate across workers.
 
 A container is provided in [`Dockerfile`](Dockerfile), but note it has **not been
 built or run** — no Docker daemon was available where it was written, and CI does

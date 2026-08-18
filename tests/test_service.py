@@ -143,10 +143,39 @@ def test_streaming_without_a_session_is_a_conflict_not_a_crash(client):
     assert client.get("/api/live/stream").status_code == 409
 
 
-def test_starting_an_unopenable_source_returns_400(client, tmp_path):
-    r = client.post(f"/api/live/start?source={tmp_path / 'nope.mp4'}&method=classical")
+def _client_for_media(root):
+    """A client whose live-source policy permits files under `root`.
+
+    Live sources are default-deny, so a test that opens a file has to say where
+    files are allowed to come from — the same thing an operator does with
+    NETINSPECT_MEDIA_ROOT.
+    """
+    from fastapi.testclient import TestClient
+
+    from netinspect.security import SecurityConfig
+    return TestClient(serve.build_app(
+        NetInspector(), security=SecurityConfig(media_root=Path(root).resolve())))
+
+
+def test_starting_an_unopenable_source_returns_400(tmp_path):
+    c = _client_for_media(tmp_path)
+    r = c.post(f"/api/live/start?source={tmp_path / 'nope.mp4'}&method=classical")
     assert r.status_code == 400
     assert "could not open" in r.json()["detail"].lower()
+
+
+def test_a_source_outside_the_media_root_is_refused(client, tmp_path):
+    """The service-level check on the SSRF / arbitrary-read surface."""
+    outside = tmp_path / "secret.mp4"
+    outside.write_bytes(b"x")
+    r = client.post(f"/api/live/start?source={outside}&method=classical")
+    assert r.status_code == 403
+    assert "NETINSPECT_MEDIA_ROOT" in r.json()["detail"]
+
+
+def test_a_stream_url_is_refused_without_an_allowlist(client):
+    r = client.post("/api/live/start?source=rtsp://camera.example.com/1&method=classical")
+    assert r.status_code == 403
 
 
 def test_stopping_when_nothing_runs_is_harmless(client):
@@ -168,6 +197,7 @@ def test_live_start_status_and_stop_round_trip(client, tmp_path):
     if not path.exists() or path.stat().st_size == 0:
         pytest.skip("video file was not produced")
 
+    client = _client_for_media(tmp_path)
     started = client.post(
         f"/api/live/start?source={path}&method=classical&conf=0.5&min_hits=2&ood=0&loop=true")
     assert started.status_code == 200, started.text
