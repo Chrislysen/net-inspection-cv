@@ -68,6 +68,30 @@ const NET3D = (() => {
     return a.z > NEAR ? [a, m] : [m, b];
   }
 
+  /* Liang–Barsky clip of a screen-space segment to the viewport.
+   *
+   * Near-plane clamping leaves an endpoint *on* the plane but possibly far
+   * off-axis, and fov/z at the plane is a huge multiplier — so a legitimately
+   * off-screen line can carry coordinates in the tens of thousands. Canvas
+   * mostly copes, but precision degrades and every one of those pixels is drawn
+   * for nothing. Clipping to the visible rect keeps the geometry exact (the
+   * slope is preserved; only the ends move) and culls what cannot be seen.
+   */
+  function clipRect(a, b, w, h, margin = 40) {
+    const x0 = -margin, y0 = -margin, x1 = w + margin, y1 = h + margin;
+    let t0 = 0, t1 = 1;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    for (const [p, q] of [[-dx, a.x - x0], [dx, x1 - a.x],
+                          [-dy, a.y - y0], [dy, y1 - a.y]]) {
+      if (p === 0) { if (q < 0) return null; continue; }
+      const r = q / p;
+      if (p < 0) { if (r > t1) return null; if (r > t0) t0 = r; }
+      else { if (r < t0) return null; if (r < t1) t1 = r; }
+    }
+    return [{ x: a.x + t0 * dx, y: a.y + t0 * dy },
+            { x: a.x + t1 * dx, y: a.y + t1 * dy }];
+  }
+
   // ---------------------------------------------------------------- geometry
   const RAD = Math.PI / 180;
 
@@ -170,7 +194,7 @@ const NET3D = (() => {
     let scene = null, shell = [], sea = [], barge = [], ribbon = [];
     let sitePx = [];                 // screen positions, for hit-testing
     let selected = null, live = [];
-    let dragging = false, lx = 0, ly = 0;
+    let dragging = false, lx = 0, ly = 0, moved = 0;
     const onSelect = opts.onSelect || (() => {});
 
     function setScene(s) {
@@ -186,16 +210,62 @@ const NET3D = (() => {
       sea = seaSegments(s.pen.radius_m);
       barge = bargeSegments(s.barge, s.pen);
       ribbon = bandRibbon(s.band || [], s.pen);
-      cam.dist = s.pen.radius_m * 2.9;
       cam.tz = -s.pen.total_depth_m / 2.4;
+      // Centre between the ring and the barge so the landmark is never cropped.
+      cam.tx = s.barge.x_m * 0.45;
+      cam.ty = s.barge.y_m * 0.45;
+      cam.dist = s.pen.radius_m * 2.9;         // a starting point; fit() refines it
       // Open on the inspected band rather than an arbitrary heading: the first
       // thing a viewer should see is the thing that was measured.
-      if (s.band && s.band.length) cam.az = (s.band[0].bearing_deg + 180) * RAD;
+      //
+      // On the band's own side, so it is the near wall rather than something
+      // viewed through the far netting — but swung 40 degrees off it, because
+      // the barge defaults to the same bearing as the start of the pass and
+      // would otherwise sit squarely in the sightline.
+      if (s.band && s.band.length) cam.az = (s.band[0].bearing_deg - 40) * RAD;
+      fit();
       draw();
     }
 
     function setLive(sites) { live = sites || []; draw(); }
     function select(id) { selected = id; draw(); }
+
+    /* Frame the whole scene by measuring it, not by guessing a distance.
+     *
+     * A cage can be 90 m or 200 m round and the barge sits outside it, so any
+     * hand-tuned multiple of the radius is wrong for some farm. Screen size is
+     * proportional to 1/dist, so projecting the scene once and comparing its
+     * bounding box to the canvas gives the correction directly; twice converges.
+     */
+    function fit(fill = 0.86) {
+      if (!scene) return;
+      const dpr = window.devicePixelRatio || 1;
+      const w = canvas.width / dpr, h = canvas.height / dpr;
+      if (!(w > 0 && h > 0)) return;
+      const pts = [];
+      for (const [a, b] of shell.concat(barge)) { pts.push(a, b); }
+      for (const s_ of (scene.sites || [])) {
+        pts.push({ x: s_.placed.x_m, y: s_.placed.y_m, z: s_.placed.z_m });
+      }
+      if (!pts.length) return;
+
+      for (let pass = 0; pass < 2; pass++) {
+        const B = basis(cam);
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity, seen = 0;
+        for (const p of pts) {
+          const c = toCam(p, B);
+          if (c.z <= NEAR) continue;           // behind the camera tells us nothing
+          const s = toScreen(c, cam, w, h);
+          minX = Math.min(minX, s.x); maxX = Math.max(maxX, s.x);
+          minY = Math.min(minY, s.y); maxY = Math.max(maxY, s.y);
+          seen++;
+        }
+        if (seen < 8) return;
+        const bw = Math.max(1, maxX - minX), bh = Math.max(1, maxY - minY);
+        const scale = Math.min((w * fill) / bw, (h * fill) / bh);
+        cam.dist = Math.max(6, Math.min(4000, cam.dist / scale));
+      }
+    }
 
     function flyTo(id) {
       const s = (scene && scene.sites || []).find((k) => k.site_id === id);
@@ -214,11 +284,15 @@ const NET3D = (() => {
       draw();
     }
 
-    function resize() {
+    function resize(refit = false) {
       const r = canvas.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
       canvas.width = Math.max(1, Math.round(r.width * dpr));
       canvas.height = Math.max(1, Math.round(r.height * dpr));
+      // The canvas is hidden until the Net 3-D tab opens, so its first real size
+      // arrives after setScene — refit then, or the scene keeps a framing chosen
+      // for a zero-sized stage.
+      if (refit) fit();
       draw();
     }
 
@@ -246,8 +320,10 @@ const NET3D = (() => {
           const ca = toCam(a, B), cb = toCam(b, B);
           const cl = clipNear(ca, cb);
           if (!cl) continue;
-          const sa = toScreen(cl[0], cam, w, h), sb = toScreen(cl[1], cam, w, h);
-          ctx.moveTo(sa.x, sa.y); ctx.lineTo(sb.x, sb.y);
+          const vis = clipRect(toScreen(cl[0], cam, w, h),
+                               toScreen(cl[1], cam, w, h), w, h);
+          if (!vis) continue;
+          ctx.moveTo(vis[0].x, vis[0].y); ctx.lineTo(vis[1].x, vis[1].y);
         }
         ctx.stroke();
         ctx.restore();
@@ -420,12 +496,23 @@ const NET3D = (() => {
 
     // ------------------------------------------------------------ input
     canvas.addEventListener('pointerdown', (e) => {
-      dragging = true; lx = e.clientX; ly = e.clientY;
+      dragging = true; moved = 0; lx = e.clientX; ly = e.clientY;
       canvas.setPointerCapture(e.pointerId);
     });
     canvas.addEventListener('pointermove', (e) => {
       if (!dragging) return;
-      cam.az -= (e.clientX - lx) * 0.008;
+      // Grab-and-drag: the surface under the pointer follows the pointer.
+      //
+      // Both signs are positive and that is not an accident. Increasing az walks
+      // the eye clockwise seen from above (north -> east), and at az=0 the camera
+      // sits north looking south, where screen-right is *west*. So dragging right
+      // must increase az to swing the camera toward screen-left, which is what
+      // makes the model appear to turn with the finger. Subtracting — as this did
+      // — moved the camera the same way as the drag and the model turned against
+      // it, which is the "backwards" everyone feels immediately and nobody can
+      // name.
+      moved += Math.abs(e.clientX - lx) + Math.abs(e.clientY - ly);
+      cam.az += (e.clientX - lx) * 0.008;
       cam.el = Math.max(-0.25, Math.min(1.45, cam.el + (e.clientY - ly) * 0.006));
       lx = e.clientX; ly = e.clientY;
       draw();
@@ -439,10 +526,16 @@ const NET3D = (() => {
     canvas.addEventListener('pointercancel', stop);
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
-      cam.dist = Math.max(6, Math.min(600, cam.dist * (1 + Math.sign(e.deltaY) * 0.12)));
+      // Same ceiling as fit(): a large cage can legitimately be framed far out,
+      // and a lower clamp would snap the view in on the first scroll.
+      cam.dist = Math.max(6, Math.min(4000, cam.dist * (1 + Math.sign(e.deltaY) * 0.12)));
       draw();
     }, { passive: false });
     canvas.addEventListener('click', (e) => {
+      // A drag ends with a click on the same element, so orbiting past a marker
+      // would select it and teleport the camera. Only a click that barely moved
+      // is a click.
+      if (moved > 6) { moved = 0; return; }
       const r = canvas.getBoundingClientRect();
       const x = e.clientX - r.left, y = e.clientY - r.top;
       let best = null, bestD = 1e9;
@@ -453,7 +546,7 @@ const NET3D = (() => {
       if (best !== null) { selected = best; draw(); onSelect(best); }
     });
 
-    return { setScene, setLive, select, flyTo, resize, draw,
+    return { setScene, setLive, select, flyTo, resize, draw, fit,
              get camera() { return cam; } };
   }
 

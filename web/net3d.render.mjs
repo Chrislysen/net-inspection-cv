@@ -141,21 +141,11 @@ function panel(fn) {
 
 // The viewer's default framing assumes a tall browser stage; these panels are
 // wide and short, so pull back and look down a little more to fit the cage.
+// These panels are wide and short, so look down a little more than the app's
+// default and let the viewer's own fit() size the scene to the panel.
 const wide = panel((v) => {
-  // Fit rather than guess: the projection is fov/z px per metre, so the distance
-  // that fits a scene of a given world height in a panel of a given pixel height
-  // follows directly. The barge sits north of the ring, so the scene is wider
-  // than the cage itself.
-  const worldH = scene.pen.total_depth_m + scene.barge.distance_from_centre_m;
-  const worldW = (scene.barge.distance_from_centre_m + 16) * 2;
-  // Centre between the ring and the barge, not on the ring: the barge is the
-  // landmark and cropping it defeats the whole point of drawing it.
-  v.camera.ty = scene.barge.y_m * 0.4;
-  v.camera.tx = scene.barge.x_m * 0.4;
-  v.camera.tz = -scene.pen.total_depth_m / 2;
   v.camera.el = 0.62;
-  v.camera.dist = Math.max(v.camera.fov * worldH / (H * 0.80),
-                           v.camera.fov * worldW / (W * 0.90));
+  v.fit(0.82);   // leave room for the panel title
   v.draw();
 });
 const best = (scene.sites || []).slice().sort((a, b) => b.sightings - a.sightings)[0];
