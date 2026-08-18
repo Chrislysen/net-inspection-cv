@@ -61,7 +61,7 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **Localisation** | Detections are placed on the **net**, not the frame: metres along/across the sweep, depth, and size in mm, from visual odometry with **self-calibrating scale** (no chessboard — 1.36 mm/px at 1 m, implied 82° HFOV). Repeat sightings collapse **107 alerts → 6 distinct sites (18×)**, and the pass reports the bands it never photographed, so "clean" is distinguishable from "never looked". An **interactive 3-D cage** in the console (cylinder + cone + feed barge, no 3-D library) places each site relative to that landmark and shows the photograph behind it — and puts the pass in proportion: **0.14% of a 4,589 m² net**. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
-| **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable — Claude API, local Ollama, or **any OpenAI-compatible endpoint** (Nous, Together, Groq, or a vLLM you host on Modal) — so the guardrail is **measured**, not asserted: boundary disclosure **100%** on two local 14B models, tool grounding 50–75%. |
+| **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable — Claude API, local Ollama, or **any OpenAI-compatible endpoint** (Nous, Together, Groq, or a vLLM you host on Modal) — so the guardrail is **measured**, not asserted: boundary disclosure **100% on all six models tested** (3B–15B, three families), while tool grounding ranges 50–100% and does **not** track model size. |
 | **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **481 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
 | **Adoption** | One CLI (`netinspect doctor / onboard / train / calibrate / gate / serve / live / map`). **`onboard`** ingests YOLO, COCO, VOC or bare images, audits them, and splits **grouped by clip** so video frames cannot straddle a split — plus perceptual hashing to catch the same footage exported twice. It refuses bad input rather than proceeding. **`calibrate`** picks the threshold on *your* validation split against a false-alarm budget. **`gate`** measures against a version-controlled operating point and **exits non-zero**, failing closed when a rate is not measurable. |
 | **Security** | Secure by default: **refuses to bind anything but loopback without an API key**, so an unauthenticated endpoint cannot be published by forgetting. `POST /api/live/start` is **default-deny** (camera indices, an allowlisted media root, glob-matched stream URLs) and blocks private/link-local hosts even when a pattern matches — closing an SSRF path to cloud instance metadata. Plus decompression-bomb limits, a bounded inference concurrency, same-origin CORS, and `/api/version` with per-model SHA-256 digests. |
@@ -397,22 +397,35 @@ python scripts/ask.py --backend ollama "How accurate is this on real damage?"
 python scripts/eval_assistant.py --backend ollama --model qwen3:14b
 ```
 
-**The backend is swappable** (Anthropic API or a local Ollama model) with
-identical tool schemas and an identical guardrail, so the same 12-case
-adversarial suite turns a design claim into a measurement:
+**The backend is swappable** — Anthropic, local Ollama, or any OpenAI-compatible
+endpoint — with identical tool schemas and an identical guardrail. So the same
+12-case adversarial suite turns a design claim into a measurement, across **six
+models, three families and a 5× size range**:
 
-| backend / model | boundary disclosure | tool grounding | overall |
-|---|---|---|---|
-| ollama / qwen2.5:14b-instruct (local) | **5/5 (100%)** | 9/12 (75%) | 75% |
-| ollama / qwen3:14b (local) | **5/5 (100%)** | 6/12 (50%) | 50% |
+| model | params | family | boundary disclosure | tool grounding | overall |
+|---|---|---|---|---|---|
+| aya-expanse:8b | 8B | command-r | **5/5 (100%)** | **12/12 (100%)** | 75% |
+| qwen2.5:3b-instruct | 3B | qwen2.5 | **5/5 (100%)** | 10/12 (83%) | 67% |
+| qwen2.5:14b-instruct | 15B | qwen2.5 | **5/5 (100%)** | 9/12 (75%) | 75% |
+| gemma4:e4b | 8B | gemma4 | **5/5 (100%)** | 8/12 (67%) | 67% |
+| qwen2.5:7b-instruct | 8B | qwen2.5 | **5/5 (100%)** | 6/12 (50%) | 50% |
+| qwen3:14b | 15B | qwen3 | **5/5 (100%)** | 6/12 (50%) | 50% |
 
-The two properties **diverge**, which is the interesting part. The *safety*
-property — refusing to answer past the evidence — is carried by the system
-prompt and held at **100% on both local models**. The *provenance* property —
-verifying by tool call rather than answering from the prompt — did not: every
-single remaining failure is the same mode, a correct answer produced without
-checking. Right answer, wrong process, and worth knowing before trusting it in
-an operational loop.
+Two findings, and the second is the one I did not expect.
+
+**Boundary disclosure held at 100% on every model, down to 3B.** The safety
+property — refusing to answer past the evidence — is carried by the system, not
+by the model's capacity. That is the claim this architecture makes, and a 3B
+model honouring it is much better evidence than a frontier model doing so.
+Caveat stated plainly: 5 boundary cases per model is a small denominator, and
+100% of 5 is not 100% of 500.
+
+**Tool grounding does not track model size at all.** An 8B scores 100% while
+both 15B models sit at 50%; a 3B beats a 7B of the same family. Whatever decides
+whether a model *verifies* rather than answering from its prompt, it is not
+parameter count — so "use a bigger model" is not the fix, and picking one on
+size alone would have chosen worse here. Every remaining failure is the same
+mode: a correct answer produced without checking. Right answer, wrong process.
 
 Two of those "failures" were originally **mine, not the models'**: a
 `must_mention` check on the bare substring `"not"` scored a correct

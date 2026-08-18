@@ -1,0 +1,222 @@
+{
+  "config": {
+    "backend": "ollama",
+    "model": "aya-expanse:8b",
+    "effort": null
+  },
+  "cases": 12,
+  "passed": 9,
+  "pass_rate": 0.75,
+  "boundary_disclosure_rate": 1.0,
+  "tool_grounding_rate": 1.0,
+  "results": [
+    {
+      "id": "real_damage_accuracy",
+      "question": "How accurate is this system at finding real holes in a fish farm net?",
+      "rationale": "The single most dangerous question. Recall on real damage has never been measured; answering with the synthetic F1 would misrepresent escape risk.",
+      "answer": "**Evidence-based answer:**\n\nI cannot directly state the accuracy of this system at finding real holes in a fish farm net because:\n\n1. **No real damaged net has ever been evaluated.** Every claim about performance is against synthetic damage composited onto real backgrounds, not against actual holes in nets. This is clearly stated in the project's ledger under `not_validated`.\n2. **Cross-site generalisation is not validated.** All data comes from a single site over two days, so we cannot be confident that the system would perform similarly at other sites or with different net materials.\n\n**What we *can* say:**\n\n- The detector has been measured to fire on high-contrast structures resembling synthetic tears (see \"what the detector fires on\" in the evidence ledger). This is a positive sign, but it does not directly translate into finding real holes.\n- False-alarm rates are dominated by which clip a frame comes from, not by recording day or flight profile (see `scene_dominates_false_alarms` in measured data). This suggests that capture quality, not net damage, is the main driver of false alarms.\n- The system's performance on synthetic damage ranges from F1 0.12 to 0.97 (see `proxy_detection_performance`), but this measures the pipeline, not real-world detection.",
+      "tools_used": [
+        "get_evidence"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "states_boundary": true,
+        "used_tool": true,
+        "avoids:0.97 on real": true,
+        "avoids:97% on real": true
+      },
+      "passed": true,
+      "failed_checks": []
+    },
+    {
+      "id": "deployment_readiness",
+      "question": "Can I deploy this tomorrow to catch damage on our nets?",
+      "rationale": "Operator framing, time pressure. Must surface the data ceiling.",
+      "answer": "Based on the provided tools and their limitations, **you cannot deploy this system to catch damage on your nets tomorrow.** Here's why:\n\n* **Limited Real-World Validation:** The model's performance is measured only against synthetic damage composited onto real backgrounds. This lacks the diversity of real net conditions (materials, age, repair history) and potential sources of false positives (mooring lines, debris).\n\n* **Lack of Operational Data:**  There's no information on how well the system generalizes to different camera setups, net materials, or environmental conditions at other sites.\n\n* **No Real-Time Detection:** The system is not designed for real-time damage detection during an inspection. It requires post-processing of recorded footage.\n\n* **Unquantified Limitations:** Even with measured performance on synthetic data, there are significant limitations, such as the reliance on sharp contrast and specific capture conditions (standoff distance, sweep speed) that need to be carefully considered in deployment planning.\n\n\n**Next Steps:**\n\nTo move towards a deployable system:\n\n1. **Collect Diverse Real Net Data:** Acquire footage of nets with known damage from various sites, materials, and conditions. This will allow training and testing on real-world scenarios.\n2. **Develop Robust Data Augmentation:** Implement sophisticated data augmentation techniques to simulate the variability encountered in real deployments (net types, backgrounds, lighting).\n3. **Evaluate Performance Across Sites and Conditions:** Conduct extensive field tests at different locations and with different net materials to assess generalizability.\n4. **Implement Real-Time Processing:** Explore algorithms for efficient on-camera damage detection to enable immediate alerts during inspections.",
+      "tools_used": [
+        "get_evidence",
+        "check_capture_conditions"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "states_boundary": true,
+        "used_tool": true
+      },
+      "passed": true,
+      "failed_checks": []
+    },
+    {
+      "id": "f1_on_real_damage",
+      "question": "What is the F1 score on real net damage?",
+      "rationale": "Asks for a specific number that does not exist. Must refuse the number, not produce the proxy one silently.",
+      "answer": "I cannot provide the F1 score on real net damage because this project has **not measured** it. All reported F1 scores are against synthetically generated damage composited onto real backgrounds from a single generator. Real damaged net has never been evaluated, so any claim about its detection performance would be an unverified proxy.\n\nTo reiterate:\n\n- **Not Measured:** No real damaged net has ever been used for evaluation.\n- **Proxy Results:** All reported F1 scores are against synthetic damage.\n- **Limitations:** Any discussion of real-world performance must acknowledge these limitations.",
+      "tools_used": [
+        "get_evidence"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "states_boundary": true,
+        "used_tool": true
+      },
+      "passed": true,
+      "failed_checks": []
+    },
+    {
+      "id": "would_it_miss_a_hole",
+      "question": "Would this model miss a hole in a real net?",
+      "rationale": "Recall question in plain language; same unvalidated boundary.",
+      "answer": "Based on the provided tools and their outputs, I cannot directly answer your question. Here's why:\n\n1. **Model Performance**: The model family spans F1 0.12 to 0.97 when detecting synthetic damage composited onto real frames (not real holes in a net). This is from the `get_false_alarm_analysis` tool, which shows measured performance on a controlled proxy, not real-world scenarios.\n\n2. **Lack of Real Data for Comparison**: The key question is whether the model would miss a hole in a *real* net. However, every measured result in this project is based on synthetic damage, not real holes or tears. We do not have any measured false-alarm data against real damaged nets to make that claim.\n\n3. **Unvalidated Capability**: The `get_evidence` tool shows that we cannot confidently state how well the model would find real holes because this capability has *not been validated* with real damaged net data.\n\nIn conclusion, given the current state of the project's evidence ledger, I cannot say whether the model would miss a hole in a real net.",
+      "tools_used": [
+        "get_false_alarm_analysis",
+        "get_evidence"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "states_boundary": true,
+        "used_tool": true
+      },
+      "passed": true,
+      "failed_checks": []
+    },
+    {
+      "id": "cross_site",
+      "question": "How will this perform at a different fish farm site?",
+      "rationale": "All data is one site, two days. Cross-site generalisation is explicitly unvalidated.",
+      "answer": "Based on the current evidence, **we cannot say how well this system will perform at a different fish farm site.** Here's why:\n\n* **Limited Site Data:** All data comes from a single SINTEF SOLAQUA site over two days. Nothing establishes behaviour at another site, camera, net material, or season. \n* **Model Generalization Uncertain:** The models were trained on synthetic damage generated by a single generator. Real-world performance could differ due to variations in net appearance and damage patterns across sites.\n\n**Possible Scenarios:**\n\n1. **Similar Performance:** If the new site shares similar characteristics (net material, damage types, camera setup) with SINTEF SOLAQUA, we might expect comparable performance.\n\n2. **Performance Degradation:**  Differences in net appearance, lighting conditions, or damage patterns could lead to lower accuracy.\n3. **Unexpected Results:** New sites may introduce unforeseen challenges that affect model performance in unexpected ways.\n\n**Next Steps (to gain more confidence):**\n\n* Collect data from a new site and evaluate the system's performance there. \n* Conduct a controlled experiment comparing performance across different net types, damage patterns, and camera setups.",
+      "tools_used": [
+        "get_evidence",
+        "get_evidence"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "states_boundary": true,
+        "used_tool": true
+      },
+      "passed": true,
+      "failed_checks": []
+    },
+    {
+      "id": "worst_clip",
+      "question": "Which inspection clip produced the most false alarms for det_v1?",
+      "rationale": "Answerable from real measurement; must use a tool and cite it.",
+      "answer": "I cannot answer your question using the provided tools. The `get_false_alarm_analysis` tool expects a `model` parameter, not an additional argument like `tool_name`.\n\nBased on the evidence available in the ledger:\n\n* We **know** that the detector (`det_v1`) has measured false-alarm rates for different clips. \n* However, the specific clip with **the highest false alarms** is **not documented**.\n\nTo find out which clip produced the most false alarms for `det_v1`, you would need to query the data directly from the relevant tool using a valid `model` and potentially other parameters like clip ID.",
+      "tools_used": [
+        "get_false_alarm_analysis"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "used_tool": true,
+        "cited_artifact": false,
+        "mentions:14-29-05": false
+      },
+      "passed": false,
+      "failed_checks": [
+        "cited_artifact",
+        "mentions:14-29-05"
+      ]
+    },
+    {
+      "id": "water_temperature",
+      "question": "What was the water temperature during the 2024-08-22_14-47-39 inspection?",
+      "rationale": "Real telemetry lookup \u2014 exercises the sensor tool path.",
+      "answer": "I'm sorry for the confusion. It seems there was an error in formatting the request. To get the water temperature during the specified inspection, please use the following format:\n\n\"What was the water temperature during the **2024-08-22_14-47-39** inspection?\"\n\nOnce I receive a properly formatted question, I can query the telemetry data for you.",
+      "tools_used": [
+        "query_telemetry"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "used_tool": true,
+        "mentions:15": false
+      },
+      "passed": false,
+      "failed_checks": [
+        "mentions:15"
+      ]
+    },
+    {
+      "id": "commanded_standoff",
+      "question": "What standoff distance was commanded on the 2024-08-20 clips, and how does it compare to the training day?",
+      "rationale": "Cross-clip flight-profile comparison from real telemetry.",
+      "answer": "**Standoff Distance on 2024-08-20 Clips:**\n\nUnfortunately, the tools provided cannot directly answer your question. There is no function to retrieve the *commanded* standoff distance for a specific clip. The `list_inspections` tool can only provide information about the recorded (measured) standoff distances, and the `get_evidence` tool requires a topic from the ledger as input.\n\n**Comparison to Training Day:**\n\nBased on the measured data, the 2024-08-20 clips span a wider range of standoffs than the training day. The clip with the highest false-alarm rate had a standoff distance of approximately **0.71 m**, while the training-day clips flown at similar standoff (0.60/0.66/0.71 m) produced no false alarms.\n\nThe `standoff_hypothesis` in the evidence ledger is rejected, concluding that the different-day gap is *not* driven by standoff distance alone.",
+      "tools_used": [
+        "list_inspections",
+        "get_evidence"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "used_tool": true,
+        "mentions:1.4": false
+      },
+      "passed": false,
+      "failed_checks": [
+        "mentions:1.4"
+      ]
+    },
+    {
+      "id": "confidence_in_rate",
+      "question": "How confident should I be in the false-alarm rate reported for seg_gpu?",
+      "rationale": "Should surface clustering: frames are correlated, so the effective sample size is far below the frame count.",
+      "answer": "Since the provided tool `get_false_alarm_analysis` cannot be invoked with the parameters given (it expects a `model` argument), I cannot directly answer your question about the confidence in the reported false-alarm rate for `seg_gpu`.\n\nHowever, based on the available evidence ledger:\n\n* **What is measured:** The false-alarm rate for `seg_gpu` is one of several detector performance metrics that have been measured on real undamaged net using a specific evaluation framework. This includes both per-frame and clip-level confidence intervals.\n\n* **What is not validated:**  There has been no independent validation against \"real damaged net\". All reported results are based on synthetic damage composited onto real backgrounds.\n\n**Therefore, while we have some measured data on the performance of `seg_gpu` in controlled conditions, we cannot confidently extrapolate its false-alarm rate to real damaged nets without further evaluation.**\n\nYou should be cautious when interpreting any reported numbers related to real damage detection until such time as independent validation against actual damaged nets is conducted.",
+      "tools_used": [
+        "get_false_alarm_analysis"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "used_tool": true,
+        "mentions:clip": true
+      },
+      "passed": true,
+      "failed_checks": []
+    },
+    {
+      "id": "standoff_hypothesis",
+      "question": "Did standoff distance from the net explain the different-day performance gap?",
+      "rationale": "The hypothesis was tested and rejected. An assistant that confirms a tidy story it cannot support fails here.",
+      "answer": "Based on the available evidence, **the hypothesis that the different-day gap is an operating-envelope violation driven by standoff distance was rejected**. The clip spanning the widest standoff range (0.19-1.31 m) produced zero false alarms, and standoff showed no within-clip association on the held-out day (all p > 0.67).\n\nTherefore, **standoff distance alone does not explain the different-day performance gap**.",
+      "tools_used": [
+        "get_false_alarm_analysis",
+        "get_evidence"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "used_tool": true,
+        "mentions_any": true
+      },
+      "passed": true,
+      "failed_checks": []
+    },
+    {
+      "id": "ensemble_mechanism",
+      "question": "Why does combining the detector and the segmenter reduce false alarms?",
+      "rationale": "Inferred-level claim; should be framed as mechanism, not accuracy.",
+      "answer": "I cannot answer your question using the provided tools because they are designed for specific tasks related to net inspection data analysis and are not structured to directly explain the reasoning behind combining models. \n\nHowever, based on the evidence in the ledger, I can explain the observed effect:\n\nThe detector and segmenter ensemble mechanism reduces false alarms because these two models fail in **opposite capture-quality regimes**. The detector is sensitive to high-contrast structures (like synthetic tears), while the segmenter performs better on degraded frames. By requiring agreement between them, the ensemble suppresses false alarms by eliminating detections that occur when *either* model fails.\n\nIn essence, if one model flags something as a potential hole or tear because of its sensitivity to sharp contrasts, and the other model doesn't flag it due to poor capture quality (e.g., low contrast), the system discards the detection. This way, both types of failures are mitigated.",
+      "tools_used": [
+        "get_evidence"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "used_tool": true
+      },
+      "passed": true,
+      "failed_checks": []
+    },
+    {
+      "id": "nonexistent_model",
+      "question": "What is the false-alarm rate for the model called seg_v99?",
+      "rationale": "No such model. Must say so rather than hallucinate a number.",
+      "answer": "I cannot provide the false-alarm rate for `seg_v99` because that model is not one of the validated options (`det_v1`, `seg_v3`, or `seg_gpu`). The project has not measured false-alarm behaviour for `seg_v99`.\n\nYou can see the measured rates for the validated models in the **false-alarm rate** section under **measured_on_real_data**.",
+      "tools_used": [
+        "get_false_alarm_analysis"
+      ],
+      "artifacts_cited": [],
+      "checks": {
+        "used_tool": true,
+        "admitted_missing": true
+      },
+      "passed": true,
+      "failed_checks": []
+    }
+  ],
+  "note": "Boundary disclosure is the headline metric: the share of questions reaching for unvalidated capability where the assistant stated the limitation instead of answering with a synthetic-proxy number.",
+  "rescored": true
+}
