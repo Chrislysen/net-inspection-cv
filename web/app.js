@@ -16,12 +16,55 @@ const METHOD_ORDER = ["classical", "anomaly", "patchcore", "yolo", "ensemble"];
 
 const state = { sources: [], methods: [], method: "yolo", source: null,
                 frames: [], idx: 0, conf: 0.25, busy: false,
-                sourceInfo: {}, ood: false, oodAvailable: false };
+                sourceInfo: {}, ood: false, oodAvailable: false,
+                mode: "browse",
+                // Kept so a threshold change can re-run the SAME image rather
+                // than silently falling back to a server-side frame, plus the
+                // settings it was last analysed with, so re-entering Drop after
+                // changing the detector elsewhere does not show a stale result.
+                lastDrop: null, lastDropSettings: null };
+
+// Set when a frame request arrives while one is already running, so the final
+// slider position is honoured instead of dropped.
+let pendingFrame = null;
 
 async function api(path) {
   const r = await fetch(path);
   if (!r.ok) throw new Error(`${r.status} ${await r.text()}`);
   return r.json();
+}
+
+/* Every async request here ends by writing the same handful of DOM nodes — the
+ * viewport image, the readout, the stats, the detection list. Without a guard,
+ * a slow response lands after the user has moved on and paints the old mode's
+ * result over the new one: a dropped photo appearing in Browse under a frame
+ * counter describing something else, a live stream overwritten by a stale
+ * inference. Each writer takes a ticket before awaiting and checks it after; a
+ * mode change invalidates every ticket outstanding.
+ *
+ * A guard on entry is not enough. The mode is re-checked *after* every await,
+ * because that is where the user's click lands. */
+let viewGen = 0;
+const takeTicket = () => ++viewGen;
+const ticketValid = (t) => t === viewGen;
+
+/* Wipe everything that describes the outgoing view, so a mode never inherits a
+ * picture, a verdict or a count from the one before it. */
+function resetViewport() {
+  const img = $("frameImg");
+  if (img) img.removeAttribute("src");
+  $("oodBadge").hidden = true;
+  $("frameName").textContent = "—";
+  $("frameDims").textContent = "—";
+  $("vpMethod").textContent = "—";
+  $("vpMethod").className = "vp-tag";
+  $("statCount").textContent = "0";
+  $("statLat").textContent = "0";
+  $("statMethod").textContent = "—";
+  $("detList").innerHTML = '<div class="det-empty">No detections</div>';
+  $("compareOut").hidden = true;
+  $("vpReadout").textContent = "—";
+  $("viewport").classList.remove("loading");
 }
 
 function setStatus(text, cls) {
@@ -40,9 +83,9 @@ async function boot() {
 
     // OOD gate toggle (only shown if the server has an anomaly/patchcore model)
     if (state.oodAvailable) {
-      $("oodToggleRow").hidden = false;
-      $("oodToggle").onchange = (e) => { state.ood = e.target.checked; infer(); };
+      $("oodToggle").onchange = (e) => { state.ood = e.target.checked; applySettings(); };
     }
+    applyModeCaps(state.mode);
 
     // deep-link params: ?source=&frame=&method=&conf=
     const params = new URLSearchParams(location.search);
@@ -63,10 +106,18 @@ async function boot() {
     renderMethods();
 
     // controls
-    $("frameSlider").oninput = (e) => { state.idx = +e.target.value; infer(); };
+    $("frameSlider").oninput = (e) => {
+      state.idx = +e.target.value;
+      if (state.busy) { pendingFrame = state.idx; return; }
+      infer();
+    };
     $("prevBtn").onclick = () => step(-1);
     $("nextBtn").onclick = () => step(1);
-    $("confSlider").oninput = debounce((e) => { state.conf = +e.target.value; $("confVal").textContent = state.conf.toFixed(2); infer(); }, 220);
+    $("confSlider").oninput = (e) => {
+      state.conf = +e.target.value;
+      $("confVal").textContent = state.conf.toFixed(2);
+      applySettings();
+    };
     $("compareBtn").onclick = compareAll;
 
     await loadSource(wantSource || h.sources[0]);
@@ -86,7 +137,7 @@ function renderMethods() {
     const btn = document.createElement("button");
     btn.className = "method-btn" + (m === state.method ? " active" : "") + (on ? "" : " disabled");
     btn.innerHTML = `${meta.label}<span class="m-sub">${on ? meta.sub : "unavailable"}</span>`;
-    if (on) btn.onclick = () => { state.method = m; renderMethods(); infer(); };
+    if (on) btn.onclick = () => { state.method = m; renderMethods(); applySettings(); };
     grid.appendChild(btn);
   }
   const ex = $("methodExplain");
@@ -94,9 +145,16 @@ function renderMethods() {
 }
 
 async function loadSource(name) {
-  state.source = name;
+  // Ticketed like the rest: switching source twice quickly could otherwise leave
+  // state.source naming one directory and state.frames listing another's files.
+  const ticket = takeTicket();
   $("sourceInfo").textContent = state.sourceInfo[name] || "";
   const d = await api(`/api/frames?source=${encodeURIComponent(name)}`);
+  if (!ticketValid(ticket)) return;
+  // Name and file list are assigned together, after the await. Setting the name
+  // first would leave state.source and state.frames describing different
+  // directories whenever the request is superseded.
+  state.source = name;
   state.frames = d.frames;
   state.idx = (Number.isInteger(state._wantFrame) && state._wantFrame >= 0
     && state._wantFrame < d.frames.length) ? state._wantFrame : 0;
@@ -116,7 +174,10 @@ function step(n) {
 }
 
 async function infer() {
-  if (state.busy || !state.frames.length) return;
+  // Guarded so a stray call cannot paint a browse frame over a dropped image
+  // or a live stream.
+  if (state.mode !== "browse" || state.busy || !state.frames.length) return;
+  const ticket = takeTicket();
   state.busy = true;
   const name = state.frames[state.idx];
   $("frameIdx").textContent = String(state.idx).padStart(3, "0");
@@ -126,6 +187,7 @@ async function infer() {
   try {
     const q = `source=${encodeURIComponent(state.source)}&name=${encodeURIComponent(name)}&method=${state.method}&conf=${state.conf}&ood=${state.ood ? 1 : 0}`;
     const r = await api(`/api/infer?${q}`);
+    if (!ticketValid(ticket)) return;      // the user moved on while this ran
     renderOOD(r.ood);
     $("frameImg").src = r.overlay;
     $("frameDims").textContent = `${r.image_size.width}×${r.image_size.height}`;
@@ -138,11 +200,14 @@ async function infer() {
     $("vpReadout").textContent = `${r.count} REGION(S) · ${r.latency_ms} ms · conf≥${r.conf}`;
     renderDetections(r.detections, r.is_heatmap);
   } catch (e) {
-    $("vpReadout").textContent = "INFERENCE ERROR";
+    if (ticketValid(ticket)) $("vpReadout").textContent = "INFERENCE ERROR";
     console.error(e);
   } finally {
     $("viewport").classList.remove("loading");
     state.busy = false;
+    // A slider dragged while this was running had its input dropped; honour the
+    // final position now instead of leaving the view a frame behind.
+    if (pendingFrame !== null) { pendingFrame = null; infer(); }
   }
 }
 
@@ -178,7 +243,10 @@ function renderDetections(dets, heat) {
 }
 
 async function compareAll() {
-  if (!state.frames.length || state.busy) return;
+  // Browse-only: it re-runs one server-side frame, which is not what a dropped
+  // image or a live stream is showing.
+  if (state.mode !== "browse" || !state.frames.length || state.busy) return;
+  const ticket = takeTicket();
   state.busy = true;
   const name = state.frames[state.idx];
   $("compareBtn").textContent = "⟳ RUNNING…";
@@ -190,6 +258,9 @@ async function compareAll() {
       rows.push({ method: m, count: r.count, lat: r.latency_ms });
     } catch (e) { rows.push({ method: m, count: "—", lat: "—" }); }
   }
+  // Leaving Browse mid-run must not pop the comparison panel open somewhere it
+  // does not belong.
+  if (!ticketValid(ticket)) { $("compareBtn").textContent = "⟳ RUN ALL METHODS"; state.busy = false; return; }
   const maxc = Math.max(1, ...rows.map((r) => +r.count || 0));
   $("compareRows").innerHTML = rows.map((r) =>
     `<div class="cmp-row" data-m="${r.method}">
@@ -199,7 +270,7 @@ async function compareAll() {
      </div>`).join("");
   $("compareOut").hidden = false;
   $("compareRows").querySelectorAll(".cmp-row").forEach((el) => {
-    el.onclick = () => { state.method = el.dataset.m; renderMethods(); infer(); };
+    el.onclick = () => { state.method = el.dataset.m; renderMethods(); applySettings(); };
   });
   $("compareBtn").textContent = "⟳ RUN ALL METHODS";
   state.busy = false;
@@ -220,7 +291,51 @@ boot();
  * ------------------------------------------------------------------------- */
 const live = { timer: null, running: false };
 
+/* Which shared controls each mode actually uses.
+ *
+ * The detector and threshold drive Browse, Drop and Live, but a Net 3-D scene
+ * is built from a map that was computed offline — leaving those controls live
+ * there would offer a knob that changes nothing. "Compare all methods" is
+ * Browse-only because it re-runs one server-side frame, so in any other mode it
+ * would quietly analyse something the viewer is not looking at. */
+const MODE_CAPS = {
+  browse: { method: true, conf: true, compare: true, ood: true, frameResults: true },
+  drop:   { method: true, conf: true, compare: false, ood: true, frameResults: true },
+  live:   { method: true, conf: true, compare: false, ood: true, frameResults: true },
+  net:    { method: false, conf: false, compare: false, ood: false, frameResults: false },
+};
+
+const MODE_NOTE = {
+  browse: "Frames are real SOLAQUA ROV footage (undamaged net) or synthetic damage " +
+          "composited onto real net. Boxes are model output, not ground truth.",
+  drop:   "Your image is analysed with the detector and threshold above; changing " +
+          "either re-runs it on the same image.",
+  live:   "Detector and threshold apply to the running session — changing them " +
+          "restarts it so what you see always matches the controls.",
+  net:    "Positions come from a map built offline by scripts/map_inspection.py, so " +
+          "the detector and threshold above do not apply here.",
+};
+
+/* Visibility only, no side effects — boot() re-applies it once the server has
+ * said whether an OOD model exists, which lands after the first setMode. */
+function applyModeCaps(mode) {
+  const caps = MODE_CAPS[mode] || MODE_CAPS.browse;
+  const show = (id, on) => { const el = $(id); if (el) el.hidden = !on; };
+  show("methodField", caps.method);
+  show("confField", caps.conf);
+  show("compareBtn", caps.compare);
+  show("oodToggleRow", caps.ood && state.oodAvailable);
+  show("frameResults", caps.frameResults);
+  if (!caps.compare) show("compareOut", false);
+  if ($("controlsNote")) $("controlsNote").textContent = MODE_NOTE[mode] || "";
+}
+
 function setMode(mode) {
+  const previous = state.mode;
+  if (previous !== mode) {
+    takeTicket();          // invalidate anything still in flight for the old view
+    resetViewport();
+  }
   state.mode = mode;
   for (const [id, m] of [["modeBrowse", "browse"], ["modeDrop", "drop"],
                          ["modeLive", "live"], ["modeNet", "net"]]) {
@@ -235,6 +350,12 @@ function setMode(mode) {
   show("livePanel", mode === "live");
   show("netPanel", mode === "net");
 
+  // A drag that ends outside the window never fires a matching dragleave, so the
+  // overlay can be left up. Switching mode is a definite "not dragging".
+  hideDropOverlay();
+
+  applyModeCaps(mode);
+
   // The 3-D stage replaces the frame image rather than sitting beside it, so
   // the viewport always shows exactly one thing.
   show("netCanvas", mode === "net");
@@ -242,21 +363,62 @@ function setMode(mode) {
   if (img) img.hidden = mode === "net";
   show("siteOut", mode === "net" && !!net.scene);
 
-  if (mode !== "live" && live.running && !$("netLiveWire")?.checked) stopLive();
+  // Live keeps running ONLY into the 3-D view, which consumes its positions.
+  // Any other mode owns the viewport, so a stream left running would fight it
+  // for the same <img> and keep the camera open for nothing.
+  const keepLive = mode === "net" && $("netLiveWire") && $("netLiveWire").checked;
+  if (mode !== "live" && live.running && !keepLive) stopLive();
+
+  // Each mode states what it is waiting for, so the readout never carries the
+  // previous mode's sentence.
+  if (mode === "live" && !live.running) {
+    $("vpReadout").textContent = "PRESS START TO OPEN THE SOURCE";
+  }
+  if (mode === "net") $("vpReadout").textContent = "LOADING THE CAGE…";
   if (mode === "browse" && state.frames && state.frames.length) infer();
+  if (mode === "drop" && previous !== "drop") {
+    if (!state.lastDrop) {
+      $("vpReadout").textContent = "DROP AN IMAGE TO ANALYSE";
+    } else {
+      // Always re-run: entering the mode cleared the viewport, so there is
+      // nothing to preserve, and the detector or threshold may have been changed
+      // in another mode since this image was last analysed.
+      analyzeFile(state.lastDrop);
+    }
+  }
   if (mode === "net" && net.view) {
-    net.view.resize();
+    // refit: the canvas had no size while the tab was hidden.
+    net.view.resize(true);
     if (!net.scene) loadNetClips();
   }
 }
 
+/* One entry point for "the detector or threshold changed", because what that
+ * should do depends entirely on what is on screen. Calling infer() regardless —
+ * as this used to — replaced a dropped image with a server-side browse frame. */
+const applySettings = debounce(() => {
+  if (state.mode === "browse") { infer(); return; }
+  if (state.mode === "drop") {
+    if (state.lastDrop) analyzeFile(state.lastDrop);
+    return;
+  }
+  if (state.mode === "live" && live.running) { restartLive(); }
+  // net: nothing to re-run — the map is precomputed.
+}, 320);
+
 /* ---- Drop ---------------------------------------------------------------- */
 async function analyzeFile(file) {
-  if (!file || state.busy) return;
+  // Deliberately does NOT bail on state.busy. A dropped file is an explicit
+  // user action; discarding it silently because a browse inference happened to
+  // be in flight looks exactly like a broken drop target.
+  if (!file) return;
   if (!/^image\/(png|jpeg)$/.test(file.type)) {
     $("vpReadout").textContent = "UNSUPPORTED FILE — PNG or JPEG only";
     return;
   }
+  state.lastDrop = file;
+  state.lastDropSettings = `${state.method}|${state.conf}|${state.ood}`;
+  const ticket = takeTicket();
   state.busy = true;
   $("viewport").classList.add("loading");
   $("compareOut").hidden = true;
@@ -264,10 +426,13 @@ async function analyzeFile(file) {
   try {
     const body = new FormData();
     body.append("file", file);
-    const q = `method=${state.method}&conf=${state.conf}&ood=${state.oodAvailable ? 1 : 0}`;
+    // Honour the checkbox rather than "on whenever a model exists" — a control
+    // that is shown and ignored is worse than no control.
+    const q = `method=${state.method}&conf=${state.conf}&ood=${state.ood ? 1 : 0}`;
     const res = await fetch(`/api/analyze?${q}`, { method: "POST", body });
     if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
     const r = await res.json();
+    if (!ticketValid(ticket)) return;
     renderOOD(r.ood);
     $("frameImg").src = r.overlay;
     $("frameDims").textContent = `${r.image_size.width}×${r.image_size.height}`;
@@ -280,12 +445,21 @@ async function analyzeFile(file) {
     $("vpReadout").textContent = `${r.count} REGION(S) · ${r.latency_ms} ms · your image`;
     renderDetections(r.detections, r.is_heatmap);
   } catch (e) {
-    $("vpReadout").textContent = "ANALYSIS FAILED";
+    if (ticketValid(ticket)) $("vpReadout").textContent = "ANALYSIS FAILED";
     console.error(e);
   } finally {
-    $("viewport").classList.remove("loading");
+    if (ticketValid(ticket)) $("viewport").classList.remove("loading");
     state.busy = false;
   }
+}
+
+let dropOverlayTimer = null;
+
+function hideDropOverlay() {
+  clearTimeout(dropOverlayTimer);
+  dropOverlayTimer = null;
+  const overlay = $("dropOverlay");
+  if (overlay) overlay.hidden = true;
 }
 
 function wireDrop() {
@@ -296,18 +470,40 @@ function wireDrop() {
     zone.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input && input.click(); } };
   }
   // Dropping anywhere in the window works — hunting for a small target is friction.
-  let depth = 0;
+  //
+  // Shown on a heartbeat rather than an enter/leave counter. Counting looks
+  // right and is not: dragenter and dragleave only balance while the pointer
+  // stays inside the window, so a drag that ends outside it, is cancelled with
+  // Escape, or drops on another app never delivers the closing event and the
+  // overlay stays up over the viewport for the rest of the session. dragover
+  // fires continuously while a drag is live, so "no dragover recently" is the
+  // one reliable signal that the drag is over.
+  const isFileDrag = (e) => !!e.dataTransfer &&
+    Array.from(e.dataTransfer.types || []).includes("Files");
+
+  const keepOverlayAlive = () => {
+    if (overlay) overlay.hidden = false;
+    clearTimeout(dropOverlayTimer);
+    dropOverlayTimer = setTimeout(hideDropOverlay, 180);
+  };
+
   window.addEventListener("dragenter", (e) => {
-    if (!e.dataTransfer || ![...e.dataTransfer.types].includes("Files")) return;
-    e.preventDefault(); depth++; if (overlay) overlay.hidden = false;
+    if (!isFileDrag(e)) return;
+    e.preventDefault(); keepOverlayAlive();
   });
-  window.addEventListener("dragover", (e) => { e.preventDefault(); });
-  window.addEventListener("dragleave", (e) => {
-    e.preventDefault(); depth = Math.max(0, depth - 1);
-    if (!depth && overlay) overlay.hidden = true;
+  window.addEventListener("dragover", (e) => {
+    if (!isFileDrag(e)) return;
+    e.preventDefault(); keepOverlayAlive();
+  });
+  for (const ev of ["dragleave", "dragend", "drop", "blur"]) {
+    window.addEventListener(ev, () => hideDropOverlay());
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") hideDropOverlay();
   });
   window.addEventListener("drop", (e) => {
-    e.preventDefault(); depth = 0; if (overlay) overlay.hidden = true;
+    e.preventDefault();
+    hideDropOverlay();
     const f = e.dataTransfer && e.dataTransfer.files[0];
     if (!f) return;
     setMode("drop");
@@ -319,6 +515,11 @@ function wireDrop() {
 async function startLive() {
   const source = ($("liveSource").value || "0").trim();
   const minHits = $("minHits") ? $("minHits").value : 3;
+  // Track ids are per-session and restart at 1, so a remembered set from the
+  // previous session would suppress every defect the new one finds.
+  net.liveSeen.clear();
+  net.liveSites = [];
+  if (net.view) net.view.setLive([]);
   $("liveStart").disabled = true;
   $("liveNote").hidden = true;
   try {
@@ -326,7 +527,7 @@ async function startLive() {
     // feature match per frame and buys nothing if nobody is placing the result.
     const odo = $("netLiveWire") && $("netLiveWire").checked;
     const q = `source=${encodeURIComponent(source)}&method=${state.method}` +
-              `&conf=${state.conf}&min_hits=${minHits}&ood=${state.oodAvailable ? 1 : 0}` +
+              `&conf=${state.conf}&min_hits=${minHits}&ood=${state.ood ? 1 : 0}` +
               `&odometry=${odo ? 1 : 0}&standoff_m=0.6`;
     const res = await fetch(`/api/live/start?${q}`, { method: "POST" });
     if (!res.ok) {
@@ -350,20 +551,39 @@ async function startLive() {
   }
 }
 
+/* Changing the detector or threshold while a session is open has to restart it —
+ * the server built the pipeline at start time, so without this the controls
+ * would claim to be doing something the running session never sees. */
+async function restartLive() {
+  if (!live.running) return;
+  await stopLive();
+  await startLive();
+}
+
 async function stopLive() {
   clearInterval(live.timer); live.timer = null; live.running = false;
   try { await fetch("/api/live/stop", { method: "POST" }); } catch (e) { /* already gone */ }
   $("liveStart").disabled = false;
   $("liveStop").disabled = true;
-  $("frameImg").src = "";
-  $("vpReadout").textContent = "LIVE STOPPED";
+  // Only blank the stage if Live still owns it; after a mode switch the new mode
+  // has already painted and these writes would wipe it.
+  if (state.mode === "live") {
+    $("frameImg").removeAttribute("src");
+    $("vpReadout").textContent = "LIVE STOPPED";
+  }
 }
 
 async function pollLive() {
   try {
     const s = await api("/api/live/status");
+    // In Net 3-D the session runs only to supply positions; the viewport belongs
+    // to the cage, so writing the stream's readout there would overwrite the
+    // coverage headline once a second.
+    const ownsViewport = state.mode === "live";
     if (!s.running) {
-      $("vpReadout").textContent = s.error ? `LIVE ENDED — ${s.error}` : "LIVE ENDED";
+      if (ownsViewport) {
+        $("vpReadout").textContent = s.error ? `LIVE ENDED — ${s.error}` : "LIVE ENDED";
+      }
       if (live.running) stopLive();
       return;
     }
@@ -371,6 +591,7 @@ async function pollLive() {
     $("liveDropped").textContent = s.frames_dropped;
     $("liveEvents").textContent = s.events;
     $("latencyHud").textContent = s.latency_ms ?? "—";
+    if (!ownsViewport) { pushLiveSites(s); return; }
     $("statCount").textContent = s.confirmed_now;
     $("statLat").textContent = s.latency_ms ?? 0;
     $("statMethod").textContent = (METHOD_META[s.method] || {}).label || s.method;
@@ -424,8 +645,13 @@ function netParams() {
 
 async function loadScene() {
   if (!net.clip) return;
+  const ticket = takeTicket();
+  // A previous selection's crop and placement text describe a cage that is about
+  // to be replaced.
+  $("siteDetail").hidden = true;
   try {
     const s = await api(`/api/scene?${netParams()}`);
+    if (!ticketValid(ticket)) return;
     net.scene = s;
     net.view.setScene(s);
     renderSites(s);
@@ -438,7 +664,17 @@ async function loadScene() {
     $("vpMethod").textContent = `${s.method || "map"} · 3D`;
     $("vpMethod").className = "vp-tag";
   } catch (e) {
-    $("vpReadout").textContent = "NO MAP FOR THIS PASS — run scripts/map_inspection.py";
+    if (!ticketValid(ticket)) return;
+    // Clear the cage rather than leaving the previous one drawn under an error
+    // message — a stale cage with new dimensions in the panel is a lie.
+    net.scene = null;
+    if (net.view) net.view.setScene(null);
+    $("siteOut").hidden = true;
+    $("netCoverage").hidden = true;
+    const msg = String(e.message || e);
+    $("vpReadout").textContent = /400/.test(msg)
+      ? "CAGE DIMENSIONS REJECTED — check the numbers above"
+      : "NO MAP FOR THIS PASS — run scripts/map_inspection.py";
     console.error(e);
   }
 }
@@ -473,7 +709,22 @@ function renderSites(s) {
 
 function selectSite(id) {
   const s = net.scene && net.scene.sites.find((k) => k.site_id === id);
-  if (!s) return;
+  if (!s) {
+    // Live markers are drawn on the cage but have no mapped site behind them —
+    // no crop, no evidence count. Say that instead of ignoring the click.
+    if (typeof id === "string" && id.startsWith("live-")) {
+      const detail = $("siteDetail");
+      detail.hidden = false;
+      $("siteCrop").hidden = true;
+      $("siteWhere").innerHTML =
+        `<b>Live detection</b><br>Confirmed during the running session and placed ` +
+        `by live odometry.<span class="warn-line">Not part of the mapped pass: no ` +
+        `crop and no sighting count, and its position rests on a declared standoff ` +
+        `rather than telemetry. Re-run scripts/map_inspection.py to map it properly.` +
+        `</span>`;
+    }
+    return;
+  }
   net.view.flyTo(id);
   for (const row of document.querySelectorAll(".site-row")) {
     row.classList.toggle("sel", parseInt(row.dataset.site, 10) === id);
@@ -553,7 +804,26 @@ function wireModes() {
   if (n) n.onclick = () => setMode("net");
   if ($("liveStart")) $("liveStart").onclick = startLive;
   if ($("liveStop")) $("liveStop").onclick = stopLive;
-  if ($("minHits")) $("minHits").oninput = (e) => { $("minHitsVal").textContent = e.target.value; };
+  if ($("minHits")) {
+    $("minHits").oninput = (e) => { $("minHitsVal").textContent = e.target.value; };
+    // The server fixes min_hits when the session opens, so a running session has
+    // to be restarted for the new value to mean anything. onchange, not oninput,
+    // so dragging the slider does not restart the camera on every step.
+    $("minHits").onchange = () => { if (live.running) restartLive(); };
+  }
+  if ($("netLiveWire")) {
+    $("netLiveWire").onchange = (e) => {
+      if (!e.target.checked) {
+        // Stale markers would keep sitting on the cage claiming to be live.
+        net.liveSites = []; net.liveSeen.clear();
+        if (net.view) net.view.setLive([]);
+        if ($("netLiveNote")) $("netLiveNote").hidden = true;
+      }
+      // Odometry is decided at session start, so the toggle only takes effect
+      // via a restart.
+      if (live.running) restartLive();
+    };
+  }
   window.addEventListener("beforeunload", () => {
     if (live.running) navigator.sendBeacon("/api/live/stop");
   });

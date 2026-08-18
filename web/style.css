@@ -20,6 +20,19 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* The `hidden` attribute is only a UA rule (`[hidden] { display: none }`), and
+ * ANY author rule that sets `display` beats it on cascade origin — specificity
+ * never enters into it. Every panel here is toggled with `el.hidden`, and the
+ * ones carrying an author `display` (the 3-D canvas, the drop overlay, the live
+ * stats) were therefore permanently visible: the canvas painted an opaque
+ * gradient over the frame image in Browse, Drop and Live, and the "Drop to
+ * analyse" wash never went away no matter what the JS did.
+ *
+ * `.toggle[hidden]` further down is the same bug patched for one element. This
+ * fixes the class of it, so a future panel with a `display` cannot regress. */
+[hidden] { display: none !important; }
+
 html, body { height: 100%; }
 body {
   font-family: var(--sans);
@@ -147,7 +160,6 @@ input[type=range]::-moz-range-thumb {
   display: flex; align-items: flex-start; gap: 9px; margin: 4px 0 18px;
   font-size: 12px; line-height: 1.4; color: var(--text); cursor: pointer;
 }
-.toggle[hidden] { display: none; }
 .toggle input { margin-top: 2px; accent-color: var(--primary); width: 15px; height: 15px; }
 
 .vp-tag.ood-flag { background: #fdeede; color: #9a5b00; border: 1px solid #f0d9a8; }
@@ -180,6 +192,9 @@ input[type=range]::-moz-range-thumb {
     repeating-conic-gradient(#f1f4f5 0% 25%, #e9edee 0% 50%) 0 0 / 22px 22px;
 }
 #frameImg { max-width: 100%; max-height: 100%; object-fit: contain; transition: opacity 0.15s; }
+/* With no src the element still lays out as a broken-image box with its alt
+   text — visible in Drop before a file arrives and in Live before Start. */
+#frameImg:not([src]) { display: none; }
 .stage.loading #frameImg { opacity: 0.5; }
 
 .progress { position: absolute; top: 0; left: 0; right: 0; height: 3px; overflow: hidden; opacity: 0; }
@@ -248,9 +263,11 @@ input[type=range]::-moz-range-thumb {
   .viewer { min-height: 60vh; }
 }
 
-/* ── Input modes: Browse / Drop / Live ─────────────────────────────────── */
+/* ── Input modes: Browse / Drop / Live / Net 3D ────────────────────────── */
 .modes {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  /* auto-fit, not a hard count: adding the fourth mode to a repeat(3) grid
+     wrapped it onto its own row. */
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
   background: #f0f4f6; border: 1px solid var(--border); border-radius: 8px;
   padding: 4px; margin-bottom: 16px;
 }

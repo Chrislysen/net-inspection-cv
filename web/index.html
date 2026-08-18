@@ -154,13 +154,13 @@
       <p class="note" id="netLiveNote" hidden></p>
     </div>
 
-    <div class="field">
+    <div class="field" id="methodField">
       <label>Detection method</label>
       <div class="method-grid" id="methodGrid"></div>
       <p class="method-explain" id="methodExplain"></p>
     </div>
 
-    <div class="field">
+    <div class="field" id="confField">
       <label>Confidence threshold <span class="muted" id="confVal">0.25</span></label>
       <input type="range" id="confSlider" min="0" max="0.9" step="0.05" value="0.25" />
     </div>
@@ -171,7 +171,7 @@
     </label>
 
     <button class="btn primary" id="compareBtn">Compare all methods</button>
-    <p class="note">Frames are real SOLAQUA ROV footage (undamaged net) or synthetic
+    <p class="note" id="controlsNote">Frames are real SOLAQUA ROV footage (undamaged net) or synthetic
       damage composited onto real net. Boxes are model output, not ground truth.</p>
   </aside>
 
@@ -197,13 +197,15 @@
   <!-- Results -->
   <aside class="card results">
     <h2 class="card-title">Results</h2>
-    <div class="stats">
-      <div class="stat"><b id="statCount">0</b><span>Regions</span></div>
-      <div class="stat"><b id="statLat">0</b><span>ms</span></div>
-      <div class="stat"><b id="statMethod">—</b><span>Method</span></div>
+    <div id="frameResults">
+      <div class="stats">
+        <div class="stat"><b id="statCount">0</b><span>Regions</span></div>
+        <div class="stat"><b id="statLat">0</b><span>ms</span></div>
+        <div class="stat"><b id="statMethod">—</b><span>Method</span></div>
+      </div>
+      <div class="det-head">Detections</div>
+      <div class="det-list" id="detList"><div class="det-empty">No detections</div></div>
     </div>
-    <div class="det-head">Detections</div>
-    <div class="det-list" id="detList"><div class="det-empty">No detections</div></div>
 
     <div id="siteOut" hidden>
       <div class="det-head">Sites on the cage</div>
