@@ -67,6 +67,17 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **Security** | Secure by default: **refuses to bind anything but loopback without an API key**, so an unauthenticated endpoint cannot be published by forgetting. `POST /api/live/start` is **default-deny** (camera indices, an allowlisted media root, glob-matched stream URLs) and blocks private/link-local hosts even when a pattern matches — closing an SSRF path to cloud instance metadata. Plus decompression-bomb limits, a bounded inference concurrency, same-origin CORS, and `/api/version` with per-model SHA-256 digests. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
+**This is five things, not one.** Detection is the most visible but not the
+largest, and the rest is easy to miss in a README this long:
+
+| | |
+|---|---|
+| **Detection** | five compared methods, adversarial evaluation, temporal + spatial confirmation → [headline result](#the-headline-result-in-three-pictures) |
+| **Localisation** | detections placed on the net in metres, with coverage and an interactive 3-D cage → [where is it?](#where-is-it-net-frame-localisation-and-coverage) |
+| **Sensor & telemetry** | 13 ROV streams from ROS bags joined to frames on the bag clock, sensor-suite drift normalised, DuckDB layer over every artifact → [beyond vision](#at-a-glance) |
+| **Grounded assistant** | tool-calling Q&A over the real artifacts, guarded by an evidence ledger, with the guardrail **measured** rather than asserted → [assistant](#grounded-assistant--and-measuring-whether-the-guardrail-holds) |
+| **Decision support** | inspection-validity report, site planning from the locality register × ocean forecast, and a release gate that exits non-zero → [use it on your own footage](#use-it-on-your-own-footage) |
+
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
 [`scripts/`](scripts/), the full write-up in
 [`reports/PROTOTYPE_REPORT.md`](reports/PROTOTYPE_REPORT.md),
