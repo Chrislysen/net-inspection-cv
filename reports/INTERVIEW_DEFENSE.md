@@ -1,6 +1,6 @@
 # Defend this project — technical Q&A (code-grounded)
 
-A study sheet of the questions a sharp ScaleAQ engineer is most likely to ask,
+A study sheet of the questions a sharp aquaculture-technology engineer is most likely to ask,
 with precise answers tied to the actual implementation. If you can derive each of
 these from scratch, the project is a strong asset; if you can't, learn it before
 the interview — the honesty narrative collapses the moment depth is faked.

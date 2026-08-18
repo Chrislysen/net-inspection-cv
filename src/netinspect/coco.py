@@ -2,7 +2,7 @@
 
 Why this exists
 ---------------
-Real labelled data arrives in COCO far more often than YOLO. When ScaleAQ (or an
+Real labelled data arrives in COCO far more often than YOLO. When an operator (or an
 annotation vendor) provides labelled net-damage frames, they will most likely be
 COCO. This adapter is that drop-in slot: point it at a COCO JSON + image folder
 and it writes a standard YOLO dataset the rest of the pipeline already consumes.

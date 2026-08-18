@@ -41,7 +41,7 @@ robustness via diverse-background training, reproducibility, and metrics. The
 single missing ingredient remains **real labelled net-damage footage**, and the
 pipeline is the drop-in slot for it.
 
-## ScaleAQ interview talking points (grounded in this repo)
+## Interview talking points (grounded in this repo)
 
 - **"How would you approach net-damage detection?"** — Inspect/understand the
   data first; start with an explainable classical baseline to gauge difficulty;
@@ -66,6 +66,6 @@ pipeline is the drop-in slot for it.
   tracking) map directly onto on-ROV deployment and honest evaluation.
 
 ## Pointers
-- Full technical write-up: [`SCALEAQ_PROTOTYPE_REPORT.md`](SCALEAQ_PROTOTYPE_REPORT.md)
+- Full technical write-up: [`PROTOTYPE_REPORT.md`](PROTOTYPE_REPORT.md)
 - Result tables/figures: [`results/`](results/)
 - The research prompt itself: [`DEEP_RESEARCH_PROMPT.md`](DEEP_RESEARCH_PROMPT.md)

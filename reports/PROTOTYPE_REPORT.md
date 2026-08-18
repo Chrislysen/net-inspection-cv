@@ -20,7 +20,7 @@ needed to turn the prototype into something useful on real footage.
 >    it **cannot** measure damage-detection precision/recall.
 >
 > Validated damage-detection numbers require real, *labelled* footage containing
-> actual damage. That is the main thing still needed from ScaleAQ.
+> actual damage. That is the main thing still needed from a farm operator.
 
 ---
 
@@ -61,7 +61,7 @@ This is a **safety-relevant** application, and that shapes every design choice:
   split leaks near-duplicate frames and flatters the model; held-out *sites/days*
   are the honest test. This repo already evaluates cross-clip and **different-day**
   for exactly this reason (§5.5–5.7).
-- **Integration target matters.** ScaleAQ already runs camera systems and the
+- **Integration target matters.** Operators already run camera systems and the
   *Vision* platform with open APIs; a real capability would plug in there (offline
   review first, then alerting), not as a standalone tool. The serving layer here
   (`serve.py`, unified `inference.py`) is shaped for that hand-off, not as a product.
@@ -330,7 +330,7 @@ three methods evaluated with the shared metrics (IoU 0.30, class-agnostic):
   ≠ cross-site. True generalisation needs different sites/seasons/cameras.
 * Therefore **no real-world damage-detection reliability is claimed.** These are
   strong *relative* results on a realistic proxy, and the exact pipeline trains on
-  real labels unchanged — the moment ScaleAQ provides labelled damage, this
+  real labels unchanged — the moment an operator provides labelled damage, this
   becomes a real evaluation.
 
 ### 5.6 Is this "industrial-grade"? An honest answer
@@ -643,10 +643,10 @@ data-and-process problems, which is why the recommendations below focus there.
 
 ---
 
-## 7. What ScaleAQ would need to provide to make this real
+## 7. What a farm operator would need to provide to make this real
 
 - **Representative footage** across sites, seasons, depths, lighting and camera
-  setups — ideally from ScaleAQ camera / Vision systems or ROV streams.
+  setups — ideally from the operator's own camera or ROV streams.
 - **Real damage examples** (holes/tears/abnormal regions) **and** abundant
   *normal*-net footage under varied conditions.
 - **Metadata** where available: camera type, site, depth, date/time, lighting,

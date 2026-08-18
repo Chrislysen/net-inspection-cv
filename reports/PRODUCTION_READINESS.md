@@ -22,7 +22,7 @@ gates real deployment.
 
 ## The one-line verdict
 **As an honest *prototype/research framework*: ~9/10.** **As a *deployable
-product ScaleAQ could put in the water*: ~3/10**, gated entirely by the absence
+product an operator could put in the water*: ~3/10**, gated entirely by the absence
 of validated real-damage performance. The work here maximises every dimension
 that does **not** require faking that — and stops, loudly, at the one that does.
 

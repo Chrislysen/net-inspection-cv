@@ -1,0 +1,326 @@
+{
+  "profiles": [
+    {
+      "clip": "2024-08-20_15-18-27",
+      "day": "2024-08-20",
+      "samples": 480,
+      "net_lock_pct": 99.38,
+      "achieved": {
+        "standoff_m_mean": 1.395,
+        "standoff_m_sd": 0.087,
+        "standoff_m_min": 1.16,
+        "standoff_m_max": 1.54,
+        "net_speed_ms_mean": 0.282,
+        "net_pitch_sd": 0.1071,
+        "net_heading_sd": 0.1876
+      },
+      "commanded": {
+        "standoff_m": 1.4,
+        "sweep_speed_ms": -0.3,
+        "vertical_speed_ms": 0.0
+      },
+      "tracking": {
+        "standoff_error_m_mean": -0.005,
+        "standoff_error_m_abs_mean": 0.07
+      },
+      "environment": {
+        "depth_m_mean": 5.21,
+        "depth_m_max": 5.29,
+        "temperature_c_mean": 15.504
+      }
+    },
+    {
+      "clip": "2024-08-20_15-20-29",
+      "day": "2024-08-20",
+      "samples": 513,
+      "net_lock_pct": 99.22,
+      "achieved": {
+        "standoff_m_mean": 1.408,
+        "standoff_m_sd": 0.105,
+        "standoff_m_min": 0.5,
+        "standoff_m_max": 1.85,
+        "net_speed_ms_mean": 0.283,
+        "net_pitch_sd": 0.1171,
+        "net_heading_sd": 0.2027
+      },
+      "commanded": {
+        "standoff_m": 1.4,
+        "sweep_speed_ms": -0.3,
+        "vertical_speed_ms": 0.0
+      },
+      "tracking": {
+        "standoff_error_m_mean": 0.008,
+        "standoff_error_m_abs_mean": 0.073
+      },
+      "environment": {
+        "depth_m_mean": 4.755,
+        "depth_m_max": 4.821,
+        "temperature_c_mean": 15.533
+      }
+    },
+    {
+      "clip": "2024-08-22_14-06-43",
+      "day": "2024-08-22",
+      "samples": 322,
+      "net_lock_pct": 98.76,
+      "achieved": {
+        "standoff_m_mean": 0.715,
+        "standoff_m_sd": 0.28,
+        "standoff_m_min": 0.15,
+        "standoff_m_max": 1.31,
+        "net_speed_ms_mean": 0.142,
+        "net_pitch_sd": 0.3701,
+        "net_heading_sd": 0.3276
+      },
+      "commanded": {
+        "standoff_m": 0.65,
+        "sweep_speed_ms": -0.2,
+        "vertical_speed_ms": 0.0
+      },
+      "tracking": {
+        "standoff_error_m_mean": 0.065,
+        "standoff_error_m_abs_mean": 0.234
+      },
+      "environment": {
+        "depth_m_mean": 1.435,
+        "depth_m_max": 1.45,
+        "temperature_c_mean": 15.553
+      }
+    },
+    {
+      "clip": "2024-08-22_14-29-05",
+      "day": "2024-08-22",
+      "samples": 525,
+      "net_lock_pct": 98.1,
+      "achieved": {
+        "standoff_m_mean": 0.66,
+        "standoff_m_sd": 0.103,
+        "standoff_m_min": 0.23,
+        "standoff_m_max": 0.88,
+        "net_speed_ms_mean": 0.1,
+        "net_pitch_sd": 0.0904,
+        "net_heading_sd": 0.1073
+      },
+      "commanded": {
+        "standoff_m": 0.6,
+        "sweep_speed_ms": -0.1,
+        "vertical_speed_ms": 0.0
+      },
+      "tracking": {
+        "standoff_error_m_mean": 0.06,
+        "standoff_error_m_abs_mean": 0.078
+      },
+      "environment": {
+        "depth_m_mean": 1.681,
+        "depth_m_max": 1.756,
+        "temperature_c_mean": 15.543
+      }
+    },
+    {
+      "clip": "2024-08-22_14-47-39",
+      "day": "2024-08-22",
+      "samples": 374,
+      "net_lock_pct": 94.39,
+      "achieved": {
+        "standoff_m_mean": 0.602,
+        "standoff_m_sd": 0.042,
+        "standoff_m_min": 0.23,
+        "standoff_m_max": 0.72,
+        "net_speed_ms_mean": 0.101,
+        "net_pitch_sd": 0.1172,
+        "net_heading_sd": 0.1917
+      },
+      "commanded": {
+        "standoff_m": 0.6,
+        "sweep_speed_ms": -0.1,
+        "vertical_speed_ms": 0.0
+      },
+      "tracking": {
+        "standoff_error_m_mean": 0.002,
+        "standoff_error_m_abs_mean": 0.029
+      },
+      "environment": {
+        "depth_m_mean": 1.87,
+        "depth_m_max": 1.907,
+        "temperature_c_mean": 15.54
+      }
+    }
+  ],
+  "streams": [
+    {
+      "name": "net_plane",
+      "topics": [
+        "/navigation/plane_approximation"
+      ],
+      "description": "ROV pose relative to the estimated net plane (standoff, heading, pitch, lock).",
+      "units": {
+        "net_distance": "m",
+        "net_heading": "rad",
+        "net_pitch": "rad",
+        "net_lock": "bool",
+        "net_vel_u": "m/s",
+        "net_vel_v": "m/s",
+        "net_vel_w": "m/s",
+        "dvl_altitude": "m"
+      }
+    },
+    {
+      "name": "net_pose",
+      "topics": [
+        "/navigation/plane_approximation_position"
+      ],
+      "description": "Dead-reckoned position in the net frame since the last estimator reset.",
+      "units": {
+        "x": "m",
+        "y": "m",
+        "z": "m",
+        "roll": "deg",
+        "pitch": "deg",
+        "yaw": "deg"
+      }
+    },
+    {
+      "name": "dvl",
+      "topics": [
+        "/sensor/dvl_velocity",
+        "/nucleus1000dvl/bottomtrack"
+      ],
+      "description": "Doppler velocity log: body-frame velocity, altitude, quality flags.",
+      "units": {
+        "vel_x": "m/s",
+        "vel_y": "m/s",
+        "vel_z": "m/s",
+        "altitude": "m",
+        "fom": "m/s (lower better)",
+        "valid": "bool"
+      }
+    },
+    {
+      "name": "depth_temp",
+      "topics": [
+        "/sensor/depth_temperature"
+      ],
+      "description": "Pressure-derived depth and in-situ water temperature.",
+      "units": {
+        "depth": "m",
+        "temperature": "degC",
+        "pressure": "mbar"
+      }
+    },
+    {
+      "name": "ins",
+      "topics": [
+        "/nucleus1000dvl/ins"
+      ],
+      "description": "Nortek INS solution (2024-08-22 suite only): depth, temperature, SOG/COG, FOM.",
+      "units": {
+        "depth": "m",
+        "temperature": "degC",
+        "pressure_bar": "bar",
+        "speed_over_ground": "m/s",
+        "course_over_ground": "deg"
+      }
+    },
+    {
+      "name": "attitude",
+      "topics": [
+        "/sensor/attitude"
+      ],
+      "description": "Vehicle attitude and body rates.",
+      "units": {
+        "roll": "rad",
+        "pitch": "rad",
+        "yaw": "rad",
+        "rollspeed": "rad/s",
+        "pitchspeed": "rad/s",
+        "yawspeed": "rad/s"
+      }
+    },
+    {
+      "name": "imu_counts",
+      "topics": [
+        "/sensor/imu"
+      ],
+      "description": "Raw IMU counts (~milli-g, ~milli-deg/s). NOT SI \u2014 do not merge with imu_si.",
+      "units": {
+        "acc_x": "counts (~mg)",
+        "gyro_x": "counts (~mdeg/s)"
+      }
+    },
+    {
+      "name": "imu_si",
+      "topics": [
+        "/nucleus1000dvl/imu"
+      ],
+      "description": "Nortek IMU in SI units. NOT comparable to imu_counts without calibration.",
+      "units": {
+        "acc_x": "m/s2",
+        "gyro_x": "rad/s"
+      }
+    },
+    {
+      "name": "setpoint",
+      "topics": [
+        "/gui/netFollowing_manager"
+      ],
+      "description": "Commanded net-following envelope: desired standoff and sweep velocity.",
+      "units": {
+        "d_net_distance": "m",
+        "d_net_velocity_horizontal": "m/s",
+        "d_net_velocity_vertical": "m/s",
+        "d_depth": "m",
+        "offset_net_heading": "rad"
+      }
+    },
+    {
+      "name": "guidance",
+      "topics": [
+        "/guidance"
+      ],
+      "description": "Guidance tracking errors and desired body velocities.",
+      "units": {
+        "error_net_distance": "m",
+        "desired_net_distance": "m",
+        "error_surge": "m/s",
+        "error_sway": "m/s",
+        "error_yaw": "deg"
+      }
+    },
+    {
+      "name": "battery",
+      "topics": [
+        "/bluerov2/battery"
+      ],
+      "description": "Battery pack voltage and consumption counters.",
+      "units": {
+        "voltage_mv": "mV",
+        "current_consumed": "mAh"
+      }
+    },
+    {
+      "name": "usbl",
+      "topics": [
+        "/sensor/usbl"
+      ],
+      "description": "Sonardyne USBL acoustic position fix.",
+      "units": {
+        "east": "m",
+        "north": "m",
+        "depth": "m",
+        "heading": "deg",
+        "sigma": "m"
+      }
+    },
+    {
+      "name": "thrust",
+      "topics": [
+        "/commanded_thrust"
+      ],
+      "description": "Commanded thruster PWM per channel plus a mean-effort summary.",
+      "units": {
+        "thrust_0": "PWM us",
+        "thrust_effort": "PWM us from neutral"
+      }
+    }
+  ]
+}

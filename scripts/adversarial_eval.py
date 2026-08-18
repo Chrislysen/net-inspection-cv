@@ -38,9 +38,17 @@ from netinspect.utils import ensure_dir, get_logger, list_images, read_image, wr
 LOGGER = get_logger()
 
 # Real UNDAMAGED frame sets (no damage present -> any detection is a false alarm).
+#
+# bag3 was missing from this dict until the operating-envelope analysis joined
+# every clip to telemetry and surfaced it. Its omission mattered: bag3 is the
+# clip the detector false-alarms on most (33% of frames), so the headline
+# "0% on training backgrounds" was computed on a subset that excluded the
+# worst same-day case. Every undamaged clip on disk belongs here — the point of
+# this file is to try to break the model, not to sample around it.
 UNDAMAGED = {
     "bag1 (train backgrounds)": "data/processed/solaqua_frames",
     "bag2 (same site, other clip)": "data/processed/solaqua_bag2",
+    "bag3 (same DAY, third clip)": "data/processed/solaqua_bag3",
     "different DAY": "data/processed/solaqua_diffday",
 }
 # Composited (labelled) test sets at increasing background distance from training.

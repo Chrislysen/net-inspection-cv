@@ -36,7 +36,7 @@ on-device latency there — the CPU numbers in this repo are dev-box only.
 `stream_inspect.py` is the operational shape: it consumes a stream, applies
 **temporal confirmation** (a defect must persist ≥`min_hits` frames), and emits
 JSONL **events** — one `damage_confirmed` alert per *new* track, plus `heartbeat`
-records with throughput. Wire the event sink to ScaleAQ's inspection workflow /
+records with throughput. Wire the event sink to the operator's inspection workflow /
 Vision platform (offline review first, alerting later), not as a standalone tool.
 
 ## 5. SLOs (illustrative — set real targets with stakeholders)

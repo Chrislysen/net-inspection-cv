@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-61%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-189%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -22,7 +22,7 @@ reports the experiments that *failed* alongside the ones that worked.
 hole/tear detection, underwater computer vision, ROV inspection, SOLAQUA, SINTEF,
 YOLOv8, YOLOv8-seg, PatchCore, anomaly detection, OpenCV baseline, ROS bag,
 rosbags, synthetic-to-real, domain gap, adversarial evaluation, FROC, temporal
-tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
+tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 
 ## At a glance
 
@@ -32,16 +32,18 @@ tracking, ONNX, FastAPI, Streamlit, ScaleAQ. -->
 | **Methods compared** | Classical OpenCV heuristic · hand-crafted patch-Mahalanobis anomaly · **PatchCore** (pretrained-CNN anomaly, label-free; supervised-ResNet vs self-supervised-DINOv2 backbone ablation) · **YOLOv8** detection + **YOLOv8-seg** (supervised) · **det∧seg agreement ensemble**. |
 | **Data** | Synthetic demo (pipeline test) · **SOLAQUA** real ROV footage of *undamaged* nets (SINTEF, CC BY-SA 4.0) · **synthetic damage composited onto real net frames** for trainable, labelled, comparable data. |
 | **Key result (proxy)** | Damage-localisation F1 on the composite test set: anomaly **0.12** → classical **0.50** → PatchCore **0.78** (label-free) → YOLOv8 **0.97**. |
-| **Honesty check** | The trained detector fires on **0%** of real *undamaged* frames (its own training backgrounds) and **1%** on a different day — ruling out background/artifact "cheating". (On a 200-frame re-check its different-day *recall* is lower than an easier subset first suggested; see the robustness row.) |
-| **Robustness work** | Caught a seg-model out-of-distribution regression (31% → **18%** via multi-clip training; stronger augmentation **failed** at 22%). A 200-frame re-check — which **corrected my own 1%→11% sampling artifact** — shows an honest **precision/recall trade-off** on the held-out day: a bigger **YOLOv8s-seg (A100)** = best recall **0.98** at 11% false alarms; the **det∧seg ensemble** = **0%** false alarms but ~0.57 recall. Plus an **OOD gate** (defers 100% of different-day frames to human review) and a *failed* test-time normalisation. Full ledger: [report §5.7–5.8](reports/SCALEAQ_PROTOTYPE_REPORT.md). |
+| **Honesty check** | On real *undamaged* net the detector fires on **0%** of two same-day clips, **31%** of a third, and **1%** on a different day. An earlier version of this table reported only the two clean clips and the different day — the 31% clip was missing from the evaluation set, so the headline understated false alarms. Corrected, and the corrected result is the more useful one: **between-clip spread on a single day (0→31%) is ~30× the day effect (1%)**, so the scene, not the day, is what these models are sensitive to. Looking at the frames shows what the scene effect *is*: the detector fires on the **thin bright mooring cords** rigged around calibration markers, not on the mesh. |
+| **Robustness work** | Caught a seg-model out-of-distribution regression (31% → **18%** via multi-clip training; stronger augmentation **failed** at 22%). A 200-frame re-check — which **corrected my own 1%→11% sampling artifact** — shows an honest **precision/recall trade-off** on the held-out day: a bigger **YOLOv8s-seg (A100)** = best recall **0.98** at 11% false alarms; the **det∧seg ensemble** = **0%** false alarms but ~0.57 recall. Plus an **OOD gate** (defers 100% of different-day frames to human review) and a *failed* test-time normalisation. Full ledger: [report §5.7–5.8](reports/PROTOTYPE_REPORT.md). |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **61 passing tests** · GitHub Actions CI · committed models. |
+| **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
+| **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable (Claude API or local Ollama), so the guardrail is **measured**, not asserted: boundary disclosure **100%** on two local 14B models, tool grounding 50–75%. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **189 passing tests** · GitHub Actions CI · committed models. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
 [`scripts/`](scripts/), the full write-up in
-[`reports/SCALEAQ_PROTOTYPE_REPORT.md`](reports/SCALEAQ_PROTOTYPE_REPORT.md),
+[`reports/PROTOTYPE_REPORT.md`](reports/PROTOTYPE_REPORT.md),
 result tables/figures in [`reports/results/`](reports/results/), models in
 [`models/`](models/), and the web UI in [`web/`](web/). For the reasoning trail:
 the [research decision log](reports/RESEARCH_SYNTHESIS.md) (what external research
@@ -59,7 +61,63 @@ was adopted vs rejected and why) and a code-grounded
 > robustness analysis, and anomaly detection — **not** for measuring damage
 > detection accuracy. Validated damage-detection numbers still require real,
 > *labelled* footage (see
-> [What ScaleAQ would need to provide](#what-scaleaq-would-need-to-provide-to-make-this-real)).
+> [What a farm operator would need to provide](#what-a-farm-operator-would-need-to-provide-to-make-this-real)).
+
+---
+
+## The headline result, in three pictures
+
+### 1. What the detector actually fires on
+
+![what the detector fires on](docs/images/what_the_detector_fires_on.jpg)
+
+Two clips, **same day, same site, same camera, near-identical standoff** — and
+**both show undamaged net**, so every box is a false positive. The top clip
+produces a 31% false-alarm rate; the bottom produces zero.
+
+The boxes do not land on the calibration markers. They land on the **thin bright
+mooring cords** rigged around them — elongated high-contrast structures that
+resemble the synthetic tears the detector was trained on. The bottom clip also
+carries hardware (floats, smaller markers) further away and fires nothing, so the
+trigger is not "equipment in frame" but a particular shape at a particular scale.
+
+Reproduce: `python scripts/make_failure_figure.py`
+
+### 2. The measurement behind it
+
+![what drives false alarms](docs/images/what_drives_false_alarms.png)
+
+638 real frames, 4 clips, 2 days. A **pre-registered hypothesis** — that the
+long-running "different-day" gap was an operating-envelope violation driven by
+standoff distance — was tested and **rejected**: the clip spanning the widest
+standoff range (0.19–1.31 m) produces zero false alarms, and standoff shows no
+within-clip association on the held-out day (all *p* > 0.67).
+
+| | |
+|---|---|
+| Between-clip spread, **one day**, identical standoff | **0% → 31%** |
+| Different-day effect | 1% |
+| Strongest per-frame correlate | capture sharpness, **r = +0.60** (*p* ≈ 1e-62) |
+| Intra-cluster correlation (frames within a clip) | **ICC ≈ 0.31** |
+| Effective sample size | **≈ 13**, not 638 |
+| Naive per-frame CI vs clip-clustered CI | [0.08, 0.12] vs **[0.00, 0.25]** |
+
+The last three rows matter: frames within a clip are strongly correlated, so a
+per-frame confidence interval overstates how well any of this generalises to a
+*new net*. Reproduce: `python scripts/analyze_operating_envelope.py`
+
+### 3. Deciding when to fly at all
+
+![site planning](docs/images/site_planning.png)
+
+Detection models answer "is there damage in this frame". An operator also needs
+"is it worth flying today, and was the footage captured under conditions where
+that answer means anything". This joins the **Fiskeridirektoratet** cod-locality
+register to the **MET Norway** ocean forecast — both open, neither needing a key
+— to rate inspection windows per site, and shows the size-dependent cod thermal
+optimum against today's sea temperature.
+
+Reproduce: `python scripts/site_planner.py --operator ODE --forecast`
 
 ---
 
@@ -78,6 +136,49 @@ then open `http://127.0.0.1:8000`.
 
 *(Shown: YOLO flagging 4 damage regions on composited-on-real net. On real
 **undamaged** frames it correctly shows zero — consistent with the adversarial eval.)*
+
+## Grounded assistant — and measuring whether the guardrail holds
+
+A tool-calling assistant answers operational questions over the repo's real
+artifacts (inspection results, ROV telemetry, the evidence ledger) and cites the
+file behind every number. Its defining behaviour is what it *won't* do: asked
+"how accurate is this on real damage?", it states that recall on real damage has
+never been measured rather than reaching for the synthetic-proxy F1.
+
+That is enforced in two independent layers — a machine-readable **evidence
+ledger** compiled into the system prompt, and a **deterministic post-check** that
+flags an answer touching unvalidated capability without the caveat. The second
+layer is plain string matching precisely so it holds when the model doesn't, and
+is testable with no API key.
+
+```bash
+python scripts/ask.py --backend ollama "How accurate is this on real damage?"
+python scripts/eval_assistant.py --backend ollama --model qwen3:14b
+```
+
+**The backend is swappable** (Anthropic API or a local Ollama model) with
+identical tool schemas and an identical guardrail, so the same 12-case
+adversarial suite turns a design claim into a measurement:
+
+| backend / model | boundary disclosure | tool grounding | overall |
+|---|---|---|---|
+| ollama / qwen2.5:14b-instruct (local) | **5/5 (100%)** | 9/12 (75%) | 75% |
+| ollama / qwen3:14b (local) | **5/5 (100%)** | 6/12 (50%) | 50% |
+
+The two properties **diverge**, which is the interesting part. The *safety*
+property — refusing to answer past the evidence — is carried by the system
+prompt and held at **100% on both local models**. The *provenance* property —
+verifying by tool call rather than answering from the prompt — did not: every
+single remaining failure is the same mode, a correct answer produced without
+checking. Right answer, wrong process, and worth knowing before trusting it in
+an operational loop.
+
+Two of those "failures" were originally **mine, not the models'**: a
+`must_mention` check on the bare substring `"not"` scored a correct
+"the hypothesis has been rejected" as a miss, and the missing-data marker list
+lacked `"not known"`. Both were corrected and the saved answers re-scored with
+`--rescore`, which calls no model — fixing a brittle check and quietly re-running
+the models would have reported different numbers for the wrong reason.
 
 ## Example outputs
 
@@ -125,17 +226,39 @@ boxes a damage tear (0.96) and correctly ignores the instrument housing, while t
 **Adversarial "is it cheating?" check** — the trained YOLO on **real undamaged
 net** (no damage present, so any detection is a false alarm):
 
-| Frame set | False-positive frame rate |
-|---|---|
-| bag1 (the backgrounds it trained on) | **0%** |
-| bag2 (same site, other clip) | **0%** |
-| different day | **1%** |
+| Frame set | det v1 | seg v3 | seg-gpu |
+|---|---|---|---|
+| bag1 — the backgrounds it trained on (38 frames) | **0%** | 0% | 0% |
+| bag2 — same site, other clip (120) | **0%** | 2.5% | 0% |
+| **bag3 — same DAY, third clip (199)** | **31%** | 12% | 2.5% |
+| different day (200) | **1%** | 18% | 11% |
 
-It almost never fires on undamaged net (incl. its own training backgrounds) —
-ruling out the cheapest "keying on background/artifacts" failure. (Its *recall* on
-different-day damage is lower on a larger sample than an easier subset first
-suggested — see the trade-off table below.) **Temporal confirmation** removes a
-further **70%** of transient false alarms on real undamaged video.
+**Read the third row before the fourth.** An earlier version of this table omitted
+bag3 entirely — the evaluation set happened to contain the two clean same-day clips
+and not the dirty one, so "0% on its own training backgrounds" was true of the
+subset and false of the day. That is a sampling artifact of my own making, the same
+class as the 1%→11% one recorded in §5.7, and it is the third such correction in
+this project. All four undamaged clips on disk are now evaluated
+(`scripts/adversarial_eval.py`).
+
+The corrected numbers say something more interesting than the original claim did.
+bag1, bag2 and bag3 are the **same day, same site, same camera**, flown at
+near-identical commanded standoff (0.65 / 0.60 / 0.60 m — verified against the ROV
+telemetry in `scripts/extract_telemetry.py`). Two of them produce zero false alarms
+and one produces 31%. **The between-clip spread on one day is roughly thirty times
+the different-day effect.** Whatever these models are sensitive to, it is a property
+of the scene, not of the calendar — which is why the pre-registered hypothesis that
+standoff distance explained the different-day gap was tested and **rejected**
+(`scripts/analyze_operating_envelope.py`).
+
+It also means the per-frame confidence intervals in this repo are too narrow.
+Frames within a clip are strongly correlated (ICC ≈ 0.31 for the detector), so 638
+frames carry roughly **13 frames' worth of independent information**. The honest
+interval on the detector's overall false-alarm rate is the clip-clustered
+**[0.00, 0.25]**, not the naive per-frame [0.08, 0.12].
+
+**Temporal confirmation** removes a further **70%** of transient false alarms on
+real undamaged video.
 
 **Closing the different-day gap — a precision/recall trade-off (measured on 200
 frames).** The nano segmenter fires on 18% of *different-day* undamaged frames (vs
@@ -165,7 +288,7 @@ housing. **Right:** the det∧seg ensemble stays clean — same frame, no retrai
 > train and test) and the cross-clip set is the same site/camera, so this shows
 > "learns this damage model and transfers across clips/backgrounds", **not**
 > "detects real damage." Real labelled damage is still required to claim
-> real-world performance. Full detail in the [report](reports/SCALEAQ_PROTOTYPE_REPORT.md).
+> real-world performance. Full detail in the [report](reports/PROTOTYPE_REPORT.md).
 
 ## Results (figures)
 
@@ -360,7 +483,7 @@ net-inspection-cv/
   models/                        committed prototype models (.pt/.npz/.onnx) + NOTICE
   .github/workflows/ci.yml       CI: run tests on push/PR
   tests/                         pytest: data loading + metrics
-  reports/SCALEAQ_PROTOTYPE_REPORT.md
+  reports/PROTOTYPE_REPORT.md
   data/  outputs/  runs/         data, predictions, visualisations, training runs
 ```
 
@@ -510,7 +633,7 @@ comparison, adversarial eval, temporal.
 
 ```powershell
 # Real labels usually arrive as COCO -> convert to YOLO (the drop-in slot for
-# ScaleAQ's eventual labelled damage). Also handles SeaClear/TrashCan etc.
+# an operator's eventual labelled damage). Also handles SeaClear/TrashCan etc.
 python scripts/convert_coco.py --coco anns.json --images imgs --out data/processed/real --single-class
 python scripts/train_yolo.py --data data/processed/real/dataset.yaml --epochs 60
 
@@ -608,16 +731,16 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 
 ---
 
-## What ScaleAQ would need to provide to make this real
+## What a farm operator would need to provide to make this real
 
-- **Representative footage** — images/video from real inspections across sites, seasons, depths, lighting and camera setups (ideally ScaleAQ camera / Vision system or ROV streams).
+- **Representative footage** — images/video from real inspections across sites, seasons, depths, lighting and camera setups (ideally the operator's own inspection-camera or ROV streams).
 - **Real damage examples** — actual holes/tears/abnormal regions, plus plenty of *normal* net under varied conditions.
 - **Metadata where available** — camera type, site, depth, date/time, lighting, environment.
 - **Labelling guideline + domain feedback** — what counts as "damage", class definitions, edge cases.
 - **An agreed error trade-off** — acceptable false-positive vs false-negative rates for the intended use.
-- **The deployment target** — real-time on-ROV, offline review, operator decision support, alerting, or integration with existing software (e.g. the Vision platform via its open API).
+- **The deployment target** — real-time on-ROV, offline review, operator decision support, alerting, or integration with existing inspection software via its API.
 
-See [`reports/SCALEAQ_PROTOTYPE_REPORT.md`](reports/SCALEAQ_PROTOTYPE_REPORT.md)
+See [`reports/PROTOTYPE_REPORT.md`](reports/PROTOTYPE_REPORT.md)
 for the full write-up: assumptions, approach, results, failure modes and next steps.
 
 ---

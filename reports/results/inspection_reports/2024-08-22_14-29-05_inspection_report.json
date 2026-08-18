@@ -1,0 +1,68 @@
+{
+  "clip": "2024-08-22_14-29-05",
+  "day": "2024-08-22",
+  "frames": 183,
+  "capture": {
+    "standoff_m_mean": 0.659,
+    "standoff_m_range": [
+      0.23,
+      0.88
+    ],
+    "net_speed_ms_mean": 0.1,
+    "depth_m_mean": 1.68,
+    "water_temperature_c": 15.54,
+    "sharpness_mean": 272.1
+  },
+  "validity_geometry": {
+    "frames": 183,
+    "counts": {
+      "in_envelope": 183,
+      "out_of_envelope": 0,
+      "unknown": 0
+    },
+    "compliance": 1.0,
+    "spec": {
+      "standoff_min_m": 0.19,
+      "standoff_max_m": 1.54,
+      "speed_max_ms": 0.35,
+      "require_lock": true,
+      "model": "observed-data-range",
+      "evidence": {
+        "source": "reports/results/operating_envelope/operating_envelope.json",
+        "meaning": "Range of conditions present in the 638 evaluated frames. Indicates similarity to the evaluated sample, not accuracy."
+      }
+    },
+    "spec_human": "standoff 0.19-1.54 m; sweep speed <= 0.35 m/s; net-plane lock required",
+    "top_reasons": {},
+    "verdict": "accept \u2014 inspection flown inside validated conditions"
+  },
+  "validity_quality": {
+    "metric": "sharpness",
+    "validated_band": [
+      34.97,
+      48.95
+    ],
+    "clip_mean": 272.1,
+    "frames_in_band": 0,
+    "share_in_band": 0.0,
+    "fitted_on_frames": 80,
+    "meaning": "Sharpness range in which this model's measured false-alarm rate stayed under 5% with 95% confidence. Geometry and quality are separate checks: a pass can satisfy every standoff and speed criterion and still sit outside the quality band."
+  },
+  "detections": {
+    "model": "det_v1",
+    "frames_with_detection": 61,
+    "total_detections": 106,
+    "candidate_events": 12,
+    "confirmed_events_min3_frames": 5,
+    "longest_event_frames": 15,
+    "detection_rate_in_envelope": 0.3333,
+    "detection_rate_outside_envelope": null,
+    "note": "These frames show UNDAMAGED net, so every detection here is a false alarm. On a real pass the same fields would be candidate defects requiring human review."
+  },
+  "not_inspected": [],
+  "caveats": [
+    "'in_envelope' means capture conditions resemble the evaluated sample. It does NOT mean detection is accurate under those conditions.",
+    "Recall on real damage has never been measured; all damage data in this project is synthetic composited onto real undamaged net.",
+    "This repo's own analysis rejected standoff distance as a driver of false alarms \u2014 scene identity dominates. Treat the envelope as a similarity check, not a performance guarantee."
+  ]
+}

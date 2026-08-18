@@ -1,0 +1,1628 @@
+{
+  "config": {
+    "conf": 0.25,
+    "tolerance_s": 0.5,
+    "models": [
+      "det_v1",
+      "seg_v3",
+      "seg_gpu"
+    ],
+    "matched_band_m": [
+      1.0,
+      1.4
+    ],
+    "target_fp_rate": 0.05
+  },
+  "data": {
+    "frames_total": 708,
+    "frames_analysed": 638,
+    "clips": 4,
+    "by_day": {
+      "2024-08-22": 453,
+      "2024-08-20": 185
+    },
+    "by_clip": {
+      "2024-08-20_15-18-27": 185,
+      "2024-08-22_14-29-05": 183,
+      "2024-08-22_14-06-43": 170,
+      "2024-08-22_14-47-39": 100
+    }
+  },
+  "flight_profiles": {
+    "2024-08-20_15-18-27": {
+      "frames": 185,
+      "commanded_standoff_m": 1.4,
+      "achieved_standoff_m": 1.4,
+      "standoff_range_m": [
+        1.17,
+        1.54
+      ],
+      "net_speed_ms": 0.304,
+      "depth_m": 5.22,
+      "temperature_c": 15.5,
+      "sharpness": 42.1,
+      "contrast": 24.6
+    },
+    "2024-08-22_14-06-43": {
+      "frames": 170,
+      "commanded_standoff_m": 0.5,
+      "achieved_standoff_m": 0.709,
+      "standoff_range_m": [
+        0.19,
+        1.31
+      ],
+      "net_speed_ms": 0.145,
+      "depth_m": 1.43,
+      "temperature_c": 15.55,
+      "sharpness": 123.9,
+      "contrast": 32.3
+    },
+    "2024-08-22_14-29-05": {
+      "frames": 183,
+      "commanded_standoff_m": 0.6,
+      "achieved_standoff_m": 0.659,
+      "standoff_range_m": [
+        0.23,
+        0.88
+      ],
+      "net_speed_ms": 0.1,
+      "depth_m": 1.68,
+      "temperature_c": 15.54,
+      "sharpness": 272.1,
+      "contrast": 40.2
+    },
+    "2024-08-22_14-47-39": {
+      "frames": 100,
+      "commanded_standoff_m": 0.6,
+      "achieved_standoff_m": 0.602,
+      "standoff_range_m": [
+        0.23,
+        0.67
+      ],
+      "net_speed_ms": 0.103,
+      "depth_m": 1.87,
+      "temperature_c": 15.54,
+      "sharpness": 187.8,
+      "contrast": 33.5
+    }
+  },
+  "models": {
+    "det_v1": {
+      "overall_naive": {
+        "n": 638,
+        "k": 63,
+        "rate": 0.0987,
+        "ci95": [
+          0.0779,
+          0.1244
+        ]
+      },
+      "overall_clustered": {
+        "point": 0.0987,
+        "ci95_clustered": [
+          0.0,
+          0.2545
+        ],
+        "clusters_resampled": 4,
+        "note": "Resamples clips, not frames \u2014 the interval for a new clip."
+      },
+      "clustering": {
+        "icc": 0.3055,
+        "clusters": 4,
+        "mean_cluster_size": 159.5,
+        "design_effect": 49.42,
+        "effective_n": 12.9,
+        "naive_n": 638,
+        "note": "Frames within a clip are correlated. The effective sample size is what a per-frame confidence interval should be based on."
+      },
+      "by_day": {
+        "2024-08-20": {
+          "n": 185,
+          "k": 2,
+          "rate": 0.0108,
+          "ci95": [
+            0.003,
+            0.0386
+          ]
+        },
+        "2024-08-22": {
+          "n": 453,
+          "k": 61,
+          "rate": 0.1347,
+          "ci95": [
+            0.1063,
+            0.1692
+          ]
+        }
+      },
+      "by_clip": {
+        "2024-08-20_15-18-27": {
+          "n": 185,
+          "k": 2,
+          "rate": 0.0108,
+          "ci95": [
+            0.003,
+            0.0386
+          ],
+          "standoff_mean": 1.4,
+          "sharpness_mean": 42.1,
+          "day": "2024-08-20"
+        },
+        "2024-08-22_14-06-43": {
+          "n": 170,
+          "k": 0,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0221
+          ],
+          "standoff_mean": 0.709,
+          "sharpness_mean": 123.9,
+          "day": "2024-08-22"
+        },
+        "2024-08-22_14-29-05": {
+          "n": 183,
+          "k": 61,
+          "rate": 0.3333,
+          "ci95": [
+            0.2691,
+            0.4044
+          ],
+          "standoff_mean": 0.659,
+          "sharpness_mean": 272.1,
+          "day": "2024-08-22"
+        },
+        "2024-08-22_14-47-39": {
+          "n": 100,
+          "k": 0,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.037
+          ],
+          "standoff_mean": 0.602,
+          "sharpness_mean": 187.8,
+          "day": "2024-08-22"
+        }
+      },
+      "between_clip_spread": {
+        "min_rate": 0.0,
+        "max_rate": 0.3333,
+        "spread": 0.3333,
+        "train_day_only_spread": 0.3333
+      },
+      "standoff_hypothesis": {
+        "within_clip_tests": {
+          "2024-08-20_15-18-27": {
+            "frames": 185,
+            "events": 2,
+            "standoff_range": [
+              1.17,
+              1.54
+            ],
+            "standoff_corr": {
+              "r": -0.0309,
+              "p": 0.676623751379742,
+              "n": 185,
+              "mean_when_event": 1.375,
+              "mean_when_clean": 1.4
+            },
+            "sharpness_corr": {
+              "r": 0.0407,
+              "p": 0.5825139459724893,
+              "n": 185,
+              "mean_when_event": 48.534,
+              "mean_when_clean": 42.032
+            }
+          },
+          "2024-08-22_14-06-43": {
+            "frames": 170,
+            "events": 0,
+            "standoff_range": [
+              0.19,
+              1.31
+            ],
+            "verdict": "no false alarms in this clip \u2014 uninformative for standoff"
+          },
+          "2024-08-22_14-29-05": {
+            "frames": 183,
+            "events": 61,
+            "standoff_range": [
+              0.23,
+              0.88
+            ],
+            "standoff_corr": {
+              "r": 0.2069,
+              "p": 0.004943659973229044,
+              "n": 183,
+              "mean_when_event": 0.69,
+              "mean_when_clean": 0.644
+            },
+            "sharpness_corr": {
+              "r": 0.6728,
+              "p": 1.7751501820309628e-25,
+              "n": 183,
+              "mean_when_event": 364.591,
+              "mean_when_clean": 225.781
+            }
+          },
+          "2024-08-22_14-47-39": {
+            "frames": 100,
+            "events": 0,
+            "standoff_range": [
+              0.23,
+              0.67
+            ],
+            "verdict": "no false alarms in this clip \u2014 uninformative for standoff"
+          }
+        },
+        "dose_response_train_day": [
+          {
+            "standoff_lo": 0.0,
+            "standoff_hi": 0.2,
+            "n": 1,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.7935
+            ]
+          },
+          {
+            "standoff_lo": 0.2,
+            "standoff_hi": 0.4,
+            "n": 8,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.3244
+            ]
+          },
+          {
+            "standoff_lo": 0.4,
+            "standoff_hi": 0.6,
+            "n": 162,
+            "k": 13,
+            "rate": 0.0802,
+            "ci95": [
+              0.0475,
+              0.1324
+            ]
+          },
+          {
+            "standoff_lo": 0.6,
+            "standoff_hi": 0.8,
+            "n": 197,
+            "k": 31,
+            "rate": 0.1574,
+            "ci95": [
+              0.1131,
+              0.2147
+            ]
+          },
+          {
+            "standoff_lo": 0.8,
+            "standoff_hi": 1.0,
+            "n": 54,
+            "k": 17,
+            "rate": 0.3148,
+            "ci95": [
+              0.2068,
+              0.4474
+            ]
+          },
+          {
+            "standoff_lo": 1.0,
+            "standoff_hi": 1.2,
+            "n": 19,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.1682
+            ]
+          },
+          {
+            "standoff_lo": 1.2,
+            "standoff_hi": 1.4,
+            "n": 12,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.2425
+            ]
+          }
+        ],
+        "dose_response_heldout_day": [
+          {
+            "standoff_lo": 1.0,
+            "standoff_hi": 1.2,
+            "n": 4,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.4899
+            ]
+          },
+          {
+            "standoff_lo": 1.2,
+            "standoff_hi": 1.4,
+            "n": 87,
+            "k": 2,
+            "rate": 0.023,
+            "ci95": [
+              0.0063,
+              0.08
+            ]
+          },
+          {
+            "standoff_lo": 1.4,
+            "standoff_hi": 1.6,
+            "n": 94,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.0393
+            ]
+          }
+        ],
+        "matched_band": {
+          "groups": {
+            "2024-08-20": {
+              "n": 91,
+              "k": 2,
+              "rate": 0.022,
+              "ci95": [
+                0.006,
+                0.0766
+              ]
+            },
+            "2024-08-22": {
+              "n": 31,
+              "k": 0,
+              "rate": 0.0,
+              "ci95": [
+                0.0,
+                0.1103
+              ]
+            }
+          },
+          "intervals_overlap": true,
+          "interpretation": "Rates overlap within 95% CI \u2014 the grouping variable is not needed to explain the difference once the matched condition is controlled.",
+          "fisher_p": 1.0
+        },
+        "naive_envelope_fit": {
+          "standoff_min_m": 1.4,
+          "standoff_max_m": 1.6,
+          "speed_max_ms": null,
+          "require_lock": true,
+          "model": "det_v1",
+          "evidence": {
+            "target_rate": 0.05,
+            "fitted": true,
+            "frames": 94,
+            "false_alarm_frames": 0,
+            "measured_rate": 0.0,
+            "measured_rate_ci95": [
+              0.0,
+              0.0393
+            ],
+            "bins": [
+              {
+                "standoff_lo": 1.4,
+                "standoff_hi": 1.6,
+                "n": 94,
+                "k": 0,
+                "rate": 0.0,
+                "ci95": [
+                  0.0,
+                  0.0393
+                ]
+              }
+            ],
+            "caveat": "Bounds false alarms on real undamaged net only. Recall on real damage is not measured by this data and remains unvalidated."
+          }
+        }
+      },
+      "condition_correlations": {
+        "standoff": {
+          "r": -0.149,
+          "p": 0.00015826197435622307,
+          "n": 638,
+          "mean_when_event": 0.712,
+          "mean_when_clean": 0.897
+        },
+        "net_speed": {
+          "r": -0.2147,
+          "p": 4.351623511182975e-08,
+          "n": 638,
+          "mean_when_event": 0.108,
+          "mean_when_clean": 0.178
+        },
+        "depth": {
+          "r": -0.255,
+          "p": 6.195170045153138e-09,
+          "n": 505,
+          "mean_when_event": 1.834,
+          "mean_when_clean": 3.14
+        },
+        "sharpness": {
+          "r": 0.5961,
+          "p": 1.2609692341363494e-62,
+          "n": 638,
+          "mean_when_event": 354.557,
+          "mean_when_clean": 130.558
+        },
+        "contrast": {
+          "r": 0.6446,
+          "p": 3.299886789937579e-76,
+          "n": 638,
+          "mean_when_event": 47.593,
+          "mean_when_clean": 30.848
+        },
+        "brightness": {
+          "r": 0.0196,
+          "p": 0.6209617838071596,
+          "n": 638,
+          "mean_when_event": 105.716,
+          "mean_when_clean": 104.954
+        },
+        "dark_fraction": {
+          "r": 0.1125,
+          "p": 0.004450029010199078,
+          "n": 638,
+          "mean_when_event": 0.013,
+          "mean_when_clean": 0.007
+        }
+      },
+      "condition_correlations_train_day_only": {
+        "standoff": {
+          "r": 0.0526,
+          "p": 0.2639986083788308,
+          "n": 453,
+          "mean_when_event": 0.69,
+          "mean_when_clean": 0.662
+        },
+        "net_speed": {
+          "r": -0.1128,
+          "p": 0.01635992585510718,
+          "n": 453,
+          "mean_when_event": 0.102,
+          "mean_when_clean": 0.12
+        },
+        "depth": {
+          "r": 0.0631,
+          "p": 0.2591232391265994,
+          "n": 322,
+          "mean_when_event": 1.722,
+          "mean_when_clean": 1.699
+        },
+        "sharpness": {
+          "r": 0.6402,
+          "p": 1.292034491431311e-53,
+          "n": 453,
+          "mean_when_event": 364.591,
+          "mean_when_clean": 171.885
+        },
+        "contrast": {
+          "r": 0.7198,
+          "p": 1.6162001494096917e-73,
+          "n": 453,
+          "mean_when_event": 48.295,
+          "mean_when_clean": 33.762
+        },
+        "brightness": {
+          "r": -0.0937,
+          "p": 0.046349232990567396,
+          "n": 453,
+          "mean_when_event": 106.016,
+          "mean_when_clean": 109.162
+        },
+        "dark_fraction": {
+          "r": 0.0645,
+          "p": 0.17060713011657702,
+          "n": 453,
+          "mean_when_event": 0.013,
+          "mean_when_clean": 0.01
+        }
+      },
+      "fitted_quality_band": {
+        "sharpness_min": 34.97,
+        "sharpness_max": 48.95,
+        "contrast_min": null,
+        "contrast_max": null,
+        "model": "det_v1",
+        "evidence": {
+          "fitted": true,
+          "metric": "sharpness",
+          "target_rate": 0.05,
+          "frames": 80,
+          "false_alarm_frames": 0,
+          "measured_rate": 0.0,
+          "bins": [
+            {
+              "lo": 34.970262500000004,
+              "hi": 48.9512,
+              "n": 80,
+              "k": 0,
+              "rate": 0.0,
+              "ci_upper": 0.0458197362645751,
+              "ok": true
+            }
+          ],
+          "caveat": "Fitted on undamaged real net: bounds false alarms only. Recall on real damage in these regimes is unmeasured."
+        }
+      }
+    },
+    "seg_v3": {
+      "overall_naive": {
+        "n": 638,
+        "k": 59,
+        "rate": 0.0925,
+        "ci95": [
+          0.0724,
+          0.1175
+        ]
+      },
+      "overall_clustered": {
+        "point": 0.0925,
+        "ci95_clustered": [
+          0.0111,
+          0.1649
+        ],
+        "clusters_resampled": 4,
+        "note": "Resamples clips, not frames \u2014 the interval for a new clip."
+      },
+      "clustering": {
+        "icc": 0.0847,
+        "clusters": 4,
+        "mean_cluster_size": 159.5,
+        "design_effect": 14.43,
+        "effective_n": 44.2,
+        "naive_n": 638,
+        "note": "Frames within a clip are correlated. The effective sample size is what a per-frame confidence interval should be based on."
+      },
+      "by_day": {
+        "2024-08-20": {
+          "n": 185,
+          "k": 35,
+          "rate": 0.1892,
+          "ci95": [
+            0.1393,
+            0.2517
+          ]
+        },
+        "2024-08-22": {
+          "n": 453,
+          "k": 24,
+          "rate": 0.053,
+          "ci95": [
+            0.0359,
+            0.0776
+          ]
+        }
+      },
+      "by_clip": {
+        "2024-08-20_15-18-27": {
+          "n": 185,
+          "k": 35,
+          "rate": 0.1892,
+          "ci95": [
+            0.1393,
+            0.2517
+          ],
+          "standoff_mean": 1.4,
+          "sharpness_mean": 42.1,
+          "day": "2024-08-20"
+        },
+        "2024-08-22_14-06-43": {
+          "n": 170,
+          "k": 0,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0221
+          ],
+          "standoff_mean": 0.709,
+          "sharpness_mean": 123.9,
+          "day": "2024-08-22"
+        },
+        "2024-08-22_14-29-05": {
+          "n": 183,
+          "k": 21,
+          "rate": 0.1148,
+          "ci95": [
+            0.0763,
+            0.1691
+          ],
+          "standoff_mean": 0.659,
+          "sharpness_mean": 272.1,
+          "day": "2024-08-22"
+        },
+        "2024-08-22_14-47-39": {
+          "n": 100,
+          "k": 3,
+          "rate": 0.03,
+          "ci95": [
+            0.0103,
+            0.0845
+          ],
+          "standoff_mean": 0.602,
+          "sharpness_mean": 187.8,
+          "day": "2024-08-22"
+        }
+      },
+      "between_clip_spread": {
+        "min_rate": 0.0,
+        "max_rate": 0.1892,
+        "spread": 0.1892,
+        "train_day_only_spread": 0.1148
+      },
+      "standoff_hypothesis": {
+        "within_clip_tests": {
+          "2024-08-20_15-18-27": {
+            "frames": 185,
+            "events": 35,
+            "standoff_range": [
+              1.17,
+              1.54
+            ],
+            "standoff_corr": {
+              "r": 0.0212,
+              "p": 0.774662538045989,
+              "n": 185,
+              "mean_when_event": 1.404,
+              "mean_when_clean": 1.399
+            },
+            "sharpness_corr": {
+              "r": 0.5042,
+              "p": 2.552204237726566e-13,
+              "n": 185,
+              "mean_when_event": 59.355,
+              "mean_when_clean": 38.077
+            }
+          },
+          "2024-08-22_14-06-43": {
+            "frames": 170,
+            "events": 0,
+            "standoff_range": [
+              0.19,
+              1.31
+            ],
+            "verdict": "no false alarms in this clip \u2014 uninformative for standoff"
+          },
+          "2024-08-22_14-29-05": {
+            "frames": 183,
+            "events": 21,
+            "standoff_range": [
+              0.23,
+              0.88
+            ],
+            "standoff_corr": {
+              "r": 0.1387,
+              "p": 0.06109250281945257,
+              "n": 183,
+              "mean_when_event": 0.7,
+              "mean_when_clean": 0.654
+            },
+            "sharpness_corr": {
+              "r": 0.2629,
+              "p": 0.00032459572968510146,
+              "n": 183,
+              "mean_when_event": 343.05,
+              "mean_when_clean": 262.847
+            }
+          },
+          "2024-08-22_14-47-39": {
+            "frames": 100,
+            "events": 3,
+            "standoff_range": [
+              0.23,
+              0.67
+            ],
+            "standoff_corr": {
+              "r": 0.0375,
+              "p": 0.7109644776808288,
+              "n": 100,
+              "mean_when_event": 0.613,
+              "mean_when_clean": 0.601
+            },
+            "sharpness_corr": {
+              "r": 0.0164,
+              "p": 0.8712761925672469,
+              "n": 100,
+              "mean_when_event": 192.501,
+              "mean_when_clean": 187.622
+            }
+          }
+        },
+        "dose_response_train_day": [
+          {
+            "standoff_lo": 0.0,
+            "standoff_hi": 0.2,
+            "n": 1,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.7935
+            ]
+          },
+          {
+            "standoff_lo": 0.2,
+            "standoff_hi": 0.4,
+            "n": 8,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.3244
+            ]
+          },
+          {
+            "standoff_lo": 0.4,
+            "standoff_hi": 0.6,
+            "n": 162,
+            "k": 5,
+            "rate": 0.0309,
+            "ci95": [
+              0.0133,
+              0.0702
+            ]
+          },
+          {
+            "standoff_lo": 0.6,
+            "standoff_hi": 0.8,
+            "n": 197,
+            "k": 16,
+            "rate": 0.0812,
+            "ci95": [
+              0.0506,
+              0.1278
+            ]
+          },
+          {
+            "standoff_lo": 0.8,
+            "standoff_hi": 1.0,
+            "n": 54,
+            "k": 3,
+            "rate": 0.0556,
+            "ci95": [
+              0.0191,
+              0.1511
+            ]
+          },
+          {
+            "standoff_lo": 1.0,
+            "standoff_hi": 1.2,
+            "n": 19,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.1682
+            ]
+          },
+          {
+            "standoff_lo": 1.2,
+            "standoff_hi": 1.4,
+            "n": 12,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.2425
+            ]
+          }
+        ],
+        "dose_response_heldout_day": [
+          {
+            "standoff_lo": 1.0,
+            "standoff_hi": 1.2,
+            "n": 4,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.4899
+            ]
+          },
+          {
+            "standoff_lo": 1.2,
+            "standoff_hi": 1.4,
+            "n": 87,
+            "k": 16,
+            "rate": 0.1839,
+            "ci95": [
+              0.1165,
+              0.2781
+            ]
+          },
+          {
+            "standoff_lo": 1.4,
+            "standoff_hi": 1.6,
+            "n": 94,
+            "k": 19,
+            "rate": 0.2021,
+            "ci95": [
+              0.1334,
+              0.2943
+            ]
+          }
+        ],
+        "matched_band": {
+          "groups": {
+            "2024-08-20": {
+              "n": 91,
+              "k": 16,
+              "rate": 0.1758,
+              "ci95": [
+                0.1112,
+                0.2667
+              ]
+            },
+            "2024-08-22": {
+              "n": 31,
+              "k": 0,
+              "rate": 0.0,
+              "ci95": [
+                0.0,
+                0.1103
+              ]
+            }
+          },
+          "intervals_overlap": false,
+          "interpretation": "Rates separate \u2014 a residual effect remains beyond the matched condition.",
+          "fisher_p": 0.01111
+        },
+        "naive_envelope_fit": {
+          "standoff_min_m": NaN,
+          "standoff_max_m": NaN,
+          "speed_max_ms": null,
+          "require_lock": true,
+          "model": "seg_v3",
+          "evidence": {
+            "target_rate": 0.05,
+            "fitted": false,
+            "note": "No standoff bin met the target at 95% confidence."
+          }
+        }
+      },
+      "condition_correlations": {
+        "standoff": {
+          "r": 0.2021,
+          "p": 2.631938135543567e-07,
+          "n": 638,
+          "mean_when_event": 1.113,
+          "mean_when_clean": 0.854
+        },
+        "net_speed": {
+          "r": 0.1437,
+          "p": 0.0002722593595336338,
+          "n": 638,
+          "mean_when_event": 0.215,
+          "mean_when_clean": 0.167
+        },
+        "depth": {
+          "r": 0.1831,
+          "p": 3.495211158302162e-05,
+          "n": 505,
+          "mean_when_event": 3.838,
+          "mean_when_clean": 2.866
+        },
+        "sharpness": {
+          "r": 0.0411,
+          "p": 0.30028851115216176,
+          "n": 638,
+          "mean_when_event": 167.101,
+          "mean_when_clean": 151.208
+        },
+        "contrast": {
+          "r": -0.0061,
+          "p": 0.8777719831780624,
+          "n": 638,
+          "mean_when_event": 32.353,
+          "mean_when_clean": 32.517
+        },
+        "brightness": {
+          "r": -0.1947,
+          "p": 7.198261439097275e-07,
+          "n": 638,
+          "mean_when_event": 97.967,
+          "mean_when_clean": 105.749
+        },
+        "dark_fraction": {
+          "r": 0.0906,
+          "p": 0.022077125235428593,
+          "n": 638,
+          "mean_when_event": 0.012,
+          "mean_when_clean": 0.007
+        }
+      },
+      "condition_correlations_train_day_only": {
+        "standoff": {
+          "r": 0.0301,
+          "p": 0.5223222276943915,
+          "n": 453,
+          "mean_when_event": 0.689,
+          "mean_when_clean": 0.664
+        },
+        "net_speed": {
+          "r": -0.1315,
+          "p": 0.005074093884768202,
+          "n": 453,
+          "mean_when_event": 0.086,
+          "mean_when_clean": 0.119
+        },
+        "depth": {
+          "r": 0.0427,
+          "p": 0.4452155919912187,
+          "n": 322,
+          "mean_when_event": 1.726,
+          "mean_when_clean": 1.702
+        },
+        "sharpness": {
+          "r": 0.291,
+          "p": 2.738429256052393e-10,
+          "n": 453,
+          "mean_when_event": 324.231,
+          "mean_when_clean": 190.764
+        },
+        "contrast": {
+          "r": 0.1963,
+          "p": 2.5812431508061897e-05,
+          "n": 453,
+          "mean_when_event": 41.439,
+          "mean_when_clean": 35.399
+        },
+        "brightness": {
+          "r": -0.1493,
+          "p": 0.0014388143375577709,
+          "n": 453,
+          "mean_when_event": 101.502,
+          "mean_when_clean": 109.143
+        },
+        "dark_fraction": {
+          "r": 0.2409,
+          "p": 2.1079893194197342e-07,
+          "n": 453,
+          "mean_when_event": 0.029,
+          "mean_when_clean": 0.009
+        }
+      },
+      "fitted_quality_band": {
+        "sharpness_min": null,
+        "sharpness_max": null,
+        "contrast_min": null,
+        "contrast_max": null,
+        "model": "seg_v3",
+        "evidence": {
+          "fitted": false,
+          "metric": "sharpness",
+          "target_rate": 0.05,
+          "note": "No contiguous quality range met the target at 95% confidence.",
+          "bins": [
+            {
+              "lo": 18.1951,
+              "hi": 34.970262500000004,
+              "n": 80,
+              "k": 2,
+              "rate": 0.025,
+              "ci_upper": 0.08664600055322111,
+              "ok": false
+            },
+            {
+              "lo": 34.970262500000004,
+              "hi": 48.9512,
+              "n": 80,
+              "k": 8,
+              "rate": 0.1,
+              "ci_upper": 0.18510878983397458,
+              "ok": false
+            },
+            {
+              "lo": 48.9512,
+              "hi": 73.21956250000001,
+              "n": 79,
+              "k": 18,
+              "rate": 0.22784810126582278,
+              "ci_upper": 0.33167055330436546,
+              "ok": false
+            },
+            {
+              "lo": 73.21956250000001,
+              "hi": 149.46395,
+              "n": 80,
+              "k": 8,
+              "rate": 0.1,
+              "ci_upper": 0.18510878983397458,
+              "ok": false
+            },
+            {
+              "lo": 149.46395,
+              "hi": 186.82046250000002,
+              "n": 80,
+              "k": 2,
+              "rate": 0.025,
+              "ci_upper": 0.08664600055322111,
+              "ok": false
+            },
+            {
+              "lo": 186.82046250000002,
+              "hi": 222.26935,
+              "n": 79,
+              "k": 1,
+              "rate": 0.012658227848101266,
+              "ci_upper": 0.06827736043177712,
+              "ok": false
+            },
+            {
+              "lo": 222.26935,
+              "hi": 277.7771375,
+              "n": 80,
+              "k": 7,
+              "rate": 0.0875,
+              "ci_upper": 0.1697698277708346,
+              "ok": false
+            },
+            {
+              "lo": 277.7771375,
+              "hi": 535.6415,
+              "n": 80,
+              "k": 13,
+              "rate": 0.1625,
+              "ci_upper": 0.2584310486348333,
+              "ok": false
+            }
+          ]
+        }
+      }
+    },
+    "seg_gpu": {
+      "overall_naive": {
+        "n": 638,
+        "k": 25,
+        "rate": 0.0392,
+        "ci95": [
+          0.0267,
+          0.0572
+        ]
+      },
+      "overall_clustered": {
+        "point": 0.0392,
+        "ci95_clustered": [
+          0.0,
+          0.0908
+        ],
+        "clusters_resampled": 4,
+        "note": "Resamples clips, not frames \u2014 the interval for a new clip."
+      },
+      "clustering": {
+        "icc": 0.0764,
+        "clusters": 4,
+        "mean_cluster_size": 159.5,
+        "design_effect": 13.12,
+        "effective_n": 48.6,
+        "naive_n": 638,
+        "note": "Frames within a clip are correlated. The effective sample size is what a per-frame confidence interval should be based on."
+      },
+      "by_day": {
+        "2024-08-20": {
+          "n": 185,
+          "k": 21,
+          "rate": 0.1135,
+          "ci95": [
+            0.0755,
+            0.1673
+          ]
+        },
+        "2024-08-22": {
+          "n": 453,
+          "k": 4,
+          "rate": 0.0088,
+          "ci95": [
+            0.0034,
+            0.0225
+          ]
+        }
+      },
+      "by_clip": {
+        "2024-08-20_15-18-27": {
+          "n": 185,
+          "k": 21,
+          "rate": 0.1135,
+          "ci95": [
+            0.0755,
+            0.1673
+          ],
+          "standoff_mean": 1.4,
+          "sharpness_mean": 42.1,
+          "day": "2024-08-20"
+        },
+        "2024-08-22_14-06-43": {
+          "n": 170,
+          "k": 0,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0221
+          ],
+          "standoff_mean": 0.709,
+          "sharpness_mean": 123.9,
+          "day": "2024-08-22"
+        },
+        "2024-08-22_14-29-05": {
+          "n": 183,
+          "k": 4,
+          "rate": 0.0219,
+          "ci95": [
+            0.0085,
+            0.0548
+          ],
+          "standoff_mean": 0.659,
+          "sharpness_mean": 272.1,
+          "day": "2024-08-22"
+        },
+        "2024-08-22_14-47-39": {
+          "n": 100,
+          "k": 0,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.037
+          ],
+          "standoff_mean": 0.602,
+          "sharpness_mean": 187.8,
+          "day": "2024-08-22"
+        }
+      },
+      "between_clip_spread": {
+        "min_rate": 0.0,
+        "max_rate": 0.1135,
+        "spread": 0.1135,
+        "train_day_only_spread": 0.0219
+      },
+      "standoff_hypothesis": {
+        "within_clip_tests": {
+          "2024-08-20_15-18-27": {
+            "frames": 185,
+            "events": 21,
+            "standoff_range": [
+              1.17,
+              1.54
+            ],
+            "standoff_corr": {
+              "r": 0.0221,
+              "p": 0.7648754217997407,
+              "n": 185,
+              "mean_when_event": 1.405,
+              "mean_when_clean": 1.399
+            },
+            "sharpness_corr": {
+              "r": 0.3715,
+              "p": 1.9308761677523568e-07,
+              "n": 185,
+              "mean_when_event": 59.263,
+              "mean_when_clean": 39.905
+            }
+          },
+          "2024-08-22_14-06-43": {
+            "frames": 170,
+            "events": 0,
+            "standoff_range": [
+              0.19,
+              1.31
+            ],
+            "verdict": "no false alarms in this clip \u2014 uninformative for standoff"
+          },
+          "2024-08-22_14-29-05": {
+            "frames": 183,
+            "events": 4,
+            "standoff_range": [
+              0.23,
+              0.88
+            ],
+            "standoff_corr": {
+              "r": -0.0275,
+              "p": 0.7117450067653067,
+              "n": 183,
+              "mean_when_event": 0.64,
+              "mean_when_clean": 0.66
+            },
+            "sharpness_corr": {
+              "r": -0.0353,
+              "p": 0.6352869396250888,
+              "n": 183,
+              "mean_when_event": 249.091,
+              "mean_when_clean": 272.564
+            }
+          },
+          "2024-08-22_14-47-39": {
+            "frames": 100,
+            "events": 0,
+            "standoff_range": [
+              0.23,
+              0.67
+            ],
+            "verdict": "no false alarms in this clip \u2014 uninformative for standoff"
+          }
+        },
+        "dose_response_train_day": [
+          {
+            "standoff_lo": 0.0,
+            "standoff_hi": 0.2,
+            "n": 1,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.7935
+            ]
+          },
+          {
+            "standoff_lo": 0.2,
+            "standoff_hi": 0.4,
+            "n": 8,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.3244
+            ]
+          },
+          {
+            "standoff_lo": 0.4,
+            "standoff_hi": 0.6,
+            "n": 162,
+            "k": 1,
+            "rate": 0.0062,
+            "ci95": [
+              0.0011,
+              0.0341
+            ]
+          },
+          {
+            "standoff_lo": 0.6,
+            "standoff_hi": 0.8,
+            "n": 197,
+            "k": 3,
+            "rate": 0.0152,
+            "ci95": [
+              0.0052,
+              0.0438
+            ]
+          },
+          {
+            "standoff_lo": 0.8,
+            "standoff_hi": 1.0,
+            "n": 54,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.0664
+            ]
+          },
+          {
+            "standoff_lo": 1.0,
+            "standoff_hi": 1.2,
+            "n": 19,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.1682
+            ]
+          },
+          {
+            "standoff_lo": 1.2,
+            "standoff_hi": 1.4,
+            "n": 12,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.2425
+            ]
+          }
+        ],
+        "dose_response_heldout_day": [
+          {
+            "standoff_lo": 1.0,
+            "standoff_hi": 1.2,
+            "n": 4,
+            "k": 0,
+            "rate": 0.0,
+            "ci95": [
+              0.0,
+              0.4899
+            ]
+          },
+          {
+            "standoff_lo": 1.2,
+            "standoff_hi": 1.4,
+            "n": 87,
+            "k": 9,
+            "rate": 0.1034,
+            "ci95": [
+              0.0554,
+              0.1851
+            ]
+          },
+          {
+            "standoff_lo": 1.4,
+            "standoff_hi": 1.6,
+            "n": 94,
+            "k": 12,
+            "rate": 0.1277,
+            "ci95": [
+              0.0746,
+              0.21
+            ]
+          }
+        ],
+        "matched_band": {
+          "groups": {
+            "2024-08-20": {
+              "n": 91,
+              "k": 9,
+              "rate": 0.0989,
+              "ci95": [
+                0.0529,
+                0.1774
+              ]
+            },
+            "2024-08-22": {
+              "n": 31,
+              "k": 0,
+              "rate": 0.0,
+              "ci95": [
+                0.0,
+                0.1103
+              ]
+            }
+          },
+          "intervals_overlap": true,
+          "interpretation": "Rates overlap within 95% CI \u2014 the grouping variable is not needed to explain the difference once the matched condition is controlled.",
+          "fisher_p": 0.10977
+        },
+        "naive_envelope_fit": {
+          "standoff_min_m": 0.4,
+          "standoff_max_m": 0.8,
+          "speed_max_ms": null,
+          "require_lock": true,
+          "model": "seg_gpu",
+          "evidence": {
+            "target_rate": 0.05,
+            "fitted": true,
+            "frames": 359,
+            "false_alarm_frames": 4,
+            "measured_rate": 0.0111,
+            "measured_rate_ci95": [
+              0.0043,
+              0.0283
+            ],
+            "bins": [
+              {
+                "standoff_lo": 0.4,
+                "standoff_hi": 0.6,
+                "n": 162,
+                "k": 1,
+                "rate": 0.0062,
+                "ci95": [
+                  0.0011,
+                  0.0341
+                ]
+              },
+              {
+                "standoff_lo": 0.6,
+                "standoff_hi": 0.8,
+                "n": 197,
+                "k": 3,
+                "rate": 0.0152,
+                "ci95": [
+                  0.0052,
+                  0.0438
+                ]
+              }
+            ],
+            "caveat": "Bounds false alarms on real undamaged net only. Recall on real damage is not measured by this data and remains unvalidated."
+          }
+        }
+      },
+      "condition_correlations": {
+        "standoff": {
+          "r": 0.2205,
+          "p": 1.824970707180442e-08,
+          "n": 638,
+          "mean_when_event": 1.283,
+          "mean_when_clean": 0.862
+        },
+        "net_speed": {
+          "r": 0.1919,
+          "p": 1.0447864735019283e-06,
+          "n": 638,
+          "mean_when_event": 0.264,
+          "mean_when_clean": 0.168
+        },
+        "depth": {
+          "r": 0.2235,
+          "p": 3.8688747346796795e-07,
+          "n": 505,
+          "mean_when_event": 4.636,
+          "mean_when_clean": 2.891
+        },
+        "sharpness": {
+          "r": -0.1136,
+          "p": 0.004077415336374225,
+          "n": 638,
+          "mean_when_event": 89.635,
+          "mean_when_clean": 155.248
+        },
+        "contrast": {
+          "r": -0.1293,
+          "p": 0.0010669610329511613,
+          "n": 638,
+          "mean_when_event": 27.541,
+          "mean_when_clean": 32.704
+        },
+        "brightness": {
+          "r": -0.1436,
+          "p": 0.0002744719480721174,
+          "n": 638,
+          "mean_when_event": 96.797,
+          "mean_when_clean": 105.365
+        },
+        "dark_fraction": {
+          "r": -0.0444,
+          "p": 0.26293955466873337,
+          "n": 638,
+          "mean_when_event": 0.004,
+          "mean_when_clean": 0.007
+        }
+      },
+      "condition_correlations_train_day_only": {
+        "standoff": {
+          "r": -0.013,
+          "p": 0.7826657857019064,
+          "n": 453,
+          "mean_when_event": 0.64,
+          "mean_when_clean": 0.666
+        },
+        "net_speed": {
+          "r": -0.0609,
+          "p": 0.1959595410860812,
+          "n": 453,
+          "mean_when_event": 0.082,
+          "mean_when_clean": 0.118
+        },
+        "depth": {
+          "r": -0.0383,
+          "p": 0.4928881957173759,
+          "n": 322,
+          "mean_when_event": 1.655,
+          "mean_when_clean": 1.704
+        },
+        "sharpness": {
+          "r": 0.0471,
+          "p": 0.3173358659171334,
+          "n": 453,
+          "mean_when_event": 249.091,
+          "mean_when_clean": 197.378
+        },
+        "contrast": {
+          "r": 0.0463,
+          "p": 0.3259383906973621,
+          "n": 453,
+          "mean_when_event": 39.097,
+          "mean_when_clean": 35.689
+        },
+        "brightness": {
+          "r": 0.0147,
+          "p": 0.754279189502127,
+          "n": 453,
+          "mean_when_event": 110.529,
+          "mean_when_clean": 108.722
+        },
+        "dark_fraction": {
+          "r": 0.0629,
+          "p": 0.18133442407288344,
+          "n": 453,
+          "mean_when_event": 0.022,
+          "mean_when_clean": 0.01
+        }
+      },
+      "fitted_quality_band": {
+        "sharpness_min": null,
+        "sharpness_max": 34.97,
+        "contrast_min": null,
+        "contrast_max": null,
+        "model": "seg_gpu",
+        "evidence": {
+          "fitted": true,
+          "metric": "sharpness",
+          "target_rate": 0.05,
+          "frames": 80,
+          "false_alarm_frames": 0,
+          "measured_rate": 0.0,
+          "bins": [
+            {
+              "lo": 18.1951,
+              "hi": 34.970262500000004,
+              "n": 80,
+              "k": 0,
+              "rate": 0.0,
+              "ci_upper": 0.0458197362645751,
+              "ok": true
+            }
+          ],
+          "caveat": "Fitted on undamaged real net: bounds false alarms only. Recall on real damage in these regimes is unmeasured."
+        }
+      }
+    }
+  },
+  "mediation_telemetry_to_quality": {
+    "n": 505,
+    "predictors": [
+      "standoff",
+      "net_speed",
+      "depth"
+    ],
+    "targets": {
+      "sharpness": {
+        "r2": 0.6438,
+        "coefficients": {
+          "standoff": 127.02,
+          "net_speed": -881.4,
+          "depth": -32.98
+        }
+      },
+      "contrast": {
+        "r2": 0.5177,
+        "coefficients": {
+          "standoff": -3.2,
+          "net_speed": -37.61,
+          "depth": -0.82
+        }
+      }
+    },
+    "interpretation": "Flight parameters explain a substantial share of capture quality (faster sweep and greater depth reduce sharpness), so quality is partly controllable when planning a survey, not only measurable afterwards."
+  },
+  "ensemble_mechanism": {
+    "sharpness_correlation_by_model": {
+      "det_v1": 0.5961,
+      "seg_v3": 0.0411,
+      "seg_gpu": -0.1136
+    },
+    "opposed_pairs": [
+      [
+        "det_v1",
+        "seg_gpu"
+      ],
+      [
+        "seg_gpu",
+        "seg_v3"
+      ]
+    ],
+    "interpretation": "Models with opposite-signed sharpness correlations fail in different capture regimes, so requiring their agreement suppresses both failure modes. This is a mechanism for the ensemble result already measured in this repo, not a new claim about accuracy."
+  },
+  "conclusions": [
+    "The pre-registered hypothesis \u2014 that the different-day gap is an operating-envelope violation driven by standoff distance \u2014 is NOT supported. The clip spanning the widest standoff range produces zero false alarms, and standoff has no within-clip association on the held-out day.",
+    "False-alarm rate is dominated by clip (scene) identity. Three training-day clips flown at near-identical standoff differ by up to 0.33 in false-alarm frame rate.",
+    "Capture quality (sharpness, contrast) is the strongest per-frame correlate, and its sign is model-dependent: the detector fires on sharp, high-contrast frames; the higher-capacity segmenter fires on degraded ones.",
+    "Because frames cluster within clips, per-frame confidence intervals overstate confidence. Generalisation should be reported with clip-level resampling; with four clips those intervals are wide."
+  ],
+  "caveats": [
+    "All frames are undamaged real net, so every detection is a false positive. This measures false-alarm behaviour only \u2014 recall on real damage is unmeasured and remains unvalidated.",
+    "Standoff, sweep speed and depth co-vary by design between the two recording days; no day-level difference can be attributed to one of them alone. Within-clip tests are what isolate a variable here.",
+    "Four clips from one site over two days is a small sample of scenes. The clip-level intervals reflect that and should not be narrowed by counting frames."
+  ],
+  "plots": [
+    "reports\\results\\operating_envelope\\what_drives_false_alarms.png",
+    "reports\\results\\operating_envelope\\standoff_hypothesis_refuted.png"
+  ]
+}

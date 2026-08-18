@@ -37,3 +37,7 @@ reports/assets/
 .DS_Store
 .vscode/
 .idea/
+
+# Per-operator planning output names a company; regenerate with
+# scripts/site_planner.py --operator <NAME> --forecast
+reports/results/site_planning/

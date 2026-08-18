@@ -6,7 +6,7 @@ with artificial "damage". They exist solely to exercise the code path end to
 end (ingest -> preprocess -> detect -> evaluate -> visualise) when no real data
 is available. **Results on this data say NOTHING about real-world aquaculture
 performance.** Do not report any metric from this generator as evidence of
-detection quality. Replace it with real ScaleAQ footage to get meaningful
+detection quality. Replace it with real inspection footage to get meaningful
 numbers.
 
 The generator produces:

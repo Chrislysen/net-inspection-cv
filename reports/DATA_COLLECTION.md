@@ -1,7 +1,7 @@
 # Data-collection & labelling protocol (what closes the gap)
 
 The single thing standing between this prototype and a real system is **labelled
-real net-damage footage**. This is a concrete protocol ScaleAQ could follow to
+real net-damage footage**. This is a concrete protocol a farm operator could follow to
 provide it — designed so the data drops straight into the existing pipeline.
 
 ## What to collect
