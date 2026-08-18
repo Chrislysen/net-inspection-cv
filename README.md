@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-358%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-420%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -62,7 +62,8 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
 | **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable (Claude API or local Ollama), so the guardrail is **measured**, not asserted: boundary disclosure **100%** on two local 14B models, tool grounding 50–75%. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **358 passing tests** (+15 headless renderer checks) · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **420 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
+| **Adoption** | One CLI (`netinspect doctor / onboard / train / calibrate / gate / serve / live / map`). **`onboard`** ingests YOLO, COCO, VOC or bare images, audits them, and splits **grouped by clip** so video frames cannot straddle a split — plus perceptual hashing to catch the same footage exported twice. It refuses bad input rather than proceeding. **`calibrate`** picks the threshold on *your* validation split against a false-alarm budget. **`gate`** measures against a version-controlled operating point and **exits non-zero**, failing closed when a rate is not measurable. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **Where to look:** code in [`src/netinspect/`](src/netinspect/), CLIs in
@@ -684,6 +685,9 @@ net-inspection-cv/
     mapping.py                   net-frame localisation: visual odometry, self-calibrating scale, coverage
     live.py                      real-time camera/RTSP/ROV capture + inference (threaded, drops stale frames)
     netmodel.py                  place a measured strip on a declared sea cage; coverage vs the whole net
+    cli.py                       the `netinspect` command — the front door for everything below
+    dataset.py                   bring-your-own-data: ingest, audit, leakage-safe grouped split
+    acceptance.py                release gate + threshold calibration against an operating point
     compose.py                   composite photorealistic damage + hard negatives onto REAL frames
     inference.py                 unified facade over all methods (used everywhere)
     onnx_infer.py                ONNX Runtime inference path
@@ -707,6 +711,8 @@ net-inspection-cv/
                                  + net3d.js (3-D cage viewer), net3d.test.mjs, net3d.render.mjs
   streamlit_app.py               alternative interactive viewer
   models/                        committed prototype models (.pt/.npz/.onnx) + NOTICE
+  Dockerfile                     CPU container (written, NOT built — see the file header)
+  operating_point.example.yaml   the acceptance contract the release gate enforces
   .github/workflows/ci.yml       CI: run tests on push/PR
   tests/                         pytest: data loading + metrics
   reports/PROTOTYPE_REPORT.md
@@ -714,6 +720,78 @@ net-inspection-cv/
 ```
 
 ---
+
+## Use it on your own footage
+
+Everything above is measured on public data. The point of the toolkit is what
+happens when **you** bring labelled footage from your own sites. One command per
+step, and the last one can refuse.
+
+```bash
+pip install -e ".[cv,ml,serve]"
+
+netinspect doctor                              # what's installed, what's missing
+netinspect onboard ./my_footage --out data/mysite
+netinspect train    --data data/mysite/dataset.yaml --epochs 80
+netinspect calibrate --data data/mysite --weights runs/detect/train/weights/best.pt
+netinspect gate      --data data/mysite --weights runs/detect/train/weights/best.pt \
+                     --operating-point operating_point.yaml
+```
+
+**`onboard`** takes whatever your annotation tool exports — YOLO `.txt`, COCO
+`.json`, Pascal VOC `.xml`, or images with no labels at all — detects the format,
+audits it, and writes a trainable dataset plus a `data_health.json`. It splits
+**grouped by clip** by default, because inspection footage is video: a random
+image-level split puts frame 100 in train and frame 101 in test, and returns an
+F1 of 0.99 that means nothing. It also perceptually hashes every frame to catch
+the same footage exported twice under different names — grouping does not catch
+that, and nothing else will tell you.
+
+It **refuses** rather than quietly proceeding: pixel coordinates in a normalised
+field, zero-area boxes, or too few clips to form three splits all stop it, with
+the offending files named.
+
+**`calibrate`** picks the confidence threshold on *your* validation split against
+a false-alarm budget you set. This is the largest honest accuracy gain available
+without collecting more data — and the repo default of 0.25 was tuned on SOLAQUA
+footage, so on your camera and water it is close to arbitrary.
+
+**`gate`** is the one that matters. It measures the model against an operating
+point you wrote down *beforehand* (see
+[`operating_point.example.yaml`](operating_point.example.yaml)) and **exits
+non-zero** if it does not meet it, so CI can refuse to promote it:
+
+```
+FAIL — must not be deployed
+  [ok  ] clean frames: 28 (needs >= 20)
+  [ok  ] damaged frames: 10 (needs >= 5)
+  [ok  ] false alarm rate: 0 (needs <= 0.05)
+  [FAIL] recall: 0 (needs >= 0.8) — 0 of 10 damaged frames were caught
+```
+
+It **fails closed**. A test set with no clean frames cannot produce a
+false-alarm rate, and the gate treats "not measurable" as a failure rather than
+a pass — silence there is exactly how an unvalidated model reaches a boat. It
+also refuses to certify on a handful of frames, because a rate over eight images
+is noise wearing a percentage sign.
+
+Why the primary axis is **frame-level false alarms** rather than mAP: a crew
+watching a screen abandons a system that cries wolf, so the number that decides
+whether this gets used at all is *what fraction of clean frames raised an
+alert*. Recall is second, and meaningless without the first — a detector that
+fires on everything has perfect recall.
+
+> **What this does and does not give you.** The engineering is production-shaped:
+> one CLI, a data audit that refuses bad input, a release gate with an exit code,
+> an OOD gate for unfamiliar domains, health/readiness/metrics endpoints, and a
+> container. The **shipped weights are not a validated product** — they learned
+> synthetic damage and their recall on real holes has never been measured. Run
+> `netinspect gate` against your own labelled footage; if it fails, that is the
+> tool working. Shadow-mode first, then alerting.
+
+A container is provided in [`Dockerfile`](Dockerfile), but note it has **not been
+built or run** — no Docker daemon was available where it was written, and CI does
+not build it either.
 
 ## Installation
 
