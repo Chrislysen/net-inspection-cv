@@ -178,6 +178,25 @@ BLOCKED_NETWORKS = tuple(ipaddress.ip_network(n) for n in (
 ))
 
 
+def _url_matches(parsed, pattern: str) -> bool:
+    """Component-wise glob match for a stream URL.
+
+    Scheme must match exactly; host and path are matched separately so a
+    wildcard cannot slide across the "/" that separates them.
+    """
+    pp = urlparse(pattern)
+    if not pp.scheme or not pp.netloc:
+        return False                                   # not a URL pattern
+    if pp.scheme != parsed.scheme:
+        return False
+    host, phost = (parsed.hostname or ""), (pp.hostname or "")
+    if not fnmatch.fnmatch(host, phost):
+        return False
+    if pp.port is not None and parsed.port != pp.port:
+        return False
+    return fnmatch.fnmatch(parsed.path or "/", pp.path or "*")
+
+
 def _host_is_blocked(host: str) -> bool:
     try:
         ip = ipaddress.ip_address(host)
@@ -205,10 +224,17 @@ def validate_live_source(source: str | int, cfg: SecurityConfig) -> str | int:
     if _CAMERA_INDEX.match(raw):
         return int(raw)
 
-    matched = any(fnmatch.fnmatch(raw, pat) for pat in cfg.live_allow)
-
     parsed = urlparse(raw)
     if parsed.scheme in {"http", "https", "rtsp", "rtmp", "udp", "tcp"}:
+        # Match scheme, host and path SEPARATELY. fnmatch's "*" happily crosses
+        # "/", so a single whole-string match lets
+        #   rtsp://cam-*.farm.local/*
+        # be satisfied by
+        #   rtsp://cam-evil.example.com/x.farm.local/y
+        # — the attacker's host, with the expected suffix pushed into the path.
+        # Splitting first confines the wildcard to one component, because a
+        # hostname cannot contain a slash.
+        matched = any(_url_matches(parsed, pat) for pat in cfg.live_allow)
         if not matched:
             raise SourceRejected(
                 f"Stream URL {raw!r} is not allowed. Add a pattern to "
@@ -226,8 +252,9 @@ def validate_live_source(source: str | int, cfg: SecurityConfig) -> str | int:
         # letter ("C:/...") as a scheme.
         raise SourceRejected(f"Unsupported scheme in {raw!r}.")
 
-    # A filesystem path.
-    if matched:
+    # A filesystem path. Whole-string globbing is fine here: paths are what the
+    # pattern is describing, and containment under media_root is checked below.
+    if any(fnmatch.fnmatch(raw, pat) for pat in cfg.live_allow):
         return raw
     if cfg.media_root is None:
         raise SourceRejected(

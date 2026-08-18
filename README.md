@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-461%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-464%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -62,7 +62,7 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
 | **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable (Claude API or local Ollama), so the guardrail is **measured**, not asserted: boundary disclosure **100%** on two local 14B models, tool grounding 50–75%. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **461 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **464 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
 | **Adoption** | One CLI (`netinspect doctor / onboard / train / calibrate / gate / serve / live / map`). **`onboard`** ingests YOLO, COCO, VOC or bare images, audits them, and splits **grouped by clip** so video frames cannot straddle a split — plus perceptual hashing to catch the same footage exported twice. It refuses bad input rather than proceeding. **`calibrate`** picks the threshold on *your* validation split against a false-alarm budget. **`gate`** measures against a version-controlled operating point and **exits non-zero**, failing closed when a rate is not measurable. |
 | **Security** | Secure by default: **refuses to bind anything but loopback without an API key**, so an unauthenticated endpoint cannot be published by forgetting. `POST /api/live/start` is **default-deny** (camera indices, an allowlisted media root, glob-matched stream URLs) and blocks private/link-local hosts even when a pattern matches — closing an SSRF path to cloud instance metadata. Plus decompression-bomb limits, a bounded inference concurrency, same-origin CORS, and `/api/version` with per-model SHA-256 digests. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
@@ -721,6 +721,26 @@ net-inspection-cv/
 ```
 
 ---
+
+## Licensing — the code is MIT, the shipped weights are not
+
+This matters more than anything else on this page if you are evaluating it for
+commercial use, so it is not buried in a footer:
+
+| | |
+|---|---|
+| all source code | **MIT** |
+| the committed `.pt` / `.npz` weights | derived from Ultralytics YOLOv8 (**AGPL-3.0**) and SOLAQUA data (**CC BY-SA 4.0**) |
+
+**AGPL-3.0 is viral over a network**, and running `netinspect serve` is exactly
+the network use that triggers it. Most corporate legal teams block AGPL for that
+reason; Ultralytics sells a commercial licence that removes it.
+
+The pipeline is the deliverable and the weights are a demonstration — so the
+clean position is to retrain from a permissively-licensed detector on your own
+footage, which is what the next section is about. Full detail in
+[`models/NOTICE.md`](models/NOTICE.md). Not legal advice; a statement of what the
+upstream licences say, so the question reaches your counsel before your product.
 
 ## Use it on your own footage
 

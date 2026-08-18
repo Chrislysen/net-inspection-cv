@@ -1,0 +1,37 @@
+# Without this, `COPY . .` bakes the local virtualenv, the git history and every
+# dataset into the image — several gigabytes of build context, most of it
+# Windows binaries that cannot run in a Linux container.
+.venv/
+venv/
+.git/
+.github/
+
+# Data and outputs: mount them at runtime, do not ship them.
+data/
+outputs/
+runs/
+reports/results/
+docs/images/
+notebooks/
+
+# Build and cache artefacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+node_modules/
+
+# Local environment
+.env
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# Keep models/ — the image is meant to be able to infer out of the box.
+# Keep src/, scripts/, web/, pyproject.toml, README.md, LICENSE, NOTICE files.

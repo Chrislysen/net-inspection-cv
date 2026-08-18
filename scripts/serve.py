@@ -241,6 +241,17 @@ def build_app(inspector: NetInspector, security=None):
     # death; with it, they queue.
     inference_slots = threading.BoundedSemaphore(sec.max_concurrency)
 
+    async def _predict_async(img, **kw):
+        """Run inference off the event loop.
+
+        The upload routes are `async def`, so anything blocking inside them
+        blocks the whole server — not just that request. Model inference takes
+        ~100 ms to 1.3 s here and the concurrency semaphore waits up to 30 s, so
+        one upload could freeze every other connection, including health checks.
+        """
+        from starlette.concurrency import run_in_threadpool
+        return await run_in_threadpool(lambda: _predict(img, **kw))
+
     def _predict(img, **kw):
         """Every inference goes through here, so the concurrency cap cannot be
         bypassed by adding a route that forgets it."""
@@ -418,7 +429,7 @@ def build_app(inspector: NetInspector, security=None):
                       conf: float = Query(0.25, ge=0.0, le=1.0)):
         _validate_method(method)
         img = await _read_upload(file)
-        r = _predict(img, method=method, conf=conf)
+        r = await _predict_async(img, method=method, conf=conf)
         metrics.inferences[method] += 1
         payload = r.to_dict()
         payload["disclaimer"] = "Prototype: proxy-trained model; human review required."
@@ -430,7 +441,7 @@ def build_app(inspector: NetInspector, security=None):
         from PIL import Image
         _validate_method(method)
         img = await _read_upload(file)
-        r = _predict(img, method=method, conf=conf)
+        r = await _predict_async(img, method=method, conf=conf)
         metrics.inferences[method] += 1
         vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
         buf = io.BytesIO(); Image.fromarray(vis).save(buf, format="PNG")
@@ -446,7 +457,7 @@ def build_app(inspector: NetInspector, security=None):
                       ood: bool = Query(True)):
         _validate_method(method)
         img = await _read_upload(file)
-        r = _predict(img, method=method, conf=conf)
+        r = await _predict_async(img, method=method, conf=conf)
         metrics.inferences[method] += 1
         vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
         return JSONResponse({

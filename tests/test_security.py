@@ -100,6 +100,30 @@ def test_internal_addresses_are_refused_even_when_allowlisted(host):
         S.validate_live_source(f"http://{host}/x", cfg)
 
 
+def test_a_wildcard_cannot_slide_across_the_host_path_boundary():
+    """Regression: fnmatch "*" crosses "/", so a whole-string match let
+    rtsp://cam-*.farm.local/* be satisfied by an attacker host with the expected
+    suffix pushed into the path."""
+    cfg = _cfg(live_allow=("rtsp://cam-*.farm.local/*",))
+    with pytest.raises(S.SourceRejected):
+        S.validate_live_source("rtsp://cam-evil.example.com/x.farm.local/y", cfg)
+    # The intended host still works.
+    assert S.validate_live_source("rtsp://cam-7.farm.local/main", cfg)
+
+
+def test_the_scheme_must_match_the_pattern():
+    cfg = _cfg(live_allow=("rtsp://cam.farm.example/*",))
+    with pytest.raises(S.SourceRejected):
+        S.validate_live_source("http://cam.farm.example/x", cfg)
+
+
+def test_a_port_in_the_pattern_is_enforced():
+    cfg = _cfg(live_allow=("rtsp://cam.farm.example:554/*",))
+    assert S.validate_live_source("rtsp://cam.farm.example:554/a", cfg)
+    with pytest.raises(S.SourceRejected):
+        S.validate_live_source("rtsp://cam.farm.example:8554/a", cfg)
+
+
 def test_a_public_host_passes_when_allowlisted():
     cfg = _cfg(live_allow=("rtsp://*",))
     assert S.validate_live_source("rtsp://203.0.113.7/stream", cfg)
