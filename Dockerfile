@@ -40,10 +40,21 @@ RUN pip install --index-url https://download.pytorch.org/whl/cpu torch torchvisi
 COPY . .
 RUN pip install --no-deps -e .
 
-# Fails the build if the package cannot even introspect itself.
-RUN netinspect version && netinspect doctor > /dev/null
+# Run as a non-root user. Nothing here needs root, and a container that does is
+# one escape away from being the host.
+RUN useradd --create-home --uid 10001 netinspect     && mkdir -p /tmp/ultralytics /tmp/matplotlib     && chown -R netinspect:netinspect /app /tmp/ultralytics /tmp/matplotlib
+USER netinspect
+
+# Smoke-test the ACTUAL entry point used by CMD, not just the two commands that
+# happen not to be wrapped: `netinspect serve` delegates to a script, and that
+# delegation was broken while `version` and `doctor` stayed green.
+RUN netinspect version     && netinspect doctor > /dev/null     && netinspect serve --help > /dev/null
 
 EXPOSE 8000
+
+# Liveness for the orchestrator. /api/health stays open even when an API key is
+# configured, precisely so this works.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3     CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4).status==200 else 1)"
 
 # Bind 0.0.0.0 so the port is reachable from outside the container. The service
 # is UNAUTHENTICATED — put it behind an authenticating proxy before exposing it

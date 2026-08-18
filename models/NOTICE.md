@@ -31,15 +31,45 @@ re-training/re-downloading. They are **not** validated damage detectors.
 * **`anomaly_normal_net.npz`** — fitted on ~38 real undamaged SOLAQUA frames. It
   flags *deviation from normal net* (biofouling/lighting too), not confirmed damage.
 
-## Licensing (read before making this repo public)
+## Licensing — READ THIS BEFORE USING THE WEIGHTS COMMERCIALLY
 
-* Prototype code: **MIT**.
-* `yolo_damage_v1.pt` derives from Ultralytics YOLOv8 (**AGPL-3.0**) and from
-  SOLAQUA data (**CC BY-SA 4.0**). The anomaly model derives from SOLAQUA data
-  (**CC BY-SA 4.0**). These artifacts are committed here only because this repo is
-  **private**. Before any public distribution or networked service use, comply
-  with AGPL-3.0 (Ultralytics) and CC BY-SA 4.0 (SOLAQUA: attribution + share-alike),
-  or retrain from a permissively-licensed base on your own licensed data.
+**The repository is public, and it is MIT only in part.** An earlier version of
+this notice said these artifacts were committed "only because this repo is
+private" and deferred compliance until public distribution. That condition has
+already occurred, so the obligations below are live now, not later.
+
+| artifact | licence that governs it |
+|---|---|
+| all source code in `src/`, `scripts/`, `web/` | **MIT** |
+| `yolo_damage_v1.pt`, `yolo_damage_seg_*.pt` | derived from Ultralytics YOLOv8 → **AGPL-3.0**, and trained on SOLAQUA → **CC BY-SA 4.0** |
+| `patchcore_*.npz`, `anomaly_normal_net.npz`, `ssl_resnet18_solaqua.pt` | fitted on SOLAQUA frames → **CC BY-SA 4.0** |
+
+Two consequences that matter to anyone evaluating this for commercial use:
+
+**AGPL-3.0 is viral over a network.** Ultralytics licenses YOLOv8 under
+AGPL-3.0, and offering an AGPL work as a network service triggers the source
+disclosure obligation for the combined work — which is exactly what
+`netinspect serve` does. Most corporate legal teams block AGPL for this reason.
+Ultralytics sells a commercial licence that removes it.
+
+**CC BY-SA 4.0 requires attribution and share-alike.** SOLAQUA is © SINTEF
+Ocean, CC BY-SA 4.0. Anything derived from those frames — including model
+weights fitted on them — carries attribution and share-alike obligations.
+
+### If you want a clean licence position
+
+The pipeline is the deliverable; the weights are a demonstration. Retrain from a
+permissively-licensed detector on your own footage and none of the above
+applies to the result:
+
+```
+netinspect onboard ./your_footage --out data/yoursite
+netinspect train --data data/yoursite/dataset.yaml
+netinspect gate  --data data/yoursite --weights runs/detect/train/weights/best.pt
+```
+
+This is not legal advice. It is a statement of what the upstream licences say,
+so that the question reaches your counsel before it reaches your product.
 
 ## Reproduce
 
