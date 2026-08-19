@@ -56,7 +56,23 @@ Ultralytics sells a commercial licence that removes it.
 Ocean, CC BY-SA 4.0. Anything derived from those frames — including model
 weights fitted on them — carries attribution and share-alike obligations.
 
-### If you want a clean licence position
+### The AGPL-free path is implemented, not just described
+
+`netinspect` ships a second detector built on torchvision (BSD-3-Clause). No
+Ultralytics import exists anywhere in `src/netinspect/permissive_baseline.py`,
+and a test parses the module's imports to keep it that way.
+
+Measured against the AGPL model on the same held-out split, same threshold:
+`yolo` 0% false alarms / 100% recall, `permissive` 0% / 88% (21 of 24 damaged
+frames, 29 frames total, 12 CPU epochs). The gate passes it. Ultralytics remains
+the better training stack; this trades some recall for a licence you can deploy,
+and the trade is a number rather than a claim.
+
+`models/permissive_v1.pt` is trained on the SOLAQUA-derived composite set, so it
+still inherits CC BY-SA 4.0 — but it carries **no AGPL obligation**. For an
+artifact free of both, retrain on footage you own.
+
+### If you want a completely clean licence position
 
 The pipeline is the deliverable; the weights are a demonstration. Retrain from a
 permissively-licensed detector on your own footage and none of the above

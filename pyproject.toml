@@ -52,6 +52,7 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["slow: exercises a real training loop; minutes, not milliseconds"]
 pythonpath = ["src"]
 
 [tool.ruff]
