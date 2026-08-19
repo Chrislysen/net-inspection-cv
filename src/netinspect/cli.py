@@ -83,7 +83,19 @@ def _delegate(script: str, args: Sequence[str]) -> int:
         runpy.run_path(str(path), run_name="__main__")
         return 0
     except SystemExit as exc:                      # argparse --help, or an error
-        return int(exc.code or 0)
+        # exc.code is None (success), an int (status), or a STRING — the last is
+        # Python's own idiom for `raise SystemExit("what went wrong")`, and its
+        # documented meaning is "print this to stderr and exit 1", not "parse
+        # this as a status". int() on it raised ValueError, which escaped and
+        # turned a failing command into exit 0. That silently disarmed
+        # `netinspect sbom --fail-on copyleft` — a gate that cannot fail.
+        code = exc.code
+        if code is None:
+            return 0
+        if isinstance(code, int):
+            return code
+        print(code, file=sys.stderr)
+        return 1
     finally:
         sys.argv = argv
         sys.path[:] = path_backup

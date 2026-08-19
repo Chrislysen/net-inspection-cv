@@ -186,3 +186,42 @@ def test_prepared_split_loads_its_labels_from_the_sibling_tree(tmp_path):
     samples = cli._load_split(out / "images" / "test")
     assert samples, "test split should not be empty"
     assert any(s.boxes for s in samples), "ground-truth boxes must survive loading"
+
+
+# --------------------------------------------------------------------------- #
+# how a delegated script's exit status reaches the caller
+# --------------------------------------------------------------------------- #
+def _fake_script(tmp_path, body: str):
+    """A stand-in script for _delegate to run."""
+    p = tmp_path / "fake_cmd.py"
+    p.write_text(body, encoding="utf-8")
+    return p
+
+
+def test_a_string_systemexit_becomes_exit_1_not_a_crash(tmp_path, monkeypatch, capsys):
+    """`raise SystemExit("why")` must mean "print it, fail" — Python's own idiom.
+
+    Found by building the container. The handler did `int(exc.code or 0)`, which
+    raises ValueError on a string payload; the exception escaped and the process
+    reported success. That silently disarmed `netinspect sbom --fail-on
+    copyleft`, a gate whose entire job is to fail a pipeline.
+    """
+    script = _fake_script(tmp_path, 'raise SystemExit("FAILED: 3 copyleft components")\n')
+    monkeypatch.setattr(cli, "SCRIPTS", tmp_path)
+
+    rc = cli._delegate(script.name, [])
+    assert rc == 1, f"a failing command reported {rc}; a pipeline would treat that as success"
+    assert "copyleft" in capsys.readouterr().err, "the reason must reach stderr"
+
+
+def test_an_integer_systemexit_is_passed_through(tmp_path, monkeypatch):
+    script = _fake_script(tmp_path, "raise SystemExit(3)\n")
+    monkeypatch.setattr(cli, "SCRIPTS", tmp_path)
+    assert cli._delegate(script.name, []) == 3
+
+
+def test_a_clean_exit_is_zero(tmp_path, monkeypatch):
+    for body in ("print('done')\n", "raise SystemExit(0)\n", "raise SystemExit(None)\n"):
+        script = _fake_script(tmp_path, body)
+        monkeypatch.setattr(cli, "SCRIPTS", tmp_path)
+        assert cli._delegate(script.name, []) == 0, body

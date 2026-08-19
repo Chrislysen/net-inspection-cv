@@ -94,7 +94,12 @@ class NetInspector:
 
     # -- availability -------------------------------------------------------
     def available_methods(self) -> list[str]:
-        methods = ["classical"]
+        # "classical" used to be unconditional. Building the container proved
+        # that wrong: the image shipped without libGL/libxcb, cv2 could not
+        # import, and the service still advertised classical as available — so a
+        # request for it 500'd and readiness stayed green, because the one method
+        # readiness leans on was a constant. It is a real check now.
+        methods = ["classical"] if optional_import("cv2") is not None else []
         if self._anomaly_path and Path(self._anomaly_path).with_suffix(".npz").exists():
             methods.append("anomaly")
         if self._patchcore_path and Path(self._patchcore_path).with_suffix(".npz").exists() \

@@ -16,19 +16,36 @@
 # training, start from a CUDA base (e.g. pytorch/pytorch:2.4.0-cuda12.1-cudnn9-runtime)
 # and install the same extras — nothing else changes.
 #
-# STATUS: written but NOT BUILT — no container runtime was available in the
-# environment where this was authored (Docker, Podman and WSL were all checked),
-# so treat it as a starting point rather than a verified artifact. The CI
-# pipeline does not build it either. Everything it installs is exercised by the
-# test suite, and the startup contract above was verified by running
-# check_binding directly — but the layer ordering, the apt package list and the
-# CPU-wheel resolution are the parts nobody has confirmed.
+# STATUS: BUILT AND RUN — Docker 29.7.2, image 4.47 GB. Verified end to end:
+# starting it with no key exits 1 with the InsecureBinding reason; with a key it
+# comes up, the HEALTHCHECK reaches healthy, /api/health and /api/ready answer
+# unauthenticated, /api/version is 401 → 200 → 401 for absent/valid/wrong keys,
+# the console serves, the process runs as uid 10001, and all six methods resolve
+# (classical, anomaly, patchcore, yolo, permissive, ensemble). CI still does not
+# build it, so a change here is unverified until someone runs the build again.
+#
+# The first build failed in a way no amount of reading would have found: the apt
+# list was libglib2.0-0 + libgomp1, which is not enough. `pyproject.toml` asks
+# for opencv-python-headless, but ultralytics depends on the full opencv-python,
+# so both wheels install and the non-headless one wins `import cv2` — which needs
+# libGL and libxcb. cv2 failed to import, taking the classical detector, video
+# decoding and YOLO with it, while the container still started and reported
+# healthy. See the apt line below.
 FROM python:3.12-slim AS base
 
-# opencv-python-headless still needs libGL's transitive deps for some codecs,
-# and git is needed only if you install from a checkout with submodules.
+# These four are load-bearing, and the list was wrong until the image was
+# actually built. `pyproject.toml` asks for opencv-python-headless, but
+# ultralytics depends on the FULL opencv-python, so both wheels end up installed
+# and the non-headless one wins the `import cv2` — which needs libGL and libxcb.
+# Without them cv2 fails to import, taking the classical detector, all video
+# decoding and YOLO with it, while the service still starts and answers /health.
+# libgomp1 is OpenMP for torch; libglib2.0-0 is opencv's own dependency.
+#
+# The AGPL-free build (EXTRAS=cv,permissive,serve) has no ultralytics and so gets
+# genuinely headless opencv, which needs neither libGL nor libxcb — they are
+# harmless there, and kept unconditional so one apt line serves both variants.
 RUN apt-get update && apt-get install --no-install-recommends -y \
-        libglib2.0-0 libgomp1 \
+        libglib2.0-0 libgomp1 libgl1 libxcb1 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV PYTHONUNBUFFERED=1 \

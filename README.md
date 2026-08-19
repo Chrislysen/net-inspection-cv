@@ -846,7 +846,7 @@ net-inspection-cv/
                                  + net3d.js (3-D cage viewer), net3d.test.mjs, net3d.render.mjs
   streamlit_app.py               alternative interactive viewer
   models/                        committed prototype models (.pt/.npz/.onnx) + NOTICE
-  Dockerfile                     CPU container (written, NOT built — see the file header)
+  Dockerfile                     CPU container (built + verified; see the file header)
   operating_point.example.yaml   the acceptance contract the release gate enforces
   .github/workflows/ci.yml       CI: run tests on push/PR
   tests/                         pytest: data loading + metrics
@@ -920,7 +920,24 @@ pip install -e ".[cv,permissive,serve]"   # torchvision detector + PatchCore, no
 netinspect sbom --fail-on copyleft        # exit 0 — verify it in YOUR environment
 ```
 
-That is the difference between a licence claim and a licence guarantee.
+Both variants were built as containers and audited from inside them:
+
+| image | components | strong copyleft | size |
+|---|---|---|---|
+| `netinspect` (default, `EXTRAS=cv,ml,serve,export`) | 120 | **3** — `ultralytics`, `ultralytics-platform`, `ultralytics-thop` | 4.47 GB |
+| `netinspect-permissive` (`EXTRAS=cv,permissive,serve`) | 74 | **0** | 3.80 GB |
+
+```bash
+docker build --build-arg EXTRAS=cv,permissive,serve -t netinspect-permissive .
+docker run --rm netinspect-permissive netinspect sbom --fail-on copyleft   # exit 0
+docker run --rm netinspect            netinspect sbom --fail-on copyleft   # exit 1
+```
+
+That is the difference between a licence claim and a licence guarantee. It also
+found a bug in the gate itself: `netinspect sbom --fail-on copyleft` printed
+`FAILED` and then **exited 0**, because the CLI's delegation did
+`int(exc.code or 0)` on a `SystemExit` whose payload was a message string. A
+pipeline would have read that as a pass. Fixed, and pinned by a test.
 
 One caveat neither path removes: weights fitted on SOLAQUA frames inherit
 CC BY-SA 4.0 regardless of framework. For a fully unencumbered artifact, train on
@@ -1070,14 +1087,25 @@ rate limiting via a reverse proxy. It is single-process, so the in-memory metric
 do not aggregate across workers, and they are counters and averages rather than
 histograms — no percentiles.
 
-A container is provided in [`Dockerfile`](Dockerfile), but note it has **not been
-built or run** — no container runtime was available where it was written (Docker,
-Podman and WSL were all checked), and CI does not build it either. Its startup
-contract *was* checked without building: `CMD` binds `0.0.0.0`, which
-`check_binding` fails closed on, so `NETINSPECT_API_KEY` must be set or the
-container exits at startup rather than coming up unauthenticated. What remains
-unverified is the layer ordering, the apt package list and the CPU-wheel
-resolution — build it before you rely on it.
+A container is provided in [`Dockerfile`](Dockerfile). It **has been built and
+run** — Docker 29.7.2, 4.47 GB — and verified end to end: no key exits 1 with the
+`InsecureBinding` reason, a key brings it up and the HEALTHCHECK reaches healthy,
+`/api/health` and `/api/ready` answer unauthenticated, `/api/version` is
+401 → 200 → 401 for absent/valid/wrong keys, it runs as uid 10001, and all six
+methods resolve. CI does not build it, so treat a *change* to it as unverified
+until someone rebuilds.
+
+Building it was worth doing, because the first build was broken in a way reading
+could not have caught. The apt list was `libglib2.0-0 libgomp1`, chosen by
+guesswork. `pyproject.toml` asks for `opencv-python-headless`, but **ultralytics
+depends on the full `opencv-python`**, so both wheels install and the
+non-headless one wins `import cv2` — which needs `libGL` and `libxcb`. cv2 failed
+to import, taking the classical detector, video decoding and YOLO with it, and
+the container *still started and reported healthy*, advertising `classical` as
+available because that string was hardcoded rather than checked. `/api/ready`
+caught it (503, naming the missing methods) — which is the entire reason the
+readiness probe was rewritten to be able to fail. Both are fixed: the apt line is
+correct, and `available_methods()` now actually checks that OpenCV imports.
 
 ## Installation
 

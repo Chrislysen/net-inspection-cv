@@ -76,6 +76,42 @@ def test_configured_and_available_are_different_questions(tmp_path):
     assert "yolo" not in insp.available_methods(), "it did not resolve"
 
 
+def test_classical_is_not_advertised_when_opencv_is_broken(monkeypatch):
+    """Found by building the container, not by reading the code.
+
+    The image shipped without libGL/libxcb, so `import cv2` failed — and the
+    service still listed "classical" as available, because that string was
+    hardcoded rather than checked. A request for it 500'd, and readiness stayed
+    green, since readiness leans on exactly that method. An orchestrator would
+    have kept routing traffic to a container whose detector could not load.
+    """
+    from netinspect import inference as I
+
+    real = I.optional_import
+    monkeypatch.setattr(I, "optional_import",
+                        lambda name, *a, **k: None if name == "cv2" else real(name, *a, **k))
+
+    insp = NetInspector()
+    assert "classical" not in insp.available_methods(), (
+        "classical was advertised with no OpenCV present — the check is a "
+        "constant again, and readiness cannot detect a broken image")
+
+
+def test_readiness_goes_red_when_opencv_is_missing(monkeypatch):
+    """The consequence of the above: the probe must actually fail."""
+    from fastapi.testclient import TestClient
+
+    from netinspect import inference as I
+
+    real = I.optional_import
+    monkeypatch.setattr(I, "optional_import",
+                        lambda name, *a, **k: None if name == "cv2" else real(name, *a, **k))
+
+    r = TestClient(serve.build_app(NetInspector())).get("/api/ready")
+    assert r.status_code == 503, "a container with no working OpenCV reported ready"
+    assert "classical" in r.json()["missing"]
+
+
 def test_the_mjpeg_stream_does_not_occupy_a_threadpool_worker(client):
     """It must be a coroutine, not a sync generator run in the threadpool.
 
