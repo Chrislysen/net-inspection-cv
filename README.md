@@ -379,6 +379,40 @@ visual path 6.29 m vs telemetry 5.88 m over the pass (**ratio 1.07**).
 > net is undamaged, so **every site mapped above is a false positive** — the map
 > is the mechanism; the damage is synthetic.
 
+## A negative result: underwater enhancement makes this worse
+
+The underwater-vision literature is full of enhancement methods — UWCNN, colour
+correction, dehazing — and they unarguably produce nicer pictures. Before
+adopting one, this project asked the only question that matters here: **does the
+detector get better?**
+
+It does not. Applied at inference to a detector trained on raw frames, which is
+how a preprocessing step would actually be deployed:
+
+| preprocessing | false-alarm rate | vs raw | boxes | recall |
+|---|---|---|---|---|
+| **raw (as deployed)** | **31%** | — | 107 | 100% |
+| gray-world white balance | 31% | +0% | 128 | 100% |
+| CLAHE | 45% | **+14%** | 177 | 100% |
+| denoise + CLAHE | 46% | +15% | 180 | 100% |
+| white balance + CLAHE | **50%** | **+19%** | 197 | 100% |
+
+*199 real undamaged SOLAQUA frames for the false-alarm rate, 29 labelled frames
+for recall, conf ≥ 0.25.*
+
+Recall was already saturated, so there was nothing to gain — and contrast
+stretching amplifies exactly the **thin bright mooring cords** this detector
+already false-fires on. The mechanism and the failure mode are the same one the
+corrected 31% headline is about.
+
+The lesson generalises past this repo: enhancement that helps a human read an
+image is not the same thing as enhancement that helps a model, and bolting it in
+front of a model trained without it introduces a distribution mismatch that costs
+more than the enhancement gains. If you want the benefit, enhance the *training*
+set and retrain — do not add it as a deployment-time filter.
+
+Reproduce: `python scripts/eval_preprocessing.py`
+
 ## Grounded assistant — and measuring whether the guardrail holds
 
 A tool-calling assistant answers operational questions over the repo's real

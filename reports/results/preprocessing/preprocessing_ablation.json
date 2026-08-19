@@ -1,0 +1,71 @@
+{
+  "conf": 0.25,
+  "weights": "models/yolo_damage_v1.pt",
+  "clean_source": "data/processed/solaqua_bag3",
+  "clean_frames": 199,
+  "labelled_source": "data/processed/real_composite",
+  "labelled_frames": 29,
+  "results": [
+    {
+      "variant": "raw",
+      "description": "no preprocessing \u2014 how the detector is actually deployed",
+      "false_alarms": {
+        "frames_alarming": 62,
+        "frames": 199,
+        "rate": 0.31155778894472363,
+        "boxes": 107
+      },
+      "recall": 1.0,
+      "damaged_frames": 24
+    },
+    {
+      "variant": "clahe",
+      "description": "contrast-limited adaptive histogram equalisation",
+      "false_alarms": {
+        "frames_alarming": 90,
+        "frames": 199,
+        "rate": 0.45226130653266333,
+        "boxes": 177
+      },
+      "recall": 1.0,
+      "damaged_frames": 24
+    },
+    {
+      "variant": "white_balance",
+      "description": "gray-world white balance \u2014 the classical colour-cast fix",
+      "false_alarms": {
+        "frames_alarming": 62,
+        "frames": 199,
+        "rate": 0.31155778894472363,
+        "boxes": 128
+      },
+      "recall": 1.0,
+      "damaged_frames": 24
+    },
+    {
+      "variant": "white_balance_clahe",
+      "description": "both, the usual underwater recipe",
+      "false_alarms": {
+        "frames_alarming": 100,
+        "frames": 199,
+        "rate": 0.5025125628140703,
+        "boxes": 197
+      },
+      "recall": 1.0,
+      "damaged_frames": 24
+    },
+    {
+      "variant": "denoise_clahe",
+      "description": "denoise first, then stretch contrast",
+      "false_alarms": {
+        "frames_alarming": 91,
+        "frames": 199,
+        "rate": 0.457286432160804,
+        "boxes": 180
+      },
+      "recall": 1.0,
+      "damaged_frames": 24
+    }
+  ],
+  "conclusion": "Underwater enhancement applied at inference to a detector trained on raw frames increases false alarms and does not improve recall. Not adopted."
+}
