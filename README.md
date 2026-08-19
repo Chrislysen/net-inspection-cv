@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-507%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-522%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -62,7 +62,7 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
 | **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable — Claude API, local Ollama, or **any OpenAI-compatible endpoint** (Nous, Together, Groq, or a vLLM you host on Modal) — so the guardrail is **measured**, not asserted: boundary disclosure **100% on all six models tested** (3B–15B, three families), while tool grounding ranges 50–100% and does **not** track model size. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **507 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **522 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
 | **Adoption** | One CLI (`netinspect doctor / onboard / train / calibrate / gate / serve / live / map`). **`onboard`** ingests YOLO, COCO, VOC or bare images, audits them, and splits **grouped by clip** so video frames cannot straddle a split — plus perceptual hashing to catch the same footage exported twice. It refuses bad input rather than proceeding. **`calibrate`** picks the threshold on *your* validation split against a false-alarm budget. **`gate`** measures against a version-controlled operating point and **exits non-zero**, failing closed when a rate is not measurable. |
 | **Security** | Secure by default: **refuses to bind anything but loopback without an API key**, so an unauthenticated endpoint cannot be published by forgetting. `POST /api/live/start` is **default-deny** (camera indices, an allowlisted media root, glob-matched stream URLs) and blocks private/link-local hosts even when a pattern matches — closing an SSRF path to cloud instance metadata. Plus decompression-bomb limits, a bounded inference concurrency, same-origin CORS, and `/api/version` with per-model SHA-256 digests. |
 | **Deployability** | Thread-safe under concurrent requests (double-checked model loading + serialised inference on the shared model, with tests that fail without them) · reference reverse-proxy config for TLS, rate limiting and CSP · **an AGPL-free detector path** on torchvision, measured against the Ultralytics one rather than asserted. |
@@ -378,6 +378,43 @@ visual path 6.29 m vs telemetry 5.88 m over the pass (**ratio 1.07**).
 > error bar (~5% of distance travelled), never as exact points. And on SOLAQUA the
 > net is undamaged, so **every site mapped above is a false positive** — the map
 > is the mechanism; the damage is synthetic.
+
+## The licence-clean detector is also the more trustworthy one
+
+Measured across **557 real undamaged frames** — every detection is a false alarm
+by construction — plus the labelled held-out split for recall:
+
+| clip | frames | `yolo` (AGPL-3.0) | `permissive` (BSD-3) |
+|---|---|---|---|
+| bag1 | 38 | 0% | 0% |
+| bag2 | 120 | 0% | 0% |
+| **bag3 (the worst clip)** | 199 | **31%** | **10%** |
+| different day | 200 | 1% | 0% |
+| **overall** | **557** | **11%** | **3%** |
+| recall (labelled split) | 29 | **100%** | 88% |
+
+This corrects what an earlier version of this README implied. The AGPL-free path
+is not simply a worse model bought for a better licence — on the axis this
+project argues decides adoption, **it is 3.6× better**, cutting the worst clip
+from 31% to 10%. It costs 12 points of recall. Which operating point is right
+depends on whether a missed defect or an ignored alarm is more expensive at your
+site, and `netinspect gate` lets you write that down and enforce it.
+
+## Two augmentation strategies that failed
+
+Physics-based water augmentation (`netinspect.water`) synthesises Jerlov water
+types onto training frames — the idea behind UWCNN's training set, reimplemented
+from the model rather than the code. The hypothesis was that the between-clip
+false-alarm spread is a water-condition sensitivity.
+
+It is not. With 60% of frames degraded: worst clip unchanged at 10%, held-out day
+**0% → 2%**, recall flat at 88%. An earlier attempt with photometric jitter also
+failed (18% → 22%). Two independent augmentation strategies missing means the gap
+is probably not a data-diversity problem — the mooring cords are genuinely in the
+training distribution and genuinely look like damage.
+
+Both are kept and documented because a failed hypothesis that was actually
+measured is worth more than an untested one that sounds plausible.
 
 ## A negative result: underwater enhancement makes this worse
 

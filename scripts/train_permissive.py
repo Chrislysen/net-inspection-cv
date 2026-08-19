@@ -36,6 +36,9 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=20)
     ap.add_argument("--batch-size", type=int, default=4)
     ap.add_argument("--lr", type=float, default=5e-4)
+    ap.add_argument("--water-augment", type=float, default=0.0,
+                    help="fraction of frames degraded through the Jerlov water "
+                         "model (0 = off)")
     ap.add_argument("--device", default=None, help="cuda / cpu (auto by default)")
     ap.add_argument("--out", default="models/permissive_v1.pt")
     args = ap.parse_args()
@@ -49,7 +52,8 @@ def main() -> None:
           f"{len(samples) - labelled} clean) from {split_dir}")
 
     cfg = PermissiveConfig(arch=args.arch, epochs=args.epochs,
-                           batch_size=args.batch_size, lr=args.lr)
+                           batch_size=args.batch_size, lr=args.lr,
+                           water_augment=args.water_augment)
     summary = train(samples, cfg, out_path=args.out, device=args.device)
 
     print(f"\nwrote {summary['weights']}")
