@@ -36,7 +36,7 @@ import _common  # noqa: F401
 from netinspect import acceptance as A
 from netinspect import dataset as D
 from netinspect.inference import NetInspector
-from netinspect.preprocess import apply_clahe, denoise, gray_world_white_balance
+from netinspect.preprocess import apply_clahe, compensate_red, denoise, gray_world_white_balance
 from netinspect.utils import BBox, ensure_dir, get_logger, list_images, read_image, write_json
 
 LOGGER = get_logger()
@@ -52,6 +52,11 @@ VARIANTS = {
                             "both, the usual underwater recipe"),
     "denoise_clahe": (lambda im: apply_clahe(denoise(im)),
                       "denoise first, then stretch contrast"),
+    "red_compensation": (lambda im: compensate_red(im),
+                         "Ancuti 2018 red-channel compensation — a colour-cast "
+                         "fix rather than a contrast stretch"),
+    "red_comp_white_balance": (lambda im: gray_world_white_balance(compensate_red(im)),
+                               "Ancuti's own recipe: compensate red, then white balance"),
 }
 
 
