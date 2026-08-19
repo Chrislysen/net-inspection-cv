@@ -298,7 +298,14 @@ def build_app(inspector: NetInspector, security=None):
         # Liveness must stay reachable for a load balancer, and the static
         # console has to load before it can send a key.
         open_paths = path in ("/api/health", "/api/ready") or not path.startswith(("/api", "/predict"))
-        if sec.auth_enabled and not open_paths:
+        # A CORS preflight carries no credentials — that is what the spec says it
+        # does — and this middleware runs OUTSIDE CORSMiddleware, so 401'ing the
+        # OPTIONS returned a response with no CORS headers and the browser
+        # blocked the real request. Cross-origin was therefore broken for every
+        # authenticated route whenever NETINSPECT_CORS_ORIGINS was set. A
+        # preflight discloses nothing; the request that follows it is still
+        # checked.
+        if sec.auth_enabled and not open_paths and request.method != "OPTIONS":
             supplied = (request.headers.get("x-api-key")
                         or (request.headers.get("authorization") or "").removeprefix("Bearer ").strip()
                         # Query-param keys land in access logs and browser

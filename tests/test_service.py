@@ -527,3 +527,55 @@ def test_metrics_label_values_are_escaped():
     unescaped = len([i for i, ch in enumerate(line)
                      if ch == '"' and (i == 0 or line[i - 1] != "\\")])
     assert unescaped == 2, f"malformed exposition line: {line}"
+
+
+def test_a_cors_preflight_is_not_401d_before_cors_headers_are_added():
+    """Auth wraps CORSMiddleware, so a 401'd OPTIONS carries no CORS headers.
+
+    The browser then blocks the real request, and cross-origin is broken for
+    every authenticated route the moment NETINSPECT_CORS_ORIGINS is set. A
+    preflight carries no credentials by specification.
+    """
+    from fastapi.testclient import TestClient
+
+    from netinspect.security import SecurityConfig
+
+    sec = SecurityConfig(api_key=KEY, cors_origins=("https://ops.example.com",))
+    c = TestClient(serve.build_app(NetInspector(), security=sec))
+
+    r = c.options("/api/version", headers={
+        "Origin": "https://ops.example.com",
+        "Access-Control-Request-Method": "GET",
+    })
+    assert r.status_code != 401, "the preflight was rejected before CORS could answer it"
+    assert "access-control-allow-origin" in {k.lower() for k in r.headers}, dict(r.headers)
+
+    # The actual request is still authenticated.
+    assert c.get("/api/version", headers={"Origin": "https://ops.example.com"}).status_code == 401
+
+
+def test_the_conf_threshold_actually_filters(monkeypatch):
+    """The operator-facing ?conf= control, and the output of `netinspect calibrate`.
+
+    Nothing exercised it: deleting the score filter broke no test.
+    """
+    from netinspect import inference as I
+    from netinspect.utils import BBox
+
+    # Keyword args on purpose: the 5th positional is class_id, not score, so
+    # BBox(0, 0, 10, 10, 0.9, "damage") silently leaves score at its 1.0 default
+    # and the filter looks broken when it is not.
+    class _Res:
+        boxes = [BBox(x1=0, y1=0, x2=10, y2=10, score=s, class_name="damage")
+                 for s in (0.9, 0.5, 0.1)]
+        debug = {}
+
+    monkeypatch.setattr(I, "classical_detect", lambda *a, **k: _Res())
+    insp = NetInspector()
+    img = np.zeros((32, 32, 3), dtype=np.uint8)
+
+    assert len(insp.predict(img, method="classical", conf=0.0).boxes) == 3
+    assert len(insp.predict(img, method="classical", conf=0.5).boxes) == 2
+    assert len(insp.predict(img, method="classical", conf=0.95).boxes) == 0
+    kept = insp.predict(img, method="classical", conf=0.5).boxes
+    assert all(b.score >= 0.5 for b in kept), [b.score for b in kept]
