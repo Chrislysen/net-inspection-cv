@@ -143,7 +143,7 @@ def fetch_cod_localities(timeout: int = 90, cache: str | Path | None = CACHE_PAT
     """Fetch every licensed cod locality in Norway.
 
     Results are cached to JSON because the register changes on the order of
-    weeks, not minutes, and an interview demo should not depend on a live
+    weeks, not minutes, and a demo should not depend on a live
     network call succeeding.
     """
     cache_path = Path(cache) if cache else None

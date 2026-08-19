@@ -102,7 +102,7 @@ result tables/figures in [`reports/results/`](reports/results/), models in
 [`models/`](models/), and the web UI in [`web/`](web/). For the reasoning trail:
 the [research decision log](reports/RESEARCH_SYNTHESIS.md) (what external research
 was adopted vs rejected and why) and a code-grounded
-[technical defense Q&A](reports/INTERVIEW_DEFENSE.md). For deployment:
+[technical Q&A](reports/TECHNICAL_QA.md). For deployment:
 [model card](reports/MODEL_CARD.md), [deployment runbook + SLOs](reports/DEPLOYMENT.md),
 [data-collection protocol](reports/DATA_COLLECTION.md), and the honest
 [production-readiness scorecard](reports/PRODUCTION_READINESS.md).

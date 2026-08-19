@@ -41,7 +41,7 @@ robustness via diverse-background training, reproducibility, and metrics. The
 single missing ingredient remains **real labelled net-damage footage**, and the
 pipeline is the drop-in slot for it.
 
-## Interview talking points (grounded in this repo)
+## Common questions, answered from this repo
 
 - **"How would you approach net-damage detection?"** — Inspect/understand the
   data first; start with an explainable classical baseline to gauge difficulty;

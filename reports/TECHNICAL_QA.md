@@ -3,7 +3,7 @@
 A study sheet of the questions a sharp aquaculture-technology engineer is most likely to ask,
 with precise answers tied to the actual implementation. If you can derive each of
 these from scratch, the project is a strong asset; if you can't, learn it before
-the interview — the honesty narrative collapses the moment depth is faked.
+review — the honesty narrative collapses the moment depth is faked.
 
 Every claim below traces to a file in this repo. The single non-negotiable: all
 damage is **synthetic**, so no number here is validated real-world performance.
