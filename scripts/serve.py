@@ -109,6 +109,18 @@ SOURCE_INFO = {
 }
 
 
+def _escape_label(value: str) -> str:
+    """Escape a Prometheus label value.
+
+    The exposition format is text, so an unescaped backslash, quote or newline in
+    a label does not merely look wrong — it produces a line the scraper cannot
+    parse, and one bad label discards the whole scrape.
+    """
+    return (str(value).replace("\\", "\\\\")
+                      .replace('"', '\\"')
+                      .replace("\n", "\\n"))
+
+
 class _Metrics:
     """Tiny in-process metrics store (single-process prototype)."""
     def __init__(self):
@@ -130,7 +142,7 @@ class _Metrics:
             "# TYPE netinspect_requests_total counter",
         ]
         for p, n in sorted(self.requests.items()):
-            lines.append(f'netinspect_requests_total{{path="{p}"}} {n}')
+            lines.append(f'netinspect_requests_total{{path="{_escape_label(p)}"}} {n}')
         lines += ["# HELP netinspect_inferences_total Inferences by method",
                   "# TYPE netinspect_inferences_total counter"]
         for m, n in sorted(self.inferences.items()):
@@ -309,7 +321,15 @@ def build_app(inspector: NetInspector, security=None):
             return JSONResponse({"error": "internal error", "request_id": rid}, status_code=500)
         ms = (time.perf_counter() - t0) * 1000
         if request.url.path.startswith("/api") or request.url.path.startswith("/predict"):
-            metrics.observe(request.url.path, ms)
+            # Label by the matched ROUTE TEMPLATE, not the raw path the client
+            # sent. The raw path is attacker-controlled and unbounded: a loop
+            # over /api/aaa1, /api/aaa2, ... grew the metrics dict without limit
+            # and produced a new Prometheus time series for each — a cardinality
+            # bomb that also survived a 401, since this runs for rejected
+            # requests too. Anything that matched no route is bucketed together.
+            route = request.scope.get("route")
+            label = getattr(route, "path", None) or "<unmatched>"
+            metrics.observe(label, ms)
             LOGGER.info("rid=%s %s %s -> %d %.0fms", rid, request.method,
                         request.url.path, response.status_code, ms)
         response.headers["X-Request-ID"] = rid
@@ -318,9 +338,26 @@ def build_app(inspector: NetInspector, security=None):
     async def _read_upload(file: UploadFile) -> np.ndarray:
         if file.content_type and file.content_type not in ALLOWED_UPLOAD_TYPES:
             raise HTTPException(415, f"Unsupported content type: {file.content_type}")
-        data = await file.read()
-        if len(data) > MAX_UPLOAD_BYTES:
-            raise HTTPException(413, f"Upload exceeds {MAX_UPLOAD_BYTES // (1024*1024)} MB")
+        # sec.max_upload_bytes, not the module constant. NETINSPECT_MAX_UPLOAD_MB
+        # was parsed from the environment and printed in the startup banner as
+        # the limit in force, while the check here used a hardcoded 16 MB — so an
+        # operator who tightened it got a log line saying so and no enforcement.
+        limit = sec.max_upload_bytes or MAX_UPLOAD_BYTES
+
+        # Stream and stop at the limit rather than reading the whole body first:
+        # the cap is meant to bound what this process ALLOCATES, and reading
+        # everything before measuring it means a large upload has already been
+        # held in memory by the time it is rejected.
+        chunks, total = [], 0
+        while True:
+            chunk = await file.read(1 << 20)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > limit:
+                raise HTTPException(413, f"Upload exceeds {limit // (1024*1024)} MB")
+            chunks.append(chunk)
+        data = b"".join(chunks)
         try:
             from PIL import Image
             im = Image.open(io.BytesIO(data))
@@ -472,13 +509,23 @@ def build_app(inspector: NetInspector, security=None):
     async def predict_overlay(file: UploadFile = File(...), method: str = Query("classical"),
                               conf: float = Query(0.25, ge=0.0, le=1.0)):
         from PIL import Image
+        from starlette.concurrency import run_in_threadpool
         _validate_method(method)
         img = await _read_upload(file)
         r = await _predict_async(img, method=method, conf=conf)
         metrics.inferences[method] += 1
-        vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
-        buf = io.BytesIO(); Image.fromarray(vis).save(buf, format="PNG")
-        return Response(content=buf.getvalue(), media_type="image/png")
+
+        # Inference was moved off the loop; the RENDER was not. Drawing the
+        # overlay and PNG-encoding a full-resolution frame is tens of
+        # milliseconds of pure CPU, and on the event loop it stalls every other
+        # connection — including the health check — for that whole time.
+        def _render() -> bytes:
+            vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
+            buf = io.BytesIO()
+            Image.fromarray(vis).save(buf, format="PNG")
+            return buf.getvalue()
+
+        return Response(content=await run_in_threadpool(_render), media_type="image/png")
 
     # ---------------------------------------------------------------- #
     # Drop-to-analyse: one round trip returns overlay, detections and the
@@ -488,22 +535,33 @@ def build_app(inspector: NetInspector, security=None):
     async def analyze(file: UploadFile = File(...), method: str = Query("yolo"),
                       conf: float = Query(0.25, ge=0.0, le=1.0),
                       ood: bool = Query(True)):
+        from starlette.concurrency import run_in_threadpool
         _validate_method(method)
         img = await _read_upload(file)
         r = await _predict_async(img, method=method, conf=conf)
         metrics.inferences[method] += 1
-        vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
+
+        # Everything below the detector is still CPU work on the event loop if
+        # left inline: drawing the overlay, PNG-encoding it, base64-ing it — and
+        # _ood_status, which runs a SECOND model. That last one is a full
+        # inference, so leaving it here undid the point of _predict_async
+        # entirely for every drop-to-analyse request.
+        def _render():
+            vis = r.heatmap if r.heatmap is not None else overlay_boxes(img, preds=r.boxes)
+            return _png_b64(vis), (_ood_status(inspector, img) if ood else None)
+
+        overlay_b64, ood_status = await run_in_threadpool(_render)
         return JSONResponse({
             "filename": Path(file.filename or "upload").name,
             "method": method, "conf": conf,
             "latency_ms": round(r.elapsed_ms, 1), "count": len(r.boxes),
-            "ood": _ood_status(inspector, img) if ood else None,
+            "ood": ood_status,
             "image_size": {"width": img.shape[1], "height": img.shape[0]},
             "detections": [
                 {"class": b.class_name, "score": round(b.score, 3),
                  "bbox": [int(b.x1), int(b.y1), int(b.x2), int(b.y2)]}
                 for b in r.boxes],
-            "overlay": _png_b64(vis), "is_heatmap": r.heatmap is not None,
+            "overlay": overlay_b64, "is_heatmap": r.heatmap is not None,
             "disclaimer": ("Prototype: model trained on SYNTHETIC damage. "
                            "Human review required; recall on real damage is unmeasured."),
         })

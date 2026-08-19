@@ -6,6 +6,7 @@
 |---|---|---|---|---|
 | bag1 (train backgrounds) | 38 | 0 | 0.0 | 0% |
 | bag2 (same site, other clip) | 120 | 3 | 0.025 | 2% |
+| bag3 (same DAY, third clip) | 199 | 31 | 0.156 | 12% |
 | different DAY | 200 | 36 | 0.18 | 18% |
 
 ## 2. Damage recall by background distance (composited damage)

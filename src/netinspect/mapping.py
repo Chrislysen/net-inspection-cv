@@ -64,7 +64,14 @@ RANSAC_PX = 3.0
 # Reference self-calibration from the SOLAQUA clips: mm per pixel at 1 m standoff.
 # Ground sampling distance scales linearly with distance, so this is the constant
 # that transfers between frames — and, cautiously, between clips of the same camera.
-MM_PER_PX_AT_1M = 1.26
+#
+# 1.36, not 1.26. The measured value is 1.3603 — see "mm_per_px_at_1m" in
+# reports/results/inspection_maps/2024-08-22_14-29-05_map.json, and the module
+# docstring above. The constant had drifted to 1.26, which every other statement
+# of it in the repo contradicted, and it is the fallback used whenever a pass has
+# no telemetry to self-calibrate from: a silent 7% scale error on every position
+# and size reported from such a pass.
+MM_PER_PX_AT_1M = 1.36
 
 # Drift assumption for the uncertainty estimate: visual odometry accumulates
 # roughly this fraction of distance travelled. Deliberately pessimistic — an
@@ -530,10 +537,17 @@ def coverage(track: Sequence[TrackPoint], image_size: tuple[int, int],
     """
     if not track:
         return Coverage(0, 0, 0, 0, 0, note="empty track")
-    width, height = image_size
+    _width, height = image_size
     along = np.array([p.along_m for p in track])
     across = np.array([p.across_m for p in track])
-    footprints = np.array([p.mm_per_px * width / 1000.0 for p in track])
+    # HEIGHT, not width. Swept area is (distance along track) x (strip width
+    # ACROSS track), and the vehicle's motion runs along the image x axis — that
+    # is the axis localise_detections resolves along_m on, via (bx - cx). So the
+    # across-track extent of one frame is its height. Using width multiplied the
+    # along-track extent by the along-track footprint, double-counting one axis
+    # and never using the other, which inflated swept area and therefore the
+    # coverage fraction.
+    footprints = np.array([p.mm_per_px * height / 1000.0 for p in track])
 
     gaps = []
     for a, b in zip(track[:-1], track[1:]):

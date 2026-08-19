@@ -29,9 +29,13 @@ that is NOT validated for real-world use.**
 
 ## Evaluation
 - Metrics: class-agnostic P/R/F1, COCO mAP@[.5:.95], FROC, image-level, mask IoU.
-- Proxy results (composite test): F1 ≈ 0.97 (det). **Adversarial** check: ~0% false
-  positives on real *undamaged* net (det v1); the suite caught the seg v2 model
-  regressing to 31% different-day FP. See `reports/results/`.
+- Proxy results (composite test): F1 ≈ 0.97 (det) **in-clip**; on a different day
+  the same model measures F1 0.56 (recall 0.42).
+- **Adversarial** check on all four undamaged clips: det v1 fires on **11% of 557
+  real frames** — 0% bag1, 0% bag2, **31% bag3**, 1% different-day. An earlier
+  three-clip sample that omitted bag3 reported ~0%, and that number is retracted.
+  The suite also caught the seg v2 model regressing to 35.5% different-day FP.
+  See `reports/results/`.
 - **All on synthetic damage** — see Limitations.
 
 ## Limitations & risks (read this)
@@ -44,8 +48,12 @@ that is NOT validated for real-world use.**
 
 ## Licensing / provenance
 - Code: MIT. Weights derive from Ultralytics YOLOv8 (**AGPL-3.0**) and SOLAQUA
-  (**CC BY-SA 4.0**); committed only because the repo is private. Verify before any
-  public/networked use. See `models/NOTICE.md`.
+  (**CC BY-SA 4.0**). **This repository is public**, so treat those terms as
+  binding rather than deferred — an earlier version of this line said the weights
+  were committed "only because the repo is private", which is no longer true and
+  was never a licence exemption. An AGPL-free path is implemented
+  (`netinspect.permissive_baseline`, the `permissive` extra); verify any build
+  with `netinspect sbom --fail-on copyleft`. See `models/NOTICE.md`.
 
 ## How to validate before deployment
 Provide real labelled damage (see `DATA_COLLECTION.md`), retrain with the existing

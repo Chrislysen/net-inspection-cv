@@ -17,6 +17,13 @@
       "frames_with_fp": 4,
       "fp_frame_rate": 0.033
     },
+    "bag3 (same DAY, third clip)": {
+      "frames": 199,
+      "total_detections": 30,
+      "mean_per_frame": 0.151,
+      "frames_with_fp": 27,
+      "fp_frame_rate": 0.136
+    },
     "different DAY": {
       "frames": 200,
       "total_detections": 107,
@@ -36,7 +43,7 @@
       "precision": 0.931,
       "recall": 0.892,
       "f1": 0.911,
-      "ap": 0.885
+      "ap": 0.884
     },
     "different-day": {
       "precision": 0.698,
@@ -48,13 +55,13 @@
   "froc": [
     {
       "conf": 0.05,
-      "fp_per_undamaged_frame": 1.855,
+      "fp_per_undamaged_frame": 1.85,
       "recall": 0.962,
       "precision": 0.439
     },
     {
       "conf": 0.1,
-      "fp_per_undamaged_frame": 1.055,
+      "fp_per_undamaged_frame": 1.05,
       "recall": 0.942,
       "precision": 0.583
     },
@@ -66,7 +73,7 @@
     },
     {
       "conf": 0.3,
-      "fp_per_undamaged_frame": 0.46,
+      "fp_per_undamaged_frame": 0.455,
       "recall": 0.846,
       "precision": 0.733
     },

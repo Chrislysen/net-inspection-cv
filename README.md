@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-522%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-591%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -56,13 +56,13 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **Data** | Synthetic demo (pipeline test) · **SOLAQUA** real ROV footage of *undamaged* nets (SINTEF, CC BY-SA 4.0) · **synthetic damage composited onto real net frames** for trainable, labelled, comparable data. |
 | **Key result (proxy)** | Damage-localisation F1 on the composite test set: anomaly **0.12** → classical **0.50** → PatchCore **0.78** (label-free) → YOLOv8 **0.97**. |
 | **Honesty check** | On real *undamaged* net the detector fires on **0%** of two same-day clips, **31%** of a third, and **1%** on a different day. An earlier version of this table reported only the two clean clips and the different day — the 31% clip was missing from the evaluation set, so the headline understated false alarms. Corrected, and the corrected result is the more useful one: **between-clip spread on a single day (0→31%) is ~30× the day effect (1%)**, so the scene, not the day, is what these models are sensitive to. Looking at the frames shows what the scene effect *is*: the detector fires on the **thin bright mooring cords** rigged around calibration markers, not on the mesh. |
-| **Robustness work** | Caught a seg-model out-of-distribution regression (31% → **18%** via multi-clip training; stronger augmentation **failed** at 22%). A 200-frame re-check — which **corrected my own 1%→11% sampling artifact** — shows an honest **precision/recall trade-off** on the held-out day: a bigger **YOLOv8s-seg (A100)** = best recall **0.98** at 11% false alarms; the **det∧seg ensemble** = **0%** false alarms but ~0.57 recall. Plus an **OOD gate** (defers 100% of different-day frames to human review) and a *failed* test-time normalisation. Full ledger: [report §5.7–5.8](reports/PROTOTYPE_REPORT.md). |
+| **Robustness work** | Caught a seg-model out-of-distribution regression (35.5% → **17.5%** different-day via multi-clip training; stronger augmentation **failed** to improve on that, 18.5%). A 200-frame re-check — which **corrected my own 1%→11% sampling artifact** — shows an honest **precision/recall trade-off** on the held-out day: a bigger **YOLOv8s-seg (A100)** = best recall **0.98** at 11% false alarms; the **det∧seg ensemble** = **0.5%** false alarms but ~0.57 recall. Plus an **OOD gate** (defers 100% of different-day frames to human review) and a *failed* test-time normalisation. Full ledger: [report §5.7–5.8](reports/PROTOTYPE_REPORT.md). |
 | **Temporal** | Persistence tracking removes **~70%** of transient false alarms on real undamaged video. |
 | **Localisation** | Detections are placed on the **net**, not the frame: metres along/across the sweep, depth, and size in mm, from visual odometry with **self-calibrating scale** (no chessboard — 1.36 mm/px at 1 m, implied 82° HFOV). Repeat sightings collapse **107 alerts → 6 distinct sites (18×)**, and the pass reports the bands it never photographed, so "clean" is distinguishable from "never looked". An **interactive 3-D cage** in the console (cylinder + cone + feed barge, no 3-D library) places each site relative to that landmark and shows the photograph behind it — and puts the pass in proportion: **0.14% of a 4,589 m² net**. |
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
 | **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable — Claude API, local Ollama, or **any OpenAI-compatible endpoint** (Nous, Together, Groq, or a vLLM you host on Modal) — so the guardrail is **measured**, not asserted: boundary disclosure **100% on all six models tested** (3B–15B, three families), while tool grounding ranges 50–100% and does **not** track model size. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **522 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **591 passing tests** across 34 files (+20 headless renderer checks) · GitHub Actions CI · committed models. |
 | **Adoption** | One CLI (`netinspect doctor / onboard / train / calibrate / gate / serve / live / map`). **`onboard`** ingests YOLO, COCO, VOC or bare images, audits them, and splits **grouped by clip** so video frames cannot straddle a split — plus perceptual hashing to catch the same footage exported twice. It refuses bad input rather than proceeding. **`calibrate`** picks the threshold on *your* validation split against a false-alarm budget. **`gate`** measures against a version-controlled operating point and **exits non-zero**, failing closed when a rate is not measurable. |
 | **Security** | Secure by default: **refuses to bind anything but loopback without an API key**, so an unauthenticated endpoint cannot be published by forgetting. `POST /api/live/start` is **default-deny** (camera indices, an allowlisted media root, glob-matched stream URLs) and blocks private/link-local hosts even when a pattern matches — closing an SSRF path to cloud instance metadata. Plus decompression-bomb limits, a bounded inference concurrency, same-origin CORS, and `/api/version` with per-model SHA-256 digests. |
 | **Deployability** | Thread-safe under concurrent requests (double-checked model loading + serialised inference on the shared model, with tests that fail without them) · reference reverse-proxy config for TLS, rate limiting and CSP · **an AGPL-free detector path** on torchvision, measured against the Ultralytics one rather than asserted. |
@@ -409,7 +409,7 @@ false-alarm spread is a water-condition sensitivity.
 
 It is not. With 60% of frames degraded: worst clip unchanged at 10%, held-out day
 **0% → 2%**, recall flat at 88%. An earlier attempt with photometric jitter also
-failed (18% → 22%). Two independent augmentation strategies missing means the gap
+failed to improve on it (17.5% → 18.5%). Two independent augmentation strategies missing means the gap
 is probably not a data-diversity problem — the mooring cords are genuinely in the
 training distribution and genuinely look like damage.
 
@@ -602,11 +602,11 @@ the detector's 1%). Two honest options, opposite ends of the operating curve:
 
 | Held-out different day (200 frames) | det v1 | seg v3 | **ensemble (det∧seg)** | **seg-gpu (A100)** |
 |---|---|---|---|---|
-| Undamaged false-positive rate | 1% | 18% | **0%** | 11% |
+| Undamaged false-positive rate | 1% | 17.5% | **0.5%** | 11% |
 | Damage recall (F1) | 0.56 | 0.93 | 0.57 | **0.98** |
 
 The **ensemble** (detector proposes, segmenter confirms) drives false alarms to
-**0%** and adds masks, but inherits the detector's caution (~0.57 recall — it only
+**0.5%** — one frame in 200, not zero — and adds masks, but inherits the detector's caution (~0.57 recall — it only
 confirms damage the detector already found). The bigger **`seg-gpu`** catches
 **0.98** of the damage at an 11% false-alarm cost. Pick by which error is more
 expensive — a *missed defect* or a *false alarm*. (Recall here is on synthetic
@@ -648,7 +648,7 @@ Generated from the committed result JSONs by `python scripts/make_plots.py`
 | ![temporal](reports/results/plots/temporal_reduction.png) |
 
 The robustness story, end to end: the first segmentation model (`seg v2`) regressed
-badly out-of-distribution (31% different-day false alarms) — a failure the
+badly out-of-distribution (35.5% different-day false alarms) — a failure the
 evaluation **caught**. Multi-clip training (`seg v3`) cut that to **18%**; a
 **stronger-augmentation** follow-up (`seg v4`) **failed** to improve it (22% — kept
 as an honest negative); and a bigger **YOLOv8s-seg on a GPU** (`seg-gpu`) reached
@@ -888,9 +888,11 @@ same threshold:
 | `yolo` | Ultralytics **AGPL-3.0** | 0% | **100%** |
 | `permissive` | torchvision **BSD-3-Clause** | 0% | 88% |
 
-That is 21 of 24 damaged frames against 24 of 24, on 29 frames, after 12 epochs
-on a laptop CPU — a small denominator and an untuned model, so read it as "the
-path works and costs something", not as a definitive gap. Ultralytics is the
+That is 21 of 24 damaged frames against 24 of 24, on 29 frames. The shipped
+checkpoint has had **30 epochs on a GPU** (final loss 0.108 — see the sidecar
+`models/permissive_v1.json`, written by the training run itself), so the gap is
+not simply undertraining; the denominator is still small, so read it as "the path
+works and costs something", not as a definitive gap. Ultralytics is the
 better training stack; this trades some recall for a licence you can deploy.
 Measure both on your own data and decide with numbers.
 
@@ -1344,7 +1346,7 @@ python scripts/extract_frames.py --video data/raw/video.mp4 --out data/processed
 - **Production-shaped serving:** path-traversal-safe, upload validation, structured logging + request IDs, `/health` `/ready` `/metrics`, no-leak error handling.
 - **Torch-free ONNX inference** (`onnx_infer.py`, parity-verified) + a **streaming pipeline** (`stream_inspect.py`) that emits one confirmed-damage alert per new track.
 - **Ops artifacts:** model card, deployment/SLO runbook, data-collection protocol, and a self-critical [production-readiness scorecard](reports/PRODUCTION_READINESS.md).
-- Tests (61) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, **ONNX**, the **DINOv2 backbone**, and **SimCLR pretraining**.
+- Tests (591, in 34 files) for data, metrics, anomaly, compositing, inference, temporal, PatchCore, COCO, per-class, **service security/integration**, **deployment/container contract**, **licence/SBOM**, **ONNX**, the **DINOv2 backbone**, and **SimCLR pretraining**.
 
 **Placeholder / synthetic (clearly marked):**
 

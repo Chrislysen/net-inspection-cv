@@ -4,7 +4,7 @@ Motivation (measured, not assumed)
 -----------------------------------
 On the held-out different *day*, the box detector ``yolo_damage_v1`` fires on only
 **1%** of undamaged frames, while the segmentation models (``seg v2/v3/v4``) fire
-on 18–31% — they add masks but generalise worse out-of-distribution. Rather than
+on 17.5–35.5% different-day — they add masks but generalise worse out-of-distribution. Rather than
 pick one, combine them with a simple agreement rule:
 
 * **det proposes** — take the box detector's predictions (high precision, low OOD

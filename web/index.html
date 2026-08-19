@@ -4,9 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Net Inspection — Damage Detection Console</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<!-- No remote fonts. This used to pull IBM Plex from Google, which contradicted
+     the CSP shipped in deploy/Caddyfile (default-src 'self', no font-src) — so
+     behind the reference proxy the request was blocked and the console silently
+     fell back anyway. It also made first paint depend on reaching the internet,
+     which an inspection vessel may well not be able to do. The stack below is
+     resolved locally on every target platform. -->
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>

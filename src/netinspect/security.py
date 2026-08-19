@@ -252,18 +252,32 @@ def validate_live_source(source: str | int, cfg: SecurityConfig) -> str | int:
         # letter ("C:/...") as a scheme.
         raise SourceRejected(f"Unsupported scheme in {raw!r}.")
 
-    # A filesystem path. Whole-string globbing is fine here: paths are what the
-    # pattern is describing, and containment under media_root is checked below.
-    if any(fnmatch.fnmatch(raw, pat) for pat in cfg.live_allow):
-        return raw
-    if cfg.media_root is None:
-        raise SourceRejected(
-            f"File sources are not allowed: {ENV_MEDIA_ROOT} is not set. "
-            "Set it to the directory holding your clips.")
+    # A filesystem path. RESOLVE BEFORE MATCHING ANYTHING.
+    #
+    # This branch used to glob the raw string and return early on a match, which
+    # skipped the containment check the comment claimed was performed. fnmatch's
+    # '*' crosses os.sep, so an operator who allowed "/data/*" also, without
+    # knowing it, allowed "/data/../../etc/shadow" — the pattern matched, the
+    # path was never resolved, and the unresolved string was handed to the
+    # decoder. Resolving first collapses the "..", so a pattern can only ever
+    # match where the path actually points.
     try:
         resolved = Path(raw).resolve()
     except OSError as exc:
         raise SourceRejected(f"Unusable path {raw!r}: {exc}")
+
+    # An explicit allowlist entry may still permit a location outside media_root
+    # — that is what an allowlist is for — but it must match where the path
+    # RESOLVES to, never the string the client sent. Both separator forms are
+    # tried so one pattern serves Windows and POSIX alike.
+    candidates = {str(resolved), resolved.as_posix()}
+    if any(fnmatch.fnmatch(c, pat) for c in candidates for pat in cfg.live_allow):
+        return str(resolved)
+
+    if cfg.media_root is None:
+        raise SourceRejected(
+            f"File sources are not allowed: {ENV_MEDIA_ROOT} is not set. "
+            "Set it to the directory holding your clips.")
     if not resolved.is_relative_to(cfg.media_root):
         raise SourceRejected(
             f"Refusing to open {resolved} — outside {ENV_MEDIA_ROOT} "

@@ -17,6 +17,13 @@
       "frames_with_fp": 0,
       "fp_frame_rate": 0.0
     },
+    "bag3 (same DAY, third clip)": {
+      "frames": 199,
+      "total_detections": 5,
+      "mean_per_frame": 0.025,
+      "frames_with_fp": 5,
+      "fp_frame_rate": 0.025
+    },
     "different DAY": {
       "frames": 200,
       "total_detections": 24,

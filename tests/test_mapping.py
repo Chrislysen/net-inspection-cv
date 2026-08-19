@@ -122,11 +122,18 @@ def test_orientation_is_a_rotation_not_a_mirror():
                         standoff_m=[1.0] * 11)
     assert rev[-1].orient == -1.0
     assert fwd[-1].orient == 1.0
-    # Raw integration of dx=+40, dy=+10 runs to (-0.504, -0.126); a 180-degree
-    # rotation negates both, a mirror would negate only along. The tell is the
-    # across/along ratio, which a rotation preserves and a mirror inverts.
-    assert rev[-1].along_m == pytest.approx(0.504, abs=1e-3)
-    assert rev[-1].across_m == pytest.approx(0.126, abs=1e-3)
+    # A 180-degree rotation negates both components; a mirror would negate only
+    # along. The tell is the across/along RATIO, which a rotation preserves and a
+    # mirror inverts — so that is what this asserts.
+    #
+    # The magnitudes are derived from the scale constant rather than hardcoded.
+    # They used to be literals computed against MM_PER_PX_AT_1M = 1.26, so when
+    # that constant was corrected to its measured 1.36 this test failed for a
+    # reason that had nothing to do with rotation. Ten steps of dx=40 px at 1 m
+    # standoff is 400 px of travel.
+    expected_along = 10 * 40.0 * M.MM_PER_PX_AT_1M / 1000.0
+    assert rev[-1].along_m == pytest.approx(expected_along, rel=1e-3)
+    assert rev[-1].across_m == pytest.approx(expected_along * 0.25, rel=1e-3)
     assert rev[-1].across_m / rev[-1].along_m == pytest.approx(0.25, abs=1e-3)
 
 

@@ -240,3 +240,18 @@ def test_matched_band_handles_an_empty_group():
     out = matched_band_comparison({"day_a": [0, 1, 0], "day_b": []})
     assert out["groups"]["day_b"]["n"] == 0
     assert "interpretation" not in out      # no comparison claimed from nothing
+
+
+def test_an_unknown_lock_state_is_not_treated_as_locked():
+    """`locked is False` let the parameter's own default through as trusted.
+
+    None means "no lock telemetry for this frame", which the module docstring
+    calls unknown — but only an explicit False was caught, so the default, and
+    any falsy non-bool, was reported in_envelope and trusted.
+    """
+    gate = EnvelopeGate(EnvelopeSpec(require_lock=True))
+    for unknown in (None, False, 0, 0.0):
+        v = gate.check(standoff_m=1.4, speed_ms=0.28, locked=unknown)
+        assert v.status == UNKNOWN, f"locked={unknown!r} was accepted as a lock"
+
+    assert gate.check(standoff_m=1.4, speed_ms=0.28, locked=True).status != UNKNOWN

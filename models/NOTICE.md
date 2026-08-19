@@ -7,7 +7,7 @@ re-training/re-downloading. They are **not** validated damage detectors.
 
 | File | What it is |
 |---|---|
-| `yolo_damage_v1.pt` | YOLOv8n detector — the most ROBUST model (0-1% undamaged FP, F1 0.97 different-day) |
+| `yolo_damage_v1.pt` | YOLOv8n detector — the most robust of these models, which is not the same as robust: 11% false alarms across 557 real undamaged frames (0/0/31/1% by clip), and different-day recall 0.42 (F1 0.56) against 0.97 in-clip |
 | `yolo_damage_seg_v2.pt` | YOLOv8n-seg (masks), single-clip; regressed out-of-distribution (31% different-day FP) — kept as the documented "before" of the closed-loop fix |
 | `yolo_damage_seg_v3.pt` | YOLOv8n-seg trained on DIVERSE multi-clip backgrounds; recovered most of v2's OOD gap (different-day FP 31%->18%, recall F1 0.77->0.91). **Best segmenter.** See reports/results/adversarial_seg_v3/ |
 | `yolo_damage_seg_v4.pt` | YOLOv8n-seg, multi-clip + STRONG photometric augmentation + more negatives. Tested the hypothesis that simulated day-to-day jitter would shrink the residual OOD gap; it did NOT (different-day FP 22% vs v3's 18%; better in-distribution masks, no better OOD). Kept as the honest negative result. See reports/results/adversarial_seg_v4/ |
@@ -27,7 +27,9 @@ re-training/re-downloading. They are **not** validated damage detectors.
   The *backgrounds* are real; the *damage* is synthetic (one generator, identical
   distribution in train and test). Reported F1 ≈ 0.97 in-clip / ≈ 0.98 on a
   held-out clip is a strong **relative/proxy** result, **NOT** validated
-  real-damage performance. Cross-clip = same site/camera, not cross-site.
+  real-damage performance. Cross-clip = same site/camera, not cross-site — and on
+  a **different day** the same model measures F1 0.56 (recall 0.42), so those
+  headline figures do not survive a change of day.
 * **`anomaly_normal_net.npz`** — fitted on ~38 real undamaged SOLAQUA frames. It
   flags *deviation from normal net* (biofouling/lighting too), not confirmed damage.
 
@@ -64,7 +66,10 @@ and a test parses the module's imports to keep it that way.
 
 Measured against the AGPL model on the same held-out split, same threshold:
 `yolo` 0% false alarms / 100% recall, `permissive` 0% / 88% (21 of 24 damaged
-frames, 29 frames total, 12 CPU epochs). The gate passes it. Ultralytics remains
+frames, 29 frames total). The shipped checkpoint was retrained for **30 epochs on
+a GPU** (final loss 0.108) — see the sidecar `models/permissive_v1.json`, which is
+written by the training run itself and is the authority on its provenance. The
+gate passes it. Ultralytics remains
 the better training stack; this trades some recall for a licence you can deploy,
 and the trade is a number rather than a claim.
 

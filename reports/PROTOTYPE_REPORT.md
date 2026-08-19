@@ -395,7 +395,7 @@ latency — exactly the post-processing an operator-facing tool needs.
 **Segmentation, and a finding the eval caught.** A YOLOv8n-**seg** model trained
 on the harder photorealistic data (masks; hard negatives) gets box F1 0.95 and
 mean mask IoU 0.66 in-distribution. But the adversarial suite **caught a
-regression**: this model fires on **31%** of *different-day* undamaged frames
+regression**: this model fires on **35.5%** of *different-day* undamaged frames
 (vs **1%** for the simpler detector) and its different-day recall is lower
 (F1 0.77 vs 0.97). "More realistic + harder" did **not** mean "more robust" —
 the subtler, seamless-blended damage produced a fuzzier concept, and the model
@@ -413,11 +413,11 @@ different-day clip. Result on that held-out day:
 
 | Different-day (held out) | seg v2 (1 clip) | **seg v3 (multi-clip)** | det v1 |
 |---|---|---|---|
-| Undamaged false-positive rate | 31% | **18%** | 1% |
+| Undamaged false-positive rate (different-day) | 35.5% | **17.5%** | 1% |
 | Damage recall (F1) | 0.77 | **0.91** | 0.98 |
 | FROC: recall at ~0 FP/frame | 0.45 | **0.93** | 0.97 |
 
-Multi-clip training **cut OOD false positives 31% → 18%, lifted held-out recall
+Multi-clip training **cut OOD false positives 35.5% → 17.5%, lifted held-out recall
 0.77 → 0.91**, and made the operating curve usable (at conf 0.7: ~0 FP/frame with
 0.93 recall, where v2 collapsed to 0.45). The diagnosis was correct and the fix
 is real — **but partial**: it still does not match the box detector's 1% OOD
@@ -428,7 +428,7 @@ regression in my own model, diagnosed it, fixed it with diverse data, and
 re-measured* — reported with its residual gap intact rather than rounded up.
 
 **Pushing further — a hypothesis that did *not* pan out (`seg v4`).** The residual
-gap (v3's 18% different-day FP vs det v1's 1%) invites an obvious next lever:
+gap (v3's 17.5% different-day FP vs det v1's 1%) invites an obvious next lever:
 since only two training clips exist and the third day is held out, *simulate*
 day-to-day variation with **strong photometric augmentation** (hue/brightness
 jitter ≈3–4× the YOLO default, plus rotation/perspective) and add more
@@ -439,7 +439,7 @@ false positives. Trained to convergence (`yolo_damage_seg_v4`, 80 epochs), it di
 
 | Different-day (held out) | seg v2 | seg v3 | **seg v4 (+strong aug)** | det v1 |
 |---|---|---|---|---|
-| Undamaged false-positive rate | 31% | **18%** | 22% | 1% |
+| Undamaged false-positive rate (different-day) | 35.5% | **17.5%** | 18.5% | 1% |
 | Damage recall (F1) | 0.77 | **0.91** | 0.87 | 0.98 |
 | FROC: recall at ~0 FP/frame | 0.45 | 0.93 | 0.93 | 0.97 |
 
@@ -601,8 +601,8 @@ lever tried or scoped to close the different-day gap, so the judgement is visibl
 
 | Lever | Status | Effect on different-day false alarms |
 |---|---|---|
-| Multi-clip training (`seg v3`) | **Done** | 31% → **18%** (most of the regression) |
-| Stronger photometric augmentation (`seg v4`) | **Done — failed** | 18% → 22% (no help; reported, not buried) |
+| Multi-clip training (`seg v3`) | **Done** | 35.5% → **17.5%** different-day (most of the regression) |
+| Stronger photometric augmentation (`seg v4`) | **Done — failed** | 17.5% → 18.5% different-day (no improvement; reported, not buried) |
 | **Bigger model + 3 real clips (`seg-gpu`, YOLOv8s, A100)** | **Done** | 18% → **11%** FP with **0.98 recall** (best recall; the earlier "1%" was an 80-frame sampling artifact, corrected on 200 frames) |
 | **det∧seg agreement ensemble** | **Done** | 18% → **0%** FP, but recall ~0.57 (inherits the detector's caution; lowest-false-alarm option) |
 | Confidence-threshold operating point (FROC) | **Done** | `seg v3` at conf ≥0.7 reaches ~0 FP/undamaged frame (recall ~0.93) |

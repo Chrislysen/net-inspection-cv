@@ -9,6 +9,13 @@
 #
 # Caddy rather than nginx for the reference config because it obtains and
 # renews certificates automatically; the nginx equivalent is beside it.
+#
+# UPSTREAM: defaults to `inspection:8000`, the service name in
+# deploy/docker-compose.yml, because that is how this file is actually deployed —
+# Caddy in its own container, where 127.0.0.1 is Caddy itself and proxying to it
+# 502s every request. Override for a same-host install:
+#
+#   NETINSPECT_UPSTREAM=127.0.0.1:8000 caddy run --config deploy/Caddyfile
 
 inspection.example.com {
 	# Certificates are issued and renewed automatically. Replace the hostname
@@ -33,7 +40,7 @@ inspection.example.com {
 	# protection causes the outage.
 	@health path /api/health /api/ready
 	handle @health {
-		reverse_proxy 127.0.0.1:8000
+		reverse_proxy {$NETINSPECT_UPSTREAM:inspection:8000}
 	}
 
 	# Inference is expensive. This is a per-IP budget, not a security control:
@@ -50,7 +57,7 @@ inspection.example.com {
 				window 1m
 			}
 		}
-		reverse_proxy 127.0.0.1:8000 {
+		reverse_proxy {$NETINSPECT_UPSTREAM:inspection:8000} {
 			# The MJPEG live stream is a long-lived response and must not be
 			# buffered or timed out like a JSON call.
 			flush_interval -1

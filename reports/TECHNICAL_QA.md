@@ -57,12 +57,34 @@ labelled damage; the pipeline trains on it unchanged.
 Real undamaged net has *no* dark see-through holes, so a damage detector should
 **rarely fire** on it. The test runs the trained model on real undamaged frames —
 including the very backgrounds it trained on — and counts detections (every one is
-a false alarm). The det model fired on **0%** of bag1/bag2 frames and **1%**
-different-day, holding F1≈0.97; a model cheating on background/artifacts would light
-up here. The FROC curve (FP-per-undamaged-frame vs recall across confidence) shows
-**0 FP/frame at conf ≥ 0.4 with recall ~0.97** — a clean operating point. Crucially,
-the same suite **caught a regression in my own seg model** (31% different-day false
-positives), which I diagnosed and fixed rather than hid (Q6).
+a false alarm).
+
+The result is worse than this document used to claim, and the correction matters
+more than the original number. On the **four** undamaged clips now evaluated, the
+det model fires on 0% of bag1, 0% of bag2, **31% of bag3**, and 1% of the
+different-day clip — **11% overall across 557 real frames**. The earlier "0% and
+1%" headline came from a three-clip sample that omitted bag3; adding the clip that
+was on disk all along changed the picture, and the honest summary is that
+between-clip variance (0%, 0%, 31% on a *single day*) dwarfs the day-to-day
+effect. That spread is still unexplained, and two augmentation strategies have
+failed to close it.
+
+The F1≈0.97 in the sentence this replaced was also the wrong number for the wrong
+set. Measured (`reports/results/adversarial_yolo/adversarial.json`):
+
+| set | precision | recall | F1 |
+|---|---|---|---|
+| in-clip | 0.958 | 0.979 | 0.968 |
+| cross-clip (bag2) | 0.981 | 0.976 | 0.979 |
+| **different-day** | 0.815 | **0.423** | **0.557** |
+
+So ~0.97 is the in-clip and cross-clip figure; on a **different day recall falls to
+0.42**. Generalisation across backgrounds is real but partial, and it degrades
+exactly where you would expect it to.
+
+Crucially, the same suite **caught a regression in my own seg model** (35.5%
+different-day false positives on the 200-frame basis), which I diagnosed and fixed
+rather than hid (Q6).
 
 ### 5. Why IoU 0.30 and class-agnostic matching? (`evaluate.py`)
 For a first prototype the meaningful question is *"did we localise the damage"*, not

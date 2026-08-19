@@ -2,10 +2,12 @@
 #
 #   cd deploy && docker compose up
 #
-# STATUS: written, NOT run — no Docker daemon was available where this was
-# authored and CI does not build it. Treat it as a starting point that has never
-# been executed. Everything it configures is documented in the service itself;
-# the composition is the part nobody has confirmed.
+# STATUS: the IMAGE is built and verified (Docker 29.7.2 — see the Dockerfile
+# header), but this COMPOSITION has not been brought up end to end: the proxy
+# needs a real hostname and a certificate, and the rate-limit directive needs a
+# Caddy built with github.com/mholt/caddy-ratelimit. The service half is
+# exercised; the two-container wiring is the part nobody has confirmed. CI does
+# not run it either.
 services:
   inspection:
     build:

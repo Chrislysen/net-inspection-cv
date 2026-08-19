@@ -14,8 +14,13 @@
   --accent-soft: #fdece1;
   --heat: #1f7a8c;
   --ok: #2f9e44;
-  --sans: "IBM Plex Sans", system-ui, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  /* Local-only stacks: the console must render identically with no network.
+     "IBM Plex *" is kept first so an operator who has it installed still gets
+     it, but nothing is fetched. */
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, "Cascadia Mono",
+          Consolas, "Liberation Mono", monospace;
   --shadow: 0 1px 2px rgba(20,40,50,0.05), 0 2px 8px rgba(20,40,50,0.04);
 }
 

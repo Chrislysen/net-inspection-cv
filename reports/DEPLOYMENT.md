@@ -13,12 +13,27 @@ Health/readiness/metrics: `GET /api/health`, `/api/ready`, `/api/metrics`.
 
 ## 2. Container
 ```bash
-docker build -t net-inspection-cv .
-docker run -p 8000:8000 net-inspection-cv
+docker build -t netinspect .
+docker run -p 8000:8000 -e NETINSPECT_API_KEY="$(openssl rand -hex 24)" netinspect
 ```
+**The key is not optional.** `CMD` binds `0.0.0.0` — the only useful bind inside a
+container — and the service refuses a non-loopback bind without authentication,
+so without it the container exits at startup rather than coming up open.
+
+For a build with no AGPL in it at all:
+```bash
+docker build --build-arg EXTRAS=cv,permissive,serve -t netinspect-permissive .
+docker run --rm netinspect-permissive netinspect sbom --fail-on copyleft   # exit 0
+```
+Note that variant ships without ultralytics, so point it at a permissive
+checkpoint (`--permissive-weights`) rather than the YOLO weights, or `/api/ready`
+will correctly report `yolo` as configured-but-unavailable.
+
 The image installs the package + committed models and runs the FastAPI service
-(`scripts/serve.py`). Health checks should target `/api/ready` (returns 503 until
-the classical path is available).
+(`scripts/serve.py`). Health checks should target `/api/health` for **liveness**
+and `/api/ready` for **readiness** — the latter returns 503, naming the methods,
+when anything the deployment was configured for failed to resolve. Both stay open
+without a key so probes keep working.
 
 ## 3. Torch-free / edge inference
 The deployable inference path needs **no PyTorch**:
@@ -58,6 +73,14 @@ Vision platform (offline review first, alerting later), not as a standalone tool
   flagged defect before action.
 
 ## 7. What is explicitly NOT production-ready
-Auth/rate-limiting, multi-worker scaling, a real metrics backend + dashboards,
-automated retraining/registry, and — above all — **validated real-damage
-performance**. See `PRODUCTION_READINESS.md`.
+**Authentication is implemented** and is mandatory for any non-loopback bind —
+`NETINSPECT_API_KEY`, enforced on every `/api` and `/predict` route except the two
+probe endpoints, with the service refusing to start otherwise. It is listed here
+no longer.
+
+Still genuinely missing: **rate limiting and TLS** (both delegated to the reverse
+proxy in `deploy/docker-compose.yml`), **multi-worker scaling** (metrics are
+in-process counters and averages, so they neither aggregate across workers nor
+give percentiles), a real metrics backend and dashboards, automated
+retraining/registry, and — above all — **validated real-damage performance**.
+See `PRODUCTION_READINESS.md`.

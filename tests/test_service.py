@@ -431,3 +431,99 @@ def test_the_console_offers_every_method_the_server_can_run():
     listed = set(re.findall(r'"([a-z]+)"', order))
     from netinspect.inference import METHODS
     assert listed == set(METHODS), f"UI {listed} vs server {set(METHODS)}"
+
+
+# --------------------------------------------------------------------------- #
+# authentication — the service's only access control
+# --------------------------------------------------------------------------- #
+KEY = "test-key-0123456789abcdef"
+
+
+@pytest.fixture(scope="module")
+def authed_client():
+    """A client whose app has an API key configured."""
+    from fastapi.testclient import TestClient
+
+    from netinspect.security import SecurityConfig
+
+    sec = SecurityConfig(api_key=KEY)
+    assert sec.auth_enabled, "SecurityConfig did not enable auth for a set key"
+    return TestClient(serve.build_app(NetInspector(), security=sec))
+
+
+def test_a_protected_route_is_refused_without_a_key(authed_client):
+    """This whole block exists because the middleware had no test at all.
+
+    It could have been deleted and the suite would have stayed green — for the
+    one control standing between a public port and an inference endpoint that
+    can be told to open a camera.
+    """
+    r = authed_client.get("/api/version")
+    assert r.status_code == 401, "an unauthenticated request reached a protected route"
+    assert "unauthorized" in r.text
+
+
+@pytest.mark.parametrize("send", [
+    lambda c: c.get("/api/version", headers={"X-API-Key": KEY}),
+    lambda c: c.get("/api/version", headers={"Authorization": f"Bearer {KEY}"}),
+    lambda c: c.get(f"/api/version?key={KEY}"),
+])
+def test_every_documented_way_of_sending_the_key_works(authed_client, send):
+    assert send(authed_client).status_code == 200
+
+
+@pytest.mark.parametrize("bad", ["", "wrong", KEY + "x", KEY[:-1], KEY.upper()])
+def test_a_wrong_key_is_refused(authed_client, bad):
+    r = authed_client.get("/api/version", headers={"X-API-Key": bad})
+    assert r.status_code == 401, f"{bad!r} was accepted"
+
+
+def test_health_and_ready_stay_open_so_probes_keep_working(authed_client):
+    """A load balancer carries no credentials; if these 401 the pod never starts."""
+    for path in ("/api/health", "/api/ready"):
+        assert authed_client.get(path).status_code in (200, 503), path
+
+
+def test_the_console_itself_loads_without_a_key(authed_client):
+    """It has to render before it can send one."""
+    assert authed_client.get("/").status_code == 200
+
+
+def test_predict_is_protected_too(authed_client):
+    """/predict does not start with /api and must not fall through the check."""
+    r = authed_client.post("/predict", files={"file": ("a.png", b"x", "image/png")})
+    assert r.status_code == 401, "the upload route was reachable unauthenticated"
+
+
+def test_no_key_configured_means_no_gate(client):
+    """Local use must stay frictionless — that is why binding is what fails closed."""
+    assert client.get("/api/version").status_code == 200
+
+
+def test_metrics_labels_are_bounded_by_route_not_client_path(client):
+    """A client-controlled label is a cardinality bomb.
+
+    The middleware recorded request.url.path verbatim, so a loop over
+    /api/aaa1, /api/aaa2, ... grew the metrics dict without limit and minted a
+    new Prometheus time series for each — and it did so for requests auth had
+    already rejected.
+    """
+    for i in range(25):
+        client.get(f"/api/definitely-not-a-route-{i}")
+    txt = client.get("/api/metrics").text
+    assert "definitely-not-a-route-3" not in txt, (
+        "a client-supplied path became a metric label; cardinality is unbounded")
+    assert "<unmatched>" in txt, "unmatched requests should still be counted, in one bucket"
+
+
+def test_metrics_label_values_are_escaped():
+    """One unparseable line discards the entire scrape."""
+    m = serve._Metrics()
+    m.observe(r'/api/x"y\z', 1.0)
+    line = next(ln for ln in m.prometheus().splitlines()
+                if ln.startswith("netinspect_requests_total{"))
+    assert '\\"' in line and "\\\\" in line, line
+    # The label must be exactly one quoted string: 2 unescaped quotes on the line.
+    unescaped = len([i for i, ch in enumerate(line)
+                     if ch == '"' and (i == 0 or line[i - 1] != "\\")])
+    assert unescaped == 2, f"malformed exposition line: {line}"

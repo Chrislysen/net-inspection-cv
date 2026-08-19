@@ -5,6 +5,20 @@
 #   docker run --rm -v "$PWD/mydata:/data" netinspect \
 #       netinspect onboard /data/raw --out /data/prepared      # your own footage
 #
+# Two things the image does NOT do, stated rather than discovered:
+#
+# * `patchcore` and `permissive` fetch their torchvision backbone from
+#   download.pytorch.org on FIRST inference. Nothing pre-warms that cache, so an
+#   air-gapped or egress-filtered host can serve `classical`, `yolo` and
+#   `anomaly` out of the box but not those two. Bake them in with a
+#   `RUN python -c "import torchvision; torchvision.models.resnet18(weights='DEFAULT')"`
+#   if that matters to you; it is left out because it adds ~100 MB most
+#   deployments never use.
+# * The AGPL-free build (EXTRAS below) ships the YOLO weights but not
+#   ultralytics, so with the default CMD `/api/ready` correctly returns 503 with
+#   "yolo configured but unavailable". Point it at a permissive checkpoint
+#   (`--permissive-weights`) or drop the YOLO weights from that image.
+#
 # The API key is NOT optional here. CMD binds 0.0.0.0 — the only useful bind
 # inside a container — and the service refuses to serve a non-loopback address
 # without authentication (netinspect.security.check_binding). Omit the key and

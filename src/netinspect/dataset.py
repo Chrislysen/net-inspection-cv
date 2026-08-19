@@ -228,7 +228,19 @@ def load_dataset(root: str | Path, fmt: str | None = None) -> list[Sample]:
         return _load_voc(root, images)
     if fmt == "yolo":
         return _load_yolo(root, images)
-    return [Sample(image=p, group=group_of(p), width=0, height=0) for p in images]
+    # Label-free ingestion still has to size the frames. Returning 0x0 here made
+    # audit() report every image as "could not be sized" at error severity, so
+    # `netinspect onboard` refused a plain folder of footage — the one path a
+    # company brings its own data through. Reading the header costs the same
+    # PIL.open the other loaders already do.
+    out = []
+    for p in images:
+        try:
+            w, h = _image_size(p)
+        except Exception:                 # genuinely unreadable: let audit say so
+            w = h = 0
+        out.append(Sample(image=p, group=group_of(p), width=w, height=h))
+    return out
 
 
 # --------------------------------------------------------------------------- #

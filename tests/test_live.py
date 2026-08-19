@@ -245,8 +245,17 @@ def test_a_persisting_defect_is_one_event_not_one_per_frame(video):
     session.start()
     try:
         assert _wait_for(lambda: session.frames_inferred > 8)
-        assert len(session.events) < session.frames_inferred
         assert len(session.events) >= 1
+        # `< frames_inferred` was the old bound, and one-event-PER-FRAME
+        # satisfies it — the exact bug this test is named for. A persisting
+        # defect is ONE event no matter how long it persists, so the count must
+        # not grow with the frame count at all.
+        first = len(session.events)
+        before = session.frames_inferred
+        assert _wait_for(lambda: session.frames_inferred > before + 8)
+        assert len(session.events) == first, (
+            f"{len(session.events)} events after {session.frames_inferred} frames "
+            f"(was {first} after {before}) — the same defect is being re-reported")
     finally:
         session.stop()
 

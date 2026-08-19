@@ -6,6 +6,7 @@
 |---|---|---|---|---|
 | bag1 (train backgrounds) | 38 | 2 | 0.053 | 5% |
 | bag2 (same site, other clip) | 120 | 5 | 0.042 | 3% |
+| bag3 (same DAY, third clip) | 199 | 30 | 0.151 | 14% |
 | different DAY | 200 | 107 | 0.535 | 36% |
 
 ## 2. Damage recall by background distance (composited damage)
@@ -13,17 +14,17 @@
 | Background | Precision | Recall | F1 | AP |
 |---|---|---|---|---|
 | in-clip | 0.93 | 0.851 | 0.889 | 0.85 |
-| cross-clip (bag2) | 0.931 | 0.892 | 0.911 | 0.885 |
+| cross-clip (bag2) | 0.931 | 0.892 | 0.911 | 0.884 |
 | different-day | 0.698 | 0.846 | 0.765 | 0.803 |
 
 ## 3. FROC (different-day): FP per undamaged frame vs recall
 
 | conf | FP/undamaged frame | recall | precision |
 |---|---|---|---|
-| 0.05 | 1.855 | 0.962 | 0.439 |
-| 0.1 | 1.055 | 0.942 | 0.583 |
+| 0.05 | 1.85 | 0.962 | 0.439 |
+| 0.1 | 1.05 | 0.942 | 0.583 |
 | 0.2 | 0.63 | 0.904 | 0.662 |
-| 0.3 | 0.46 | 0.846 | 0.733 |
+| 0.3 | 0.455 | 0.846 | 0.733 |
 | 0.4 | 0.315 | 0.75 | 0.78 |
 | 0.5 | 0.175 | 0.712 | 0.841 |
 | 0.6 | 0.085 | 0.673 | 0.946 |

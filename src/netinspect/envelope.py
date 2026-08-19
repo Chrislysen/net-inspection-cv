@@ -195,7 +195,11 @@ class EnvelopeGate:
                 UNKNOWN, ["no validated operating envelope for this model"],
                 standoff_m, speed_ms)
 
-        if s.require_lock and locked is False:
+        # `not locked`, not `locked is False`. The parameter defaults to None,
+        # meaning "no lock telemetry for this frame" — which is precisely the
+        # case the docstring above calls unknown, yet `is False` let it through
+        # as trusted. Any falsy non-bool (0, 0.0) was waved through too.
+        if s.require_lock and not locked:
             return EnvelopeVerdict(UNKNOWN, ["net-plane estimate not locked"],
                                    standoff_m, speed_ms)
         if standoff_m is None or (isinstance(standoff_m, float) and math.isnan(standoff_m)):

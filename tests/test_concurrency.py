@@ -148,10 +148,33 @@ def test_the_ensemble_holds_the_lock_across_both_models(monkeypatch):
     assert model.max_concurrent == 1
 
 
-def test_the_classical_method_is_not_serialised_unnecessarily():
-    """It holds no shared state, so it must not queue behind the model lock."""
+def test_the_classical_method_is_not_serialised_unnecessarily(monkeypatch):
+    """It holds no shared state, so it must not queue behind the model lock.
+
+    The old assertion was "the whole run took under 20 s" against work that takes
+    about 0.2 s — true whether or not the calls were serialised, so it could not
+    fail. Observe the overlap directly instead: instrument the classical detector
+    and require that more than one thread is inside it at once.
+    """
+    from netinspect import inference as I
+
+    tracker = _SlowModel()
+    # inference.py does `from .classical_baseline import detect as
+    # classical_detect`, so the name is bound at import time — patching
+    # classical_baseline.detect would have no effect on the caller.
+    real = I.classical_detect
+
+    def instrumented(*a, **k):
+        tracker()
+        return real(*a, **k)
+
+    monkeypatch.setattr(I, "classical_detect", instrumented)
+
     insp = NetInspector()
     img = np.zeros((64, 64, 3), dtype=np.uint8)
-    started = time.perf_counter()
     _run_threads(lambda: insp.predict(img, method="classical", conf=0.9), n=4)
-    assert time.perf_counter() - started < 20
+
+    assert tracker.calls == 4, "every request must still be served"
+    assert tracker.max_concurrent > 1, (
+        "classical inference ran one-at-a-time; it holds no shared state and "
+        "must not be queued behind the model lock")

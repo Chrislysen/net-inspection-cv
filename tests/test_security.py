@@ -248,3 +248,61 @@ def test_one_version_string_everywhere():
 
     assert netinspect.__version__ == cli.VERSION
     assert md.version("net-inspection-cv") == netinspect.__version__
+
+
+def test_a_live_allow_path_pattern_cannot_be_escaped_with_dotdot(tmp_path):
+    """fnmatch's '*' crosses os.sep, so a path pattern is not a boundary.
+
+    The branch used to glob the RAW string and return it on a match, skipping the
+    containment check the comment above it claimed to perform. An operator who
+    allowed "<media>/*" therefore also allowed "<media>/../../anything" — the
+    pattern matched, the path was never resolved, and the unresolved string went
+    straight to the decoder.
+    """
+    import netinspect.security as S
+
+    media = tmp_path / "clips"
+    media.mkdir()
+    secret = tmp_path / "secret.mp4"
+    secret.write_bytes(b"not yours")
+
+    cfg = S.SecurityConfig()
+    cfg.media_root = media.resolve()
+    cfg.live_allow = (str(media / "*"),)
+
+    escape = str(media / ".." / "secret.mp4")
+    with pytest.raises(S.SourceRejected):
+        S.validate_live_source(escape, cfg)
+
+
+def test_a_live_allow_pattern_still_permits_what_it_names(tmp_path):
+    """The fix must not break the allowlist it hardens."""
+    import netinspect.security as S
+
+    media = tmp_path / "clips"
+    media.mkdir()
+    clip = media / "pass1.mp4"
+    clip.write_bytes(b"x")
+
+    cfg = S.SecurityConfig()
+    cfg.media_root = media.resolve()
+    cfg.live_allow = (str(media / "*"),)
+
+    assert S.validate_live_source(str(clip), cfg) == str(clip.resolve())
+
+
+def test_paths_under_media_root_still_work_without_any_pattern(tmp_path):
+    import netinspect.security as S
+
+    media = tmp_path / "clips"
+    media.mkdir()
+    clip = media / "pass1.mp4"
+    clip.write_bytes(b"x")
+
+    cfg = S.SecurityConfig()
+    cfg.media_root = media.resolve()
+    cfg.live_allow = ()
+
+    assert S.validate_live_source(str(clip), cfg) == str(clip.resolve())
+    with pytest.raises(S.SourceRejected):
+        S.validate_live_source(str(tmp_path / "outside.mp4"), cfg)

@@ -127,7 +127,10 @@ def plot_fp_undamaged(out: Path):
         ax.bar(x + off * w, rates, w, label=label, color=col)
     ax.set_xticks(x); ax.set_xticklabels([s.replace(" (", "\n(") for s in sets], fontsize=8)
     ax.set_ylabel("False-positive frame rate")
-    ax.set_title("False positives on REAL UNDAMAGED net (lower is better)\nnano seg overfired OOD (18-31%); a bigger yolov8s on 3 real clips (seg-gpu) cuts it to 11%")
+    ax.set_title(
+        "False positives on REAL UNDAMAGED net (lower is better)\n"
+        "All 4 clips, 557 frames: overall 11.5% (det v1), 18.7% (seg v2), "
+        "4.8% (seg-gpu) — bag3 is the hard one")
     ax.legend(); ax.grid(axis="y", alpha=0.3)
     fig.tight_layout(); fig.savefig(out / "fp_on_undamaged.png", dpi=130); plt.close(fig)
 

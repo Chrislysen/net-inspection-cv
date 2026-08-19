@@ -23,7 +23,7 @@ the augmentation that targets it directly, by showing the detector the same net
 under water it has never been filmed in.
 
 An earlier attempt at robustness through stronger *photometric* augmentation
-(HSV jitter, rotation, perspective) made things worse — 18% to 22%. This is a
+(HSV jitter, rotation, perspective) did not help — 17.5% to 18.5% different-day. This is a
 different hypothesis rather than more of the same one: random colour jitter
 explores directions the physics never takes, while this walks the one-parameter
 family that real water actually produces. It was tested, and **it failed too**: trained with 60% of frames degraded through
