@@ -647,6 +647,9 @@ def main() -> None:
     ap.add_argument("--anomaly-model", default="models/anomaly_normal_net")
     ap.add_argument("--patchcore-model", default="models/patchcore_normal_net")
     ap.add_argument("--yolo-weights", default="models/yolo_damage_v1.pt")
+    ap.add_argument("--permissive-weights", default="models/permissive_v1.pt",
+                    help="torchvision (BSD-3-Clause) detector — the AGPL-free "
+                         "path, selectable in the console as 'permissive'")
     ap.add_argument("--seg-weights", default="models/yolo_damage_seg_v3.pt",
                     help="Segmentation model; enables the det+seg 'ensemble' method")
     ap.add_argument("--host", default="127.0.0.1")
@@ -662,6 +665,7 @@ def main() -> None:
         patchcore_model_path=_exists(args.patchcore_model),
         yolo_weights=_exists(args.yolo_weights),
         seg_weights=_exists(args.seg_weights),
+        permissive_weights=_exists(args.permissive_weights),
     )
     LOGGER.info("Methods: %s", inspector.available_methods())
     LOGGER.info("Console: http://%s:%d", args.host, args.port)

@@ -305,3 +305,30 @@ def test_site_crop_is_served_and_path_traversal_is_refused(client):
         assert ok.status_code == 200 and ok.headers["content-type"] == "image/jpeg"
     bad = client.get("/api/scene/crop", params={"clip": "../secrets", "site": 1})
     assert bad.status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# The AGPL-free detector must be reachable from the console, not only the CLI
+# --------------------------------------------------------------------------- #
+def test_the_permissive_method_is_exposed_when_its_weights_exist():
+    """Regression: permissive_baseline shipped and the gate could use it, but
+    serve.py had no flag for it — so the licence-clean path existed everywhere
+    except the interface people actually look at."""
+    weights = Path("models/permissive_v1.pt")
+    if not weights.exists():
+        pytest.skip("permissive weights not built; run scripts/train_permissive.py")
+    from fastapi.testclient import TestClient
+    app = serve.build_app(NetInspector(permissive_weights=str(weights)))
+    methods = TestClient(app).get("/api/health").json()["methods"]
+    assert "permissive" in methods
+
+
+def test_the_console_offers_every_method_the_server_can_run():
+    """The method list in the UI and the one the service advertises must not
+    drift apart, or a method exists that nobody can select."""
+    import re
+    js = Path("web/app.js").read_text(encoding="utf-8")
+    order = re.search(r"METHOD_ORDER\s*=\s*\[(.*?)\]", js, re.S).group(1)
+    listed = set(re.findall(r'"([a-z]+)"', order))
+    from netinspect.inference import METHODS
+    assert listed == set(METHODS), f"UI {listed} vs server {set(METHODS)}"
