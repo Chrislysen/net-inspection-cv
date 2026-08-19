@@ -65,6 +65,7 @@ at runtime.
 import argparse
 import base64
 import io
+import os
 import sys
 import threading
 import time
@@ -251,6 +252,12 @@ def build_app(inspector: NetInspector, security=None):
     # death; with it, they queue.
     inference_slots = threading.BoundedSemaphore(sec.max_concurrency)
 
+    # Long-lived MJPEG viewers are bounded separately: they are not inference,
+    # so they must not consume inference slots, but unbounded they still pile up
+    # sockets and encode work. Refused with a 503 rather than accepted and starved.
+    MAX_STREAM_VIEWERS = max(1, int(os.environ.get("NETINSPECT_MAX_STREAM_VIEWERS", "8")))
+    live_viewers = threading.BoundedSemaphore(MAX_STREAM_VIEWERS)
+
     async def _predict_async(img, **kw):
         """Run inference off the event loop.
 
@@ -355,11 +362,27 @@ def build_app(inspector: NetInspector, security=None):
 
     @app.get("/api/ready")
     def ready():
-        # Ready if the always-on classical method is usable; report model availability.
-        methods = inspector.available_methods()
+        """Readiness, meaning: can this process serve what it was deployed for?
+
+        It used to answer "is 'classical' available", which is hardcoded present
+        and so could never be false — a probe that cannot fail. An orchestrator
+        would keep a pod in the load-balancer after its model volume failed to
+        mount, and every request naming that method would 500.
+
+        So compare what was configured against what resolved. Anything missing
+        makes this 503, and the payload names it, because "not ready" without a
+        reason is the next hour of someone's incident.
+        """
+        available = inspector.available_methods()
+        configured = inspector.configured_methods()
+        missing = [m for m in configured if m not in available]
         return JSONResponse(
-            {"ready": "classical" in methods, "methods": methods},
-            status_code=200 if "classical" in methods else 503)
+            {"ready": not missing, "methods": available,
+             "configured": configured, "missing": missing,
+             "detail": ("" if not missing else
+                        "configured but unavailable: " + ", ".join(missing)
+                        + " — check the weights paths are readable in this environment")},
+            status_code=503 if missing else 200)
 
     @app.get("/api/version")
     def version():
@@ -540,39 +563,66 @@ def build_app(inspector: NetInspector, security=None):
         return JSONResponse(session.status() if session else {"running": False})
 
     @app.get("/api/live/stream")
-    def live_stream(fps: float = Query(12.0, gt=0.0, le=60.0)):
+    async def live_stream(fps: float = Query(12.0, gt=0.0, le=60.0)):
         """Annotated frames as multipart MJPEG — an <img> tag renders it directly.
 
         MJPEG rather than WebRTC or a websocket because it needs no client-side
         decoding, survives a page refresh, and degrades gracefully: if inference
         is slower than the requested rate, the same annotated frame is re-sent
         rather than a backlog being replayed.
+
+        Async on purpose, and it matters more than it looks. A sync generator
+        here is run by Starlette in the threadpool, so every viewer held one
+        worker for the whole life of the stream — sleeping in it between frames.
+        AnyIO hands out 40 by default and inference goes through the same pool,
+        so a few dozen open browser tabs would starve every /predict call in the
+        process indefinitely. As a coroutine a viewer costs one task instead, and
+        the only threadpool trips are the JPEG encodes, which return immediately.
         """
+        import anyio
         from fastapi.responses import StreamingResponse
         from PIL import Image
+        from starlette.concurrency import run_in_threadpool
 
         session = live_state.get("session")
         if session is None:
             raise HTTPException(409, "No live session. POST /api/live/start first.")
 
+        # Viewers are cheap now, but not free: each still holds a socket and
+        # schedules encodes. Bound them rather than discovering the limit in
+        # production.
+        if not live_viewers.acquire(blocking=False):
+            raise HTTPException(
+                503, f"Too many concurrent stream viewers (limit {MAX_STREAM_VIEWERS}). "
+                     "Close an existing tab, or raise NETINSPECT_MAX_STREAM_VIEWERS.")
+
         boundary = "netinspectframe"
         interval = 1.0 / fps
 
-        def frames():
-            while True:
-                s = live_state.get("session")
-                if s is None or not s.running:
-                    break
-                frame = s.latest()
-                if frame is not None:
-                    buf = io.BytesIO()
-                    Image.fromarray(frame.image).save(buf, format="JPEG", quality=80)
-                    payload = buf.getvalue()
-                    yield (f"--{boundary}\r\nContent-Type: image/jpeg\r\n"
-                           f"Content-Length: {len(payload)}\r\n\r\n").encode()
-                    yield payload
-                    yield b"\r\n"
-                time.sleep(interval)
+        def _encode(image) -> bytes:
+            buf = io.BytesIO()
+            Image.fromarray(image).save(buf, format="JPEG", quality=80)
+            return buf.getvalue()
+
+        async def frames():
+            try:
+                while True:
+                    s = live_state.get("session")
+                    if s is None or not s.running:
+                        break
+                    frame = s.latest()
+                    if frame is not None:
+                        payload = await run_in_threadpool(_encode, frame.image)
+                        yield (f"--{boundary}\r\nContent-Type: image/jpeg\r\n"
+                               f"Content-Length: {len(payload)}\r\n\r\n").encode()
+                        yield payload
+                        yield b"\r\n"
+                    await anyio.sleep(interval)
+            finally:
+                # Runs on client disconnect too — Starlette closes the generator.
+                # Without this the slot leaks and the cap becomes a slow ratchet
+                # down to a service that refuses every viewer.
+                live_viewers.release()
 
         return StreamingResponse(
             frames(),

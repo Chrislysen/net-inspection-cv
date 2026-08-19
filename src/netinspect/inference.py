@@ -112,6 +112,30 @@ class NetInspector:
             methods.append("ensemble")
         return methods
 
+    def configured_methods(self) -> list[str]:
+        """The methods this deployment was *asked* to serve.
+
+        Distinct from :meth:`available_methods`, which reports what actually
+        resolved. The gap between the two is the useful signal: pass
+        ``--yolo-weights`` to a container whose model volume failed to mount and
+        "yolo" is configured but not available. Readiness has to be about this
+        set, because "classical" is always present and a probe that only checks
+        it can never fail — the pod reports ready and then 500s every real
+        request against the method it was actually deployed for.
+        """
+        wanted = ["classical"]
+        if self._anomaly_path:
+            wanted.append("anomaly")
+        if self._patchcore_path:
+            wanted.append("patchcore")
+        if self._yolo_weights:
+            wanted.append("yolo")
+        if self._permissive_weights:
+            wanted.append("permissive")
+        if self._yolo_weights and self._seg_weights:
+            wanted.append("ensemble")
+        return wanted
+
     # -- lazy loaders -------------------------------------------------------
     def _load_once(self, attr: str, build):
         """Double-checked lazy load: build the model at most once, ever."""

@@ -1017,14 +1017,30 @@ internal endpoint" to "has your cloud credentials".
 | `NETINSPECT_CORS_ORIGINS` | comma-separated origins; same-origin only if unset |
 | `NETINSPECT_MAX_PIXELS` | decompression-bomb ceiling (default 50 MP) |
 | `NETINSPECT_MAX_CONCURRENCY` | simultaneous inferences before requests queue, then 503 |
+| `NETINSPECT_MAX_STREAM_VIEWERS` | concurrent MJPEG viewers before 503 (default 8) |
 
 `GET /api/version` reports the service version, the git commit, and a **SHA-256
 digest of every model file** — so an inspection report can be tied to the exact
 artefacts that produced it, which a version string alone cannot do.
 
+`GET /api/ready` answers a narrower question than it looks: *can this process
+serve what it was deployed for?* It compares the methods that were **configured**
+against the ones that actually **resolved**, and 503s naming the difference. The
+earlier version asked whether the always-present `classical` method was
+available, so it could never fail — a pod whose model volume never mounted would
+stay in the load-balancer and 500 every request against the method it existed to
+serve.
+
+Long-lived MJPEG viewers are streamed from a coroutine rather than a sync
+generator. That is not a style preference: Starlette runs a sync streaming
+generator in the threadpool, so each viewer held one worker for the whole life of
+the stream, and inference shares that pool. A few dozen open browser tabs would
+have starved every `/predict` in the process indefinitely.
+
 Still needed for a hardened deployment, and deliberately not faked here: TLS and
-rate limiting via a reverse proxy, and a lock file for reproducible builds. It is
-single-process, so the in-memory metrics do not aggregate across workers.
+rate limiting via a reverse proxy. It is single-process, so the in-memory metrics
+do not aggregate across workers, and they are counters and averages rather than
+histograms — no percentiles.
 
 A container is provided in [`Dockerfile`](Dockerfile), but note it has **not been
 built or run** — no container runtime was available where it was written (Docker,

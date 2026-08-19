@@ -37,6 +37,69 @@ def test_health_and_ready(client):
     assert "X-Request-ID" in r.headers
 
 
+def test_readiness_fails_when_a_configured_model_is_missing(tmp_path):
+    """503 must be REACHABLE.
+
+    The old check asked whether "classical" was available. It is hardcoded
+    present, so the answer was always yes and the probe could not fail — an
+    orchestrator would hold a pod in the load-balancer whose model volume never
+    mounted, and every request naming that method would 500.
+    """
+    from fastapi.testclient import TestClient
+
+    absent = tmp_path / "never_mounted.pt"
+    app = serve.build_app(NetInspector(yolo_weights=absent))
+    r = TestClient(app).get("/api/ready")
+
+    assert r.status_code == 503, (
+        "a deployment configured for yolo whose weights are unreadable reported "
+        "itself ready; the readiness probe cannot fail")
+    body = r.json()
+    assert body["ready"] is False
+    assert "yolo" in body["missing"], body
+    assert "yolo" in body["detail"], "the response must name what is missing"
+
+
+def test_readiness_is_green_when_everything_configured_resolved(tmp_path):
+    """The converse: no configuration means nothing can be missing."""
+    from fastapi.testclient import TestClient
+
+    r = TestClient(serve.build_app(NetInspector())).get("/api/ready")
+    assert r.status_code == 200
+    assert r.json()["missing"] == []
+
+
+def test_configured_and_available_are_different_questions(tmp_path):
+    """The gap between them is the whole signal."""
+    insp = NetInspector(yolo_weights=tmp_path / "gone.pt")
+    assert "yolo" in insp.configured_methods(), "it was asked for"
+    assert "yolo" not in insp.available_methods(), "it did not resolve"
+
+
+def test_the_mjpeg_stream_does_not_occupy_a_threadpool_worker(client):
+    """It must be a coroutine, not a sync generator run in the threadpool.
+
+    Starlette runs a sync streaming generator in the threadpool, so each viewer
+    held one worker for the entire life of the stream — sleeping in it between
+    frames. AnyIO hands out 40 by default and inference shares that pool, so a
+    few dozen open tabs would starve every /predict in the process. Reverting
+    this to `def` reintroduces that silently: nothing else fails, the service
+    just stops answering under load.
+    """
+    import inspect as _inspect
+
+    route = next(r for r in client.app.routes
+                 if getattr(r, "path", None) == "/api/live/stream")
+    assert _inspect.iscoroutinefunction(route.endpoint), (
+        "/api/live/stream is a sync def — every viewer will pin a threadpool "
+        "worker and starve inference")
+
+    src = _inspect.getsource(route.endpoint)
+    assert "time.sleep" not in src, (
+        "time.sleep blocks a worker (or the event loop); use anyio.sleep")
+    assert "anyio.sleep" in src, "the frame pacing must yield to the event loop"
+
+
 def test_metrics_prometheus(client):
     client.get("/api/health")  # generate some traffic
     txt = client.get("/api/metrics").text
