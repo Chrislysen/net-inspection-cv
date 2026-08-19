@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-503%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-507%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -62,7 +62,7 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
 | **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable — Claude API, local Ollama, or **any OpenAI-compatible endpoint** (Nous, Together, Groq, or a vLLM you host on Modal) — so the guardrail is **measured**, not asserted: boundary disclosure **100% on all six models tested** (3B–15B, three families), while tool grounding ranges 50–100% and does **not** track model size. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **503 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **507 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
 | **Adoption** | One CLI (`netinspect doctor / onboard / train / calibrate / gate / serve / live / map`). **`onboard`** ingests YOLO, COCO, VOC or bare images, audits them, and splits **grouped by clip** so video frames cannot straddle a split — plus perceptual hashing to catch the same footage exported twice. It refuses bad input rather than proceeding. **`calibrate`** picks the threshold on *your* validation split against a false-alarm budget. **`gate`** measures against a version-controlled operating point and **exits non-zero**, failing closed when a rate is not measurable. |
 | **Security** | Secure by default: **refuses to bind anything but loopback without an API key**, so an unauthenticated endpoint cannot be published by forgetting. `POST /api/live/start` is **default-deny** (camera indices, an allowlisted media root, glob-matched stream URLs) and blocks private/link-local hosts even when a pattern matches — closing an SSRF path to cloud instance metadata. Plus decompression-bomb limits, a bounded inference concurrency, same-origin CORS, and `/api/version` with per-model SHA-256 digests. |
 | **Deployability** | Thread-safe under concurrent requests (double-checked model loading + serialised inference on the shared model, with tests that fail without them) · reference reverse-proxy config for TLS, rate limiting and CSP · **an AGPL-free detector path** on torchvision, measured against the Ultralytics one rather than asserted. |
@@ -392,10 +392,12 @@ how a preprocessing step would actually be deployed:
 | preprocessing | false-alarm rate | vs raw | boxes | recall |
 |---|---|---|---|---|
 | **raw (as deployed)** | **31%** | — | 107 | 100% |
-| gray-world white balance | 31% | +0% | 128 | 100% |
+| red compensation (Ancuti 2018) | 32% | +1% | **95** | 100% |
+| red compensation + white balance | 32% | +1% | 132 | 100% |
+| gray-world white balance | 31% | +0% | 127 | 100% |
 | CLAHE | 45% | **+14%** | 177 | 100% |
 | denoise + CLAHE | 46% | +15% | 180 | 100% |
-| white balance + CLAHE | **50%** | **+19%** | 197 | 100% |
+| white balance + CLAHE | **50%** | **+19%** | 196 | 100% |
 
 *199 real undamaged SOLAQUA frames for the false-alarm rate, 29 labelled frames
 for recall, conf ≥ 0.25.*
@@ -410,6 +412,14 @@ image is not the same thing as enhancement that helps a model, and bolting it in
 front of a model trained without it introduces a distribution mismatch that costs
 more than the enhancement gains. If you want the benefit, enhance the *training*
 set and retrain — do not add it as a deployment-time filter.
+
+The split is mechanistic, not incidental. **Contrast** operations (CLAHE) hurt;
+**colour-cast** operations do not. Red-channel compensation is the only variant
+that reduces spurious boxes at all — 95 against raw's 107 — because it borrows
+structure from the surviving green channel instead of stretching local contrast
+into the bright rigging. It is still not adopted at inference: +1% on 199 frames
+is inside the noise, and the frames-alarming rate is what decides whether an
+operator trusts the system.
 
 Reproduce: `python scripts/eval_preprocessing.py`
 

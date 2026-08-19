@@ -84,6 +84,35 @@ def denoise(image: np.ndarray) -> np.ndarray:
     return cv2.bilateralFilter(image, d=5, sigmaColor=50, sigmaSpace=50)
 
 
+def compensate_red(image: np.ndarray, alpha: float = 1.0) -> np.ndarray:
+    """Restore the attenuated red channel using the better-preserved green one.
+
+        I_rc = I_r + alpha * (mean(I_g) - mean(I_r)) * (1 - I_r) * I_g
+
+    with channels in [0, 1]. From Ancuti, Ancuti, De Vleeschouwer & Bekaert,
+    "Color Balance and Fusion for Underwater Image Enhancement", IEEE TIP 27(1),
+    2018 — implemented from the published formula, not from any existing code.
+
+    Why this rather than the usual gray-world: water absorbs red first, so by a
+    few metres the red channel is not merely *scaled* down, it is nearly gone in
+    the dark regions and unrecoverable by a global gain. Gray-world multiplies a
+    channel that has little signal left and amplifies its noise. This instead
+    borrows structure from green, which survives, and the ``(1 - I_r)`` term
+    concentrates the correction where red is most depleted while leaving
+    already-bright red pixels alone.
+
+    NOTE for anyone wiring this into training data: :mod:`netinspect.compose`
+    paints synthetic damage onto real frames. Apply this consistently on both
+    sides or not at all — correcting the background but not the pasted damage
+    teaches the detector a colour discontinuity that is an artifact of the
+    pipeline rather than a property of damage.
+    """
+    img = image.astype(np.float32) / 255.0
+    r, g = img[..., 0], img[..., 1]
+    img[..., 0] = np.clip(r + alpha * (g.mean() - r.mean()) * (1.0 - r) * g, 0.0, 1.0)
+    return (img * 255.0).astype(np.uint8)
+
+
 def gray_world_white_balance(image: np.ndarray) -> np.ndarray:
     """Correct colour cast by equalising per-channel means (gray-world assumption).
 
