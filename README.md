@@ -1027,8 +1027,13 @@ rate limiting via a reverse proxy, and a lock file for reproducible builds. It i
 single-process, so the in-memory metrics do not aggregate across workers.
 
 A container is provided in [`Dockerfile`](Dockerfile), but note it has **not been
-built or run** — no Docker daemon was available where it was written, and CI does
-not build it either.
+built or run** — no container runtime was available where it was written (Docker,
+Podman and WSL were all checked), and CI does not build it either. Its startup
+contract *was* checked without building: `CMD` binds `0.0.0.0`, which
+`check_binding` fails closed on, so `NETINSPECT_API_KEY` must be set or the
+container exits at startup rather than coming up unauthenticated. What remains
+unverified is the layer ordering, the apt package list and the CPU-wheel
+resolution — build it before you rely on it.
 
 ## Installation
 
@@ -1210,8 +1215,13 @@ provenance/licensing), so the YOLO and anomaly paths run out of the box:
 python scripts/serve.py --anomaly-model models/anomaly_normal_net --yolo-weights models/yolo_damage_v1.pt
 # curl -F file=@frame.jpg "http://localhost:8000/predict?method=yolo"
 
-# Or containerised (serves YOLO + anomaly + classical):
-docker build -t net-inspection-cv . ; docker run -p 8000:8000 net-inspection-cv
+# Or containerised (serves YOLO + anomaly + classical). The key is NOT optional:
+# CMD binds 0.0.0.0, and the service refuses a non-loopback bind without auth,
+# so without it the container exits at startup instead of coming up open.
+docker build -t netinspect .
+$key = python -c "import secrets; print(secrets.token_hex(24))"
+docker run -p 8000:8000 -e NETINSPECT_API_KEY=$key netinspect
+# then browse to http://localhost:8000/?key=$key
 
 # Interactive viewer: browse frames, switch methods, live thresholds
 streamlit run streamlit_app.py

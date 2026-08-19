@@ -221,6 +221,16 @@ def build_app(inspector: NetInspector, security=None):
         # filesystem: the bundled clips keep working out of the box, and
         # "C:/Windows/win.ini" still does not. Override with NETINSPECT_MEDIA_ROOT.
         sec.media_root = (REPO / "data").resolve()
+    if not sec.media_root.is_dir():
+        # Containers hit this: .dockerignore strips data/, so the default points
+        # at a directory the image does not contain. Path containment is pure
+        # string logic and still "passes", so every file source would be accepted
+        # and then fail to open — a confusing 500 instead of a clear cause. Say so
+        # once at startup; uploads and the demo clips are unaffected.
+        LOGGER.warning(
+            "Media root %s does not exist — file and stream sources under it "
+            "cannot resolve. Mount your footage there, or set %s to where it is.",
+            sec.media_root, "NETINSPECT_MEDIA_ROOT")
     apply_decoder_limits(sec)
 
     app = FastAPI(title="net-inspection-cv console", version=__version__,
