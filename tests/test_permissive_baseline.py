@@ -36,6 +36,33 @@ def _samples(tmp_path, n=4, labelled=True, size=(64, 64)):
 # --------------------------------------------------------------------------- #
 # the licence property this module exists for
 # --------------------------------------------------------------------------- #
+def test_an_extra_exists_that_installs_this_path_without_agpl():
+    """A clean module is not enough if you cannot install it on its own.
+
+    The `ml` extra pins torch, torchvision AND ultralytics together, so for a
+    long time there was no way to get this detector without also pulling the
+    AGPL one into the environment — the module was permissive while every
+    supported install of it was not. The `permissive` extra closes that, and this
+    test is what stops someone reuniting them for convenience.
+    """
+    import re
+    import tomllib
+    from pathlib import Path as _P
+
+    pyproject = _P(__file__).resolve().parents[1] / "pyproject.toml"
+    extras = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"][
+        "optional-dependencies"]
+
+    assert "permissive" in extras, (
+        "the `permissive` extra is gone — there is now no AGPL-free way to "
+        "install the torchvision detector")
+    names = [re.split(r"[<>=!\[]", d)[0].strip().lower() for d in extras["permissive"]]
+    assert "ultralytics" not in names, (
+        f"the permissive extra pulls in AGPL: {extras['permissive']}")
+    assert "torchvision" in names, (
+        "the permissive extra must actually provide the detector it names")
+
+
 def test_the_module_never_imports_ultralytics():
     """The entire point: no AGPL code in this path.
 

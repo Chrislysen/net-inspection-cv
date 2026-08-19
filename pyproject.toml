@@ -21,7 +21,16 @@ dependencies = [
 # Classical baseline, visualisation, and video need OpenCV + matplotlib.
 cv = ["opencv-python-headless>=4.8", "matplotlib>=3.7", "scikit-image>=0.21", "scikit-learn>=1.3"]
 # ML baseline (YOLO) + foundation-model anomaly (PatchCore uses torchvision backbones).
+# NOTE: ultralytics is AGPL-3.0 and viral over a network. If that is a problem,
+# install `permissive` instead — see below.
 ml = ["ultralytics>=8.1", "torch>=2.0", "torchvision>=0.15", "scikit-learn>=1.3"]
+# The same deep-learning capability with NO AGPL: torchvision detectors
+# (BSD-3-Clause) via netinspect.permissive_baseline, plus PatchCore anomaly,
+# which only ever needed torchvision backbones. `ml` deliberately bundles
+# ultralytics with torch, so it is not possible to take the permissive path from
+# it alone — that is what this extra is for. Verify with:
+#     netinspect sbom --fail-on copyleft
+permissive = ["torch>=2.0", "torchvision>=0.15", "scikit-learn>=1.3"]
 # Real-data ingestion (SOLAQUA ROS .bag reading, no ROS install needed) +
 # telemetry persistence (parquet).
 data = ["rosbags>=0.9", "pyarrow>=14.0"]

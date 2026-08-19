@@ -894,6 +894,34 @@ path works and costs something", not as a definitive gap. Ultralytics is the
 better training stack; this trades some recall for a licence you can deploy.
 Measure both on your own data and decide with numbers.
 
+**You do not have to take any of this on trust.** `netinspect sbom` writes a
+CycloneDX 1.5 bill of materials and classifies every installed dependency's
+licence from its own package metadata — never a hand-maintained table, which
+goes stale silently:
+
+```bash
+netinspect sbom                     # -> reports/results/sbom.cyclonedx.json
+netinspect sbom --fail-on copyleft  # exit 1 if anything strong-copyleft is present
+```
+
+On the full development environment that is 120 components: **115 permissive, 2
+strong copyleft — `ultralytics` and `ultralytics-thop`, exactly as claimed
+above** — plus `certifi` (MPL-2.0) and `pi_heif` (LGPLv3), both file/library-level
+obligations that do not reach your code.
+
+Running that audit exposed a packaging gap worth stating, because it made the
+claim above untrue in practice: the `ml` extra bundles `torch` and `torchvision`
+*together with* `ultralytics`, so there was no way to install the permissive
+detector without also installing the AGPL one. There is now a `permissive` extra
+that carries the torchvision path alone:
+
+```bash
+pip install -e ".[cv,permissive,serve]"   # torchvision detector + PatchCore, no AGPL
+netinspect sbom --fail-on copyleft        # exit 0 — verify it in YOUR environment
+```
+
+That is the difference between a licence claim and a licence guarantee.
+
 One caveat neither path removes: weights fitted on SOLAQUA frames inherit
 CC BY-SA 4.0 regardless of framework. For a fully unencumbered artifact, train on
 footage you own. Full detail in [`models/NOTICE.md`](models/NOTICE.md). Not legal

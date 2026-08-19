@@ -40,11 +40,22 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# Which extras to install. The default includes `ml`, which pulls Ultralytics
+# (AGPL-3.0, viral over a network — and this image serves over a network). For a
+# build with no strong copyleft in it at all:
+#
+#   docker build --build-arg EXTRAS=cv,permissive,serve -t netinspect-permissive .
+#   docker run --rm netinspect-permissive netinspect sbom --fail-on copyleft
+#
+# The second command is the verification, not a formality: it exits non-zero if
+# any strong-copyleft package made it into the image.
+ARG EXTRAS=cv,ml,serve,export
+
 # Dependency layer first, so source edits do not re-resolve the whole stack.
 COPY pyproject.toml README.md ./
 COPY src/netinspect/__init__.py src/netinspect/__init__.py
 RUN pip install --index-url https://download.pytorch.org/whl/cpu torch torchvision \
-    && pip install ".[cv,ml,serve,export]"
+    && pip install ".[${EXTRAS}]"
 
 COPY . .
 RUN pip install --no-deps -e .

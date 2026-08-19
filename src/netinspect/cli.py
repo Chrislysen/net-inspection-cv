@@ -50,6 +50,7 @@ WRAPPED = {
     "live": ("live_inspect.py", "real-time inference on a camera or RTSP feed"),
     "map": ("map_inspection.py", "turn a pass into a net-frame map of defect sites"),
     "report": ("inspection_report.py", "per-pass inspection validity report"),
+    "sbom": ("make_sbom.py", "CycloneDX bill of materials + copyleft audit"),
 }
 
 
