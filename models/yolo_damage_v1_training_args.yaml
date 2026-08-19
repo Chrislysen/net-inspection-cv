@@ -107,4 +107,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Users\chris\VSCODE\ScaleAQ\net-inspection-cv\runs\detect\train
+save_dir: runs/detect/train

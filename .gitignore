@@ -46,3 +46,37 @@ reports/results/site_planning/
 .coverage
 .coverage.*
 htmlcov/
+
+# --- secrets and local credentials -------------------------------------------
+# The service and the assistant read their keys from the environment
+# (NETINSPECT_API_KEY, NETINSPECT_OPENAI_API_KEY, ANTHROPIC_API_KEY). Nothing
+# here should ever hold one, but this repo is public: a single accidental
+# `git add .` of a .env is unrecoverable once pushed, because history is public
+# too. Deny the shapes rather than rely on remembering.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+!**/*public*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+secrets.*
+secrets/
+credentials.*
+.netrc
+.aws/
+.ssh/
+*.token
+service-account*.json
+
+# Personal / application material lives OUTSIDE this repository on purpose
+# (see ../brief). These patterns are belt-and-braces in case anything is ever
+# copied in by mistake.
+cover_email*
+*dossier*
+*_DOSSIER*
+resume*
+cv_*.pdf
