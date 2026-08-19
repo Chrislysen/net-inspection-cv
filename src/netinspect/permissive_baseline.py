@@ -72,6 +72,10 @@ class PermissiveConfig:
     pretrained_backbone: bool = True
     max_detections: int = 100
     seed: int = 0
+    # Fraction of training frames degraded through the Jerlov water model
+    # (netinspect.water). 0 disables it. Targets the documented weakness: the
+    # between-clip false-alarm spread is a water/scene sensitivity.
+    water_augment: float = 0.0
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -121,6 +125,10 @@ def _to_target(sample, torch):
             "labels": torch.zeros((0,), dtype=torch.int64)}
 
 
+def _from_array(arr, torch):
+    return torch.from_numpy(np.asarray(arr, dtype=np.float32) / 255.0).permute(2, 0, 1)
+
+
 def _to_image(path, torch):
     from PIL import Image
     with Image.open(path) as im:
@@ -167,7 +175,16 @@ def train(samples: Sequence[Any], cfg: PermissiveConfig | None = None,
         running, batches = 0.0, 0
         for start in range(0, len(order), cfg.batch_size):
             chunk = order[start:start + cfg.batch_size]
-            images = [_to_image(samples[i].image, torch).to(device) for i in chunk]
+            images = []
+            for i in chunk:
+                arr = None
+                if cfg.water_augment > 0:
+                    from .utils import read_image
+                    from .water import augment as water_augment
+                    arr = water_augment(read_image(samples[i].image), rng,
+                                        probability=cfg.water_augment)
+                images.append((_from_array(arr, torch) if arr is not None
+                               else _to_image(samples[i].image, torch)).to(device))
             targets = [{k: v.to(device) for k, v in _to_target(samples[i], torch).items()}
                        for i in chunk]
             losses = model(images, targets)

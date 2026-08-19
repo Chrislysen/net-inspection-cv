@@ -1,61 +1,133 @@
 {
-  "weights": "models\\permissive_v1.pt",
+  "weights": "models\\perm_baseline.pt",
   "arch": "ssdlite320_mobilenet_v3_large",
   "frames": 132,
   "labelled_frames": 116,
   "clean_frames": 16,
-  "epochs": 12,
-  "final_loss": 0.6331,
+  "epochs": 30,
+  "final_loss": 0.108,
   "history": [
     {
       "epoch": 1,
-      "loss": 6.5237
+      "loss": 6.405
     },
     {
       "epoch": 2,
-      "loss": 4.1984
+      "loss": 4.0469
     },
     {
       "epoch": 3,
-      "loss": 3.2917
+      "loss": 3.191
     },
     {
       "epoch": 4,
-      "loss": 2.6296
+      "loss": 2.6071
     },
     {
       "epoch": 5,
-      "loss": 2.0684
+      "loss": 2.0987
     },
     {
       "epoch": 6,
-      "loss": 1.8966
+      "loss": 1.8788
     },
     {
       "epoch": 7,
-      "loss": 1.6223
+      "loss": 1.6853
     },
     {
       "epoch": 8,
-      "loss": 1.343
+      "loss": 1.369
     },
     {
       "epoch": 9,
-      "loss": 1.1052
+      "loss": 1.1072
     },
     {
       "epoch": 10,
-      "loss": 0.8618
+      "loss": 0.921
     },
     {
       "epoch": 11,
-      "loss": 0.8164
+      "loss": 0.8504
     },
     {
       "epoch": 12,
-      "loss": 0.6331
+      "loss": 0.6685
+    },
+    {
+      "epoch": 13,
+      "loss": 0.596
+    },
+    {
+      "epoch": 14,
+      "loss": 0.4579
+    },
+    {
+      "epoch": 15,
+      "loss": 0.4579
+    },
+    {
+      "epoch": 16,
+      "loss": 0.364
+    },
+    {
+      "epoch": 17,
+      "loss": 0.3778
+    },
+    {
+      "epoch": 18,
+      "loss": 0.2558
+    },
+    {
+      "epoch": 19,
+      "loss": 0.2309
+    },
+    {
+      "epoch": 20,
+      "loss": 0.1849
+    },
+    {
+      "epoch": 21,
+      "loss": 0.1937
+    },
+    {
+      "epoch": 22,
+      "loss": 0.1982
+    },
+    {
+      "epoch": 23,
+      "loss": 0.1975
+    },
+    {
+      "epoch": 24,
+      "loss": 0.2067
+    },
+    {
+      "epoch": 25,
+      "loss": 0.1729
+    },
+    {
+      "epoch": 26,
+      "loss": 0.156
+    },
+    {
+      "epoch": 27,
+      "loss": 0.2217
+    },
+    {
+      "epoch": 28,
+      "loss": 0.1398
+    },
+    {
+      "epoch": 29,
+      "loss": 0.1249
+    },
+    {
+      "epoch": 30,
+      "loss": 0.108
     }
   ],
-  "device": "cpu",
+  "device": "cuda",
   "licence": "torchvision (BSD-3-Clause) \u2014 no Ultralytics/AGPL code in the training or inference path. Note that weights fitted on CC BY-SA data inherit that data's terms."
 }
