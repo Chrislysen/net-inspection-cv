@@ -1,0 +1,67 @@
+# Reverse proxy for the inspection service: TLS, rate limiting, security headers.
+#
+# The service deliberately does NOT implement these itself. TLS termination and
+# rate limiting belong at the edge, and a hand-rolled version inside a
+# single-process Python app would be worse than none — it would look like a
+# control while failing under exactly the load it exists for.
+#
+#   caddy run --config deploy/Caddyfile
+#
+# Caddy rather than nginx for the reference config because it obtains and
+# renews certificates automatically; the nginx equivalent is beside it.
+
+inspection.example.com {
+	# Certificates are issued and renewed automatically. Replace the hostname
+	# and this stops being a placeholder.
+	encode gzip
+
+	# The API key still travels in a header, so TLS is not optional. HSTS is set
+	# for a year; drop it while testing with a self-signed certificate.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		# The console is self-contained: no CDN, no external fonts, no inline
+		# eval. Nothing here needs a remote origin.
+		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'"
+		-Server
+	}
+
+	# Health checks must not be rate limited or they will trip the limiter and
+	# take the service out of rotation under load — the failure mode where the
+	# protection causes the outage.
+	@health path /api/health /api/ready
+	handle @health {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	# Inference is expensive. This is a per-IP budget, not a security control:
+	# authentication is the security control, and this stops one client from
+	# consuming the whole worker pool.
+	#
+	# Needs github.com/mholt/caddy-ratelimit:
+	#   xcaddy build --with github.com/mholt/caddy-ratelimit
+	handle {
+		rate_limit {
+			zone inference {
+				key {remote_host}
+				events 60
+				window 1m
+			}
+		}
+		reverse_proxy 127.0.0.1:8000 {
+			# The MJPEG live stream is a long-lived response and must not be
+			# buffered or timed out like a JSON call.
+			flush_interval -1
+			transport http {
+				read_timeout 0
+			}
+		}
+	}
+
+	log {
+		output file /var/log/caddy/inspection.log
+		format json
+	}
+}

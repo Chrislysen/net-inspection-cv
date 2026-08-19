@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml/badge.svg)](https://github.com/Chrislysen/net-inspection-cv/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%E2%80%933.14-blue)
-![Tests](https://img.shields.io/badge/tests-481%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-501%20passing-brightgreen)
 ![Lint](https://img.shields.io/badge/lint-ruff-261230)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
@@ -62,9 +62,10 @@ tracking, ONNX, FastAPI, Streamlit, net pen inspection, escape prevention. -->
 | **The hard limit** | All numbers are on **synthetic damage** (one generator). **No validated real-world damage-detection performance is claimed** — that needs real *labelled* net-damage footage. The repo is the drop-in slot for it. |
 | **Beyond vision** | **ROV telemetry** from all 5 SOLAQUA sensor bags (net standoff, DVL, depth, temperature, thrust) joined to frames on the bag clock · a per-pass **inspection-validity report** · **site planning** from the Fiskeridirektoratet register × MET Norway ocean forecast · a **DuckDB reporting layer** over every artifact. |
 | **Grounded assistant** | Tool-calling Q&A over the real artifacts, guarded by a machine-readable **evidence ledger** + a deterministic post-check. Backend is swappable — Claude API, local Ollama, or **any OpenAI-compatible endpoint** (Nous, Together, Groq, or a vLLM you host on Modal) — so the guardrail is **measured**, not asserted: boundary disclosure **100% on all six models tested** (3B–15B, three families), while tool grounding ranges 50–100% and does **not** track model size. |
-| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **481 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
+| **Engineering** | Unified inference facade · FastAPI service + **interactive web console** (drag-and-drop analysis · **live camera / RTSP / ROV feed over MJPEG**) · Streamlit viewer · batch/video/bag runner · COCO→YOLO adapter · ONNX export + benchmark · **501 passing tests** (+20 headless renderer checks) · GitHub Actions CI · committed models. |
 | **Adoption** | One CLI (`netinspect doctor / onboard / train / calibrate / gate / serve / live / map`). **`onboard`** ingests YOLO, COCO, VOC or bare images, audits them, and splits **grouped by clip** so video frames cannot straddle a split — plus perceptual hashing to catch the same footage exported twice. It refuses bad input rather than proceeding. **`calibrate`** picks the threshold on *your* validation split against a false-alarm budget. **`gate`** measures against a version-controlled operating point and **exits non-zero**, failing closed when a rate is not measurable. |
 | **Security** | Secure by default: **refuses to bind anything but loopback without an API key**, so an unauthenticated endpoint cannot be published by forgetting. `POST /api/live/start` is **default-deny** (camera indices, an allowlisted media root, glob-matched stream URLs) and blocks private/link-local hosts even when a pattern matches — closing an SSRF path to cloud instance metadata. Plus decompression-bomb limits, a bounded inference concurrency, same-origin CORS, and `/api/version` with per-model SHA-256 digests. |
+| **Deployability** | Thread-safe under concurrent requests (double-checked model loading + serialised inference on the shared model, with tests that fail without them) · reference reverse-proxy config for TLS, rate limiting and CSP · **an AGPL-free detector path** on torchvision, measured against the Ultralytics one rather than asserted. |
 | **Stack** | Python 3.11–3.14 · OpenCV · PyTorch/torchvision · Ultralytics YOLOv8 · scikit-learn · rosbags · FastAPI · NumPy/Pandas. |
 
 **This is five things, not one.** Detection is the most visible but not the
@@ -788,11 +789,35 @@ commercial use, so it is not buried in a footer:
 the network use that triggers it. Most corporate legal teams block AGPL for that
 reason; Ultralytics sells a commercial licence that removes it.
 
-The pipeline is the deliverable and the weights are a demonstration — so the
-clean position is to retrain from a permissively-licensed detector on your own
-footage, which is what the next section is about. Full detail in
-[`models/NOTICE.md`](models/NOTICE.md). Not legal advice; a statement of what the
-upstream licences say, so the question reaches your counsel before your product.
+**There is a way out, and it is implemented.** `netinspect` ships a second
+detector path built on **torchvision (BSD-3-Clause)** with no Ultralytics import
+anywhere in it — asserted by a test that parses the module's imports rather than
+grepping its prose:
+
+```bash
+python scripts/train_permissive.py --data data/mysite --epochs 30
+netinspect gate --data data/mysite --method permissive --weights models/permissive_v1.pt
+```
+
+The cost is measured rather than asserted. Both detectors, same held-out split,
+same threshold:
+
+| method | licence | false alarms | recall |
+|---|---|---|---|
+| `yolo` | Ultralytics **AGPL-3.0** | 0% | **100%** |
+| `permissive` | torchvision **BSD-3-Clause** | 0% | 88% |
+
+That is 21 of 24 damaged frames against 24 of 24, on 29 frames, after 12 epochs
+on a laptop CPU — a small denominator and an untuned model, so read it as "the
+path works and costs something", not as a definitive gap. Ultralytics is the
+better training stack; this trades some recall for a licence you can deploy.
+Measure both on your own data and decide with numbers.
+
+One caveat neither path removes: weights fitted on SOLAQUA frames inherit
+CC BY-SA 4.0 regardless of framework. For a fully unencumbered artifact, train on
+footage you own. Full detail in [`models/NOTICE.md`](models/NOTICE.md). Not legal
+advice; a statement of what the upstream licences say, so the question reaches
+your counsel before your product.
 
 ## Use it on your own footage
 

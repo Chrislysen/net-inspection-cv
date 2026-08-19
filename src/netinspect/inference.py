@@ -7,6 +7,7 @@ this class so behaviour is identical everywhere.
 """
 from __future__ import annotations
 
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -19,7 +20,7 @@ from .utils import BBox, get_logger, optional_import
 
 LOGGER = get_logger()
 
-METHODS = ("classical", "anomaly", "patchcore", "yolo", "ensemble")
+METHODS = ("classical", "anomaly", "patchcore", "yolo", "ensemble", "permissive")
 
 
 @dataclass
@@ -60,16 +61,36 @@ class NetInspector:
                  anomaly_model_path: str | Path | None = None,
                  patchcore_model_path: str | Path | None = None,
                  yolo_weights: str | Path | None = None,
-                 seg_weights: str | Path | None = None):
+                 seg_weights: str | Path | None = None,
+                 permissive_weights: str | Path | None = None):
         self.classical_cfg = classical_cfg or ClassicalConfig()
         self._anomaly_path = str(anomaly_model_path) if anomaly_model_path else None
         self._patchcore_path = str(patchcore_model_path) if patchcore_model_path else None
         self._yolo_weights = str(yolo_weights) if yolo_weights else None
         self._seg_weights = str(seg_weights) if seg_weights else None
+        self._permissive_weights = (str(permissive_weights)
+                                    if permissive_weights else None)
         self._anomaly_model = None
         self._patchcore_model = None
         self._yolo_model = None
         self._seg_model = None
+        self._permissive_model = None
+
+        # Two separate hazards, two separate locks.
+        #
+        # LOADING: the lazy getters were check-then-set, so two request threads
+        # arriving together both saw None and both loaded the same weights —
+        # doubling peak memory for a large model and racing on the assignment.
+        #
+        # INFERENCE: an Ultralytics model object is stateful and is not
+        # documented as thread-safe, yet the service lets several request
+        # threads call predict() on the *same* object. Serialising inference is
+        # the conservative choice: the concurrency cap in the service already
+        # bounds the queue, and a wrong box under load is far worse than a
+        # queued one. Swap this for a per-thread model pool if throughput ever
+        # matters more than certainty.
+        self._load_lock = threading.Lock()
+        self._infer_lock = threading.RLock()
 
     # -- availability -------------------------------------------------------
     def available_methods(self) -> list[str]:
@@ -82,6 +103,9 @@ class NetInspector:
         if self._yolo_weights and Path(self._yolo_weights).exists() \
                 and optional_import("ultralytics") is not None:
             methods.append("yolo")
+        if (self._permissive_weights and Path(self._permissive_weights).exists()
+                and optional_import("torchvision") is not None):
+            methods.append("permissive")
         if self._yolo_weights and self._seg_weights \
                 and Path(self._yolo_weights).exists() and Path(self._seg_weights).exists() \
                 and optional_import("ultralytics") is not None:
@@ -89,29 +113,40 @@ class NetInspector:
         return methods
 
     # -- lazy loaders -------------------------------------------------------
+    def _load_once(self, attr: str, build):
+        """Double-checked lazy load: build the model at most once, ever."""
+        got = getattr(self, attr)
+        if got is not None:
+            return got
+        with self._load_lock:
+            got = getattr(self, attr)          # another thread may have won
+            if got is None:
+                got = build()
+                setattr(self, attr, got)
+            return got
+
     def _anomaly(self):
-        if self._anomaly_model is None:
-            from .anomaly import AnomalyModel
-            self._anomaly_model = AnomalyModel.load(self._anomaly_path)
-        return self._anomaly_model
+        from .anomaly import AnomalyModel
+        return self._load_once("_anomaly_model",
+                               lambda: AnomalyModel.load(self._anomaly_path))
 
     def _patchcore(self):
-        if self._patchcore_model is None:
-            from .patchcore import PatchCoreModel
-            self._patchcore_model = PatchCoreModel.load(self._patchcore_path)
-        return self._patchcore_model
+        from .patchcore import PatchCoreModel
+        return self._load_once("_patchcore_model",
+                               lambda: PatchCoreModel.load(self._patchcore_path))
 
     def _seg(self):
-        if self._seg_model is None:
-            from .model_baseline import load_model
-            self._seg_model = load_model(self._seg_weights)
-        return self._seg_model
+        from .model_baseline import load_model
+        return self._load_once("_seg_model", lambda: load_model(self._seg_weights))
 
     def _yolo(self):
-        if self._yolo_model is None:
-            from .model_baseline import load_model
-            self._yolo_model = load_model(self._yolo_weights)
-        return self._yolo_model
+        from .model_baseline import load_model
+        return self._load_once("_yolo_model", lambda: load_model(self._yolo_weights))
+
+    def _permissive(self):
+        from .permissive_baseline import load_model as load_permissive
+        return self._load_once("_permissive_model",
+                               lambda: load_permissive(self._permissive_weights))
 
     # -- inference ----------------------------------------------------------
     def predict(self, image_rgb: np.ndarray, method: str = "classical",
@@ -141,17 +176,34 @@ class NetInspector:
         elif method == "ensemble":
             from .ensemble import EnsembleConfig, combine
             from .model_baseline import YoloConfig, predict_image
-            det = predict_image(self._yolo(), image_rgb, YoloConfig(conf=0.01, iou=0.5))
-            seg = predict_image(self._seg(), image_rgb, YoloConfig(conf=0.01, iou=0.5))
+            # Held across BOTH calls: the ensemble's whole premise is that the
+            # two models judged the same frame, and interleaving another
+            # request's inference between them is exactly how that stops being
+            # true.
+            with self._infer_lock:
+                det = predict_image(self._yolo(), image_rgb, YoloConfig(conf=0.01, iou=0.5))
+                seg = predict_image(self._seg(), image_rgb, YoloConfig(conf=0.01, iou=0.5))
             ecfg = EnsembleConfig(det_conf=conf, seg_conf=conf, mode="agree")
             boxes = combine(det, seg, ecfg)
             heatmap = None
             meta = {"det_weights": self._yolo_weights, "seg_weights": self._seg_weights,
                     "rule": "det proposes, seg confirms (box agreement)"}
+        elif method == "permissive":
+            # torchvision (BSD-3-Clause). No Ultralytics anywhere in this
+            # path, which is the entire reason it exists.
+            from .permissive_baseline import PermissiveConfig
+            from .permissive_baseline import predict_image as predict_permissive
+            with self._infer_lock:
+                boxes = predict_permissive(self._permissive(), image_rgb,
+                                           PermissiveConfig(conf=conf))
+            heatmap = None
+            meta = {"weights": self._permissive_weights,
+                    "licence": "torchvision BSD-3-Clause; AGPL-free path"}
         else:  # yolo
             from .model_baseline import YoloConfig, predict_image
-            boxes = predict_image(self._yolo(), image_rgb,
-                                  YoloConfig(conf=conf, iou=0.5))
+            with self._infer_lock:
+                boxes = predict_image(self._yolo(), image_rgb,
+                                      YoloConfig(conf=conf, iou=0.5))
             heatmap = None
             meta = {"weights": self._yolo_weights}
 

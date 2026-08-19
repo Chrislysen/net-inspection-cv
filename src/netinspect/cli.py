@@ -119,8 +119,11 @@ def _run_detector(samples, weights: str | None, method: str, conf: float):
     from .inference import NetInspector
     from .utils import read_image
 
-    insp = NetInspector(classical_cfg=ClassicalConfig(),
-                        yolo_weights=weights if weights else None)
+    # A .pt from train_permissive.py carries its own config; route it to the
+    # AGPL-free path rather than to Ultralytics.
+    kw = ({"permissive_weights": weights} if method == "permissive"
+          else {"yolo_weights": weights})
+    insp = NetInspector(classical_cfg=ClassicalConfig(), **kw)
     if method not in insp.available_methods():
         raise SystemExit(f"Method {method!r} is unavailable "
                          f"(have: {insp.available_methods()}). Check --weights.")
@@ -325,7 +328,8 @@ def build_parser() -> argparse.ArgumentParser:
     c.add_argument("--data", required=True, help="dataset directory from `onboard`")
     c.add_argument("--split", default="val")
     c.add_argument("--weights", default="models/yolo_damage_v1.pt")
-    c.add_argument("--method", default="yolo")
+    c.add_argument("--method", default="yolo",
+                   choices=["classical", "yolo", "permissive"])
     c.add_argument("--max-false-alarms", type=float, default=0.05,
                    help="fraction of clean frames allowed to raise an alert")
     c.add_argument("--out", default=None, help="write the sweep to this JSON file")
@@ -335,7 +339,10 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--data", required=True, help="dataset directory from `onboard`")
     g.add_argument("--split", default="test")
     g.add_argument("--weights", default="models/yolo_damage_v1.pt")
-    g.add_argument("--method", default="yolo")
+    g.add_argument("--method", default="yolo",
+                   choices=["classical", "yolo", "permissive"],
+                   help="'permissive' uses the torchvision (BSD-3) detector — "
+                        "no Ultralytics/AGPL in the inference path")
     g.add_argument("--conf", type=float, default=0.25)
     g.add_argument("--iou", type=float, default=0.5)
     g.add_argument("--max-false-alarms", type=float, default=0.05)

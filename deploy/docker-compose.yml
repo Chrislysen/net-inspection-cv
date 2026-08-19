@@ -1,0 +1,65 @@
+# Reference deployment: the service behind a TLS-terminating, rate-limiting proxy.
+#
+#   cd deploy && docker compose up
+#
+# STATUS: written, NOT run — no Docker daemon was available where this was
+# authored and CI does not build it. Treat it as a starting point that has never
+# been executed. Everything it configures is documented in the service itself;
+# the composition is the part nobody has confirmed.
+services:
+  inspection:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    # No published ports. The service is reachable only through the proxy, which
+    # is the point — binding it to the host as well would quietly undo the TLS
+    # and the rate limit.
+    expose:
+      - "8000"
+    environment:
+      # Required for any non-loopback bind. The service refuses to start
+      # without it, which is how an unauthenticated endpoint stops being one
+      # forgotten step away.
+      NETINSPECT_API_KEY: ${NETINSPECT_API_KEY:?set NETINSPECT_API_KEY in .env}
+      # Default-deny stays default-deny unless you name your cameras.
+      NETINSPECT_LIVE_ALLOW: ${NETINSPECT_LIVE_ALLOW:-}
+      NETINSPECT_MEDIA_ROOT: /data/clips
+      NETINSPECT_MAX_CONCURRENCY: ${NETINSPECT_MAX_CONCURRENCY:-4}
+      NETINSPECT_CORS_ORIGINS: ${NETINSPECT_CORS_ORIGINS:-}
+    volumes:
+      # Read-only: the service never writes to your footage.
+      - ${CLIPS_DIR:-./clips}:/data/clips:ro
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          # Inference is memory-hungry and the concurrency cap bounds how many
+          # run at once; this is the backstop if that is misconfigured.
+          memory: 4G
+
+  proxy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - inspection
+    restart: unless-stopped
+    # NOTE: the stock caddy image does not include the rate-limit plugin the
+    # Caddyfile uses. Either build it with
+    #   xcaddy build --with github.com/mholt/caddy-ratelimit
+    # or comment the rate_limit block out. Stated rather than silently shipping
+    # a config that will not start.
+
+volumes:
+  caddy_data:
+  caddy_config:
