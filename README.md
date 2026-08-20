@@ -440,12 +440,57 @@ was discarded rather than published.
 
 Three independent strategies have now failed to close this gap, one of them the
 strategy that most directly targets it. That is the strongest evidence in the
-repo that the between-clip spread is **not a data-diversity problem**, and that
-the next honest step is to understand *why* the mooring cords are learned as
-damage rather than to keep feeding the model more pixels.
+repo that the between-clip spread is **not a data-diversity problem** — so the
+next step was to stop feeding the model pixels and find out what it is firing on.
 
 All three are kept and documented because a failed hypothesis that was actually
 measured is worth more than an untested one that sounds plausible.
+
+### Then measuring it worked: the false alarms are the wrong colour
+
+[`analyse_false_alarms.py`](scripts/analyse_false_alarms.py) measured all 109
+false-alarm boxes against the 284 labelled damage boxes, and refuted this repo's
+own stated explanation. The culprit *is* the mooring cords — a contact sheet of
+the 24 highest-scoring false alarms shows bright rope in 22 of them — but they
+are **bright**, and the damage the detector trained on is **dark**:
+
+<img src="reports/results/false_alarm_anatomy/bag3_false_alarms.png" width="620" alt="The 24 highest-scoring false alarms on bag3: bright mooring rope, not dark holes" />
+
+| signed contrast (>0 = darker than surround) | p10 | median | p90 |
+|---|---|---|---|
+| real damage (n=284) | **+15.0** | +42.3 | +57.1 |
+| false alarms (n=109) | −43.8 | **−5.7** | +23.0 |
+
+The model is firing *across the polarity boundary* — most likely on the
+oriented-edge signature a bright rope and a dark tear share, since both interrupt
+an otherwise regular mesh. That also explains all three failures above: two
+changed appearance without changing edge structure, and the third asked the model
+to suppress the very signature that marks real damage too.
+
+**And the two populations are separable with no retraining at all.** A hole shows
+unlit water and is dark; a rope is an object in front of the net and is bright.
+[`netinspect.polarity`](src/netinspect/polarity.py) drops detections brighter
+than the net around them ([sweep](scripts/eval_polarity_filter.py)):
+
+| `min_contrast` | bag3 | overall (557 real frames) | recall |
+|---|---|---|---|
+| off | 31.2% | 11.5% | 100% |
+| **10** | **14.1%** | **5.4%** | **100%** |
+| 20 | 8.5% | 3.2% | 96% |
+| 30 | 1.5% | **0.5%** | 88% |
+
+Halving the false alarms is free; a 23× reduction costs 12 points of recall.
+After three failed attempts to fix this with more data, the thing that worked was
+**one afternoon of measuring what the model actually does**.
+
+> **Read the recall column sceptically.** It is measured on *synthetic* damage,
+> which the generator paints dark **by construction** — the same assumption the
+> filter makes, so it is being graded on its own premise. The false-alarm column
+> is real net and stands on its own; the recall column only shows the filter does
+> not obviously break the detector. Real damage is not always dark (backscatter,
+> a fish behind the hole, a partly-occluded tear), which is why this is
+> **off by default** and opt-in, and why validating it needs real labelled damage
+> this project does not have.
 
 ## A negative result: underwater enhancement makes this worse
 

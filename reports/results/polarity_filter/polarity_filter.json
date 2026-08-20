@@ -1,0 +1,263 @@
+{
+  "config": {
+    "weights": "models/yolo_damage_v1.pt",
+    "method": "yolo",
+    "labelled": "data/processed/real_composite",
+    "split": "test",
+    "conf": 0.25,
+    "thresholds": [
+      -1000000000.0,
+      0.0,
+      5.0,
+      10.0,
+      15.0,
+      20.0,
+      30.0,
+      40.0
+    ],
+    "out": "reports/results/polarity_filter"
+  },
+  "sweep": [
+    {
+      "min_contrast": -1000000000.0,
+      "per_clip": {
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag3": {
+          "frames": 199,
+          "alarming": 62,
+          "rate": 0.31155778894472363
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 2,
+          "rate": 0.01
+        }
+      },
+      "overall_rate": 0.11490125673249552,
+      "alarming_frames": 64,
+      "frames": 557,
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "min_contrast": 0.0,
+      "per_clip": {
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag3": {
+          "frames": 199,
+          "alarming": 34,
+          "rate": 0.1708542713567839
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 2,
+          "rate": 0.01
+        }
+      },
+      "overall_rate": 0.06463195691202872,
+      "alarming_frames": 36,
+      "frames": 557,
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "min_contrast": 5.0,
+      "per_clip": {
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag3": {
+          "frames": 199,
+          "alarming": 33,
+          "rate": 0.1658291457286432
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 2,
+          "rate": 0.01
+        }
+      },
+      "overall_rate": 0.06283662477558348,
+      "alarming_frames": 35,
+      "frames": 557,
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "min_contrast": 10.0,
+      "per_clip": {
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag3": {
+          "frames": 199,
+          "alarming": 28,
+          "rate": 0.1407035175879397
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 2,
+          "rate": 0.01
+        }
+      },
+      "overall_rate": 0.05385996409335727,
+      "alarming_frames": 30,
+      "frames": 557,
+      "recall": 1.0,
+      "precision": 1.0
+    },
+    {
+      "min_contrast": 15.0,
+      "per_clip": {
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag3": {
+          "frames": 199,
+          "alarming": 22,
+          "rate": 0.11055276381909548
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 2,
+          "rate": 0.01
+        }
+      },
+      "overall_rate": 0.04308797127468582,
+      "alarming_frames": 24,
+      "frames": 557,
+      "recall": 0.9583333333333334,
+      "precision": 1.0
+    },
+    {
+      "min_contrast": 20.0,
+      "per_clip": {
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag3": {
+          "frames": 199,
+          "alarming": 17,
+          "rate": 0.08542713567839195
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 1,
+          "rate": 0.005
+        }
+      },
+      "overall_rate": 0.03231597845601436,
+      "alarming_frames": 18,
+      "frames": 557,
+      "recall": 0.9583333333333334,
+      "precision": 1.0
+    },
+    {
+      "min_contrast": 30.0,
+      "per_clip": {
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag3": {
+          "frames": 199,
+          "alarming": 3,
+          "rate": 0.01507537688442211
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 0,
+          "rate": 0.0
+        }
+      },
+      "overall_rate": 0.005385996409335727,
+      "alarming_frames": 3,
+      "frames": 557,
+      "recall": 0.875,
+      "precision": 1.0
+    },
+    {
+      "min_contrast": 40.0,
+      "per_clip": {
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "rate": 0.0
+        },
+        "bag3": {
+          "frames": 199,
+          "alarming": 2,
+          "rate": 0.010050251256281407
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 0,
+          "rate": 0.0
+        }
+      },
+      "overall_rate": 0.003590664272890485,
+      "alarming_frames": 2,
+      "frames": 557,
+      "recall": 0.75,
+      "precision": 1.0
+    }
+  ],
+  "caveat": "Recall is measured on synthetic damage that is dark by construction; the filter assumes darkness. Transfer to real damage is unvalidated."
+}

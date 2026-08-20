@@ -1,0 +1,217 @@
+{
+  "config": {
+    "weights": "models/yolo_damage_v1.pt",
+    "method": "yolo",
+    "labelled": "data/processed/real_composite",
+    "conf": 0.25,
+    "out": "reports/results/false_alarm_anatomy"
+  },
+  "per_clip": {
+    "bag1": {
+      "frames": 38,
+      "alarming": 0,
+      "rate": 0.0,
+      "boxes": 0,
+      "stats": {
+        "n": 0
+      }
+    },
+    "bag2": {
+      "frames": 120,
+      "alarming": 0,
+      "rate": 0.0,
+      "boxes": 0,
+      "stats": {
+        "n": 0
+      }
+    },
+    "bag3": {
+      "frames": 199,
+      "alarming": 62,
+      "rate": 0.31155778894472363,
+      "boxes": 107,
+      "stats": {
+        "n": 107,
+        "mean_luma": {
+          "mean": 104.203,
+          "median": 106.655,
+          "p10": 57.902,
+          "p90": 135.566
+        },
+        "surround_luma": {
+          "mean": 97.534,
+          "median": 98.758,
+          "p10": 76.489,
+          "p90": 116.12
+        },
+        "contrast": {
+          "mean": -6.669,
+          "median": -6.158,
+          "p10": -43.886,
+          "p90": 22.475
+        },
+        "elongation": {
+          "mean": 2.82,
+          "median": 1.811,
+          "p10": 1.191,
+          "p90": 6.273
+        },
+        "area_frac": {
+          "mean": 0.008,
+          "median": 0.004,
+          "p10": 0.001,
+          "p90": 0.017
+        },
+        "edge_density": {
+          "mean": 8.764,
+          "median": 8.339,
+          "p10": 4.113,
+          "p90": 14.936
+        },
+        "score": {
+          "mean": 0.425,
+          "median": 0.388,
+          "p10": 0.28,
+          "p90": 0.661
+        }
+      }
+    },
+    "diffday": {
+      "frames": 200,
+      "alarming": 2,
+      "rate": 0.01,
+      "boxes": 2,
+      "stats": {
+        "n": 2,
+        "mean_luma": {
+          "mean": 93.206,
+          "median": 93.206,
+          "p10": 90.393,
+          "p90": 96.02
+        },
+        "surround_luma": {
+          "mean": 113.26,
+          "median": 113.26,
+          "p10": 107.282,
+          "p90": 119.239
+        },
+        "contrast": {
+          "mean": 20.054,
+          "median": 20.054,
+          "p10": 16.889,
+          "p90": 23.219
+        },
+        "elongation": {
+          "mean": 2.185,
+          "median": 2.185,
+          "p10": 1.956,
+          "p90": 2.415
+        },
+        "area_frac": {
+          "mean": 0.025,
+          "median": 0.025,
+          "p10": 0.022,
+          "p90": 0.028
+        },
+        "edge_density": {
+          "mean": 2.091,
+          "median": 2.091,
+          "p10": 1.99,
+          "p90": 2.192
+        },
+        "score": {
+          "mean": 0.335,
+          "median": 0.335,
+          "p10": 0.322,
+          "p90": 0.348
+        }
+      }
+    }
+  },
+  "false_alarms": {
+    "n": 109,
+    "mean_luma": {
+      "mean": 104.001,
+      "median": 106.352,
+      "p10": 58.272,
+      "p90": 135.499
+    },
+    "surround_luma": {
+      "mean": 97.823,
+      "median": 98.82,
+      "p10": 76.572,
+      "p90": 116.892
+    },
+    "contrast": {
+      "mean": -6.179,
+      "median": -5.697,
+      "p10": -43.791,
+      "p90": 22.968
+    },
+    "elongation": {
+      "mean": 2.808,
+      "median": 1.815,
+      "p10": 1.193,
+      "p90": 6.245
+    },
+    "area_frac": {
+      "mean": 0.008,
+      "median": 0.004,
+      "p10": 0.001,
+      "p90": 0.018
+    },
+    "edge_density": {
+      "mean": 8.641,
+      "median": 8.323,
+      "p10": 3.506,
+      "p90": 14.927
+    },
+    "score": {
+      "mean": 0.423,
+      "median": 0.388,
+      "p10": 0.28,
+      "p90": 0.66
+    }
+  },
+  "trained_on_damage": {
+    "n": 284,
+    "mean_luma": {
+      "mean": 68.175,
+      "median": 67.548,
+      "p10": 47.237,
+      "p90": 90.239
+    },
+    "surround_luma": {
+      "mean": 107.219,
+      "median": 107.433,
+      "p10": 89.222,
+      "p90": 125.054
+    },
+    "contrast": {
+      "mean": 39.044,
+      "median": 42.256,
+      "p10": 15.022,
+      "p90": 57.066
+    },
+    "elongation": {
+      "mean": 2.085,
+      "median": 1.358,
+      "p10": 1.051,
+      "p90": 4.137
+    },
+    "area_frac": {
+      "mean": 0.029,
+      "median": 0.024,
+      "p10": 0.008,
+      "p90": 0.059
+    },
+    "edge_density": {
+      "mean": 4.309,
+      "median": 3.796,
+      "p10": 2.219,
+      "p90": 7.076
+    }
+  },
+  "fraction_darker_than_surround": 0.3944954128440367,
+  "P1": "REFUTED: the false alarms are mostly BRIGHTER than their surround, so they cannot be matching the dark synthetic damage directly"
+}
