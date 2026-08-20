@@ -62,6 +62,31 @@ def _draw_mesh(img: np.ndarray, spacing: int, rng: np.random.Generator) -> None:
             img[np.abs((xx - c) + yy) <= 0] = color
 
 
+def _clip(box: BBox, w: int, h: int) -> BBox:
+    """Confine a ground-truth box to the frame it describes.
+
+    A tear is a ROTATED rectangle whose length comes from the image width while
+    its centre is bounded by the height, so on a wide, short frame its corners
+    land outside the image — and nothing clipped them. The box was then written
+    to a YOLO label as-is, giving normalised coordinates outside [0, 1] that
+    `netinspect.data.parse_yolo_label` refuses to read back.
+
+    Worth being precise about the blast radius: `generate_dataset` only ever
+    calls this at its default 540x720, where no box escapes, so no committed
+    dataset or reported metric is affected. But `make_synthetic_image` is public
+    and takes height and width, and ground-truth geometry is the last place to
+    leave a latent off-frame bug.
+
+    Clipping rather than rejecting: the damage really was painted there, and the
+    visible part of it is the correct label for the visible part of the frame.
+    """
+    x1 = min(max(box.x1, 0.0), float(w))
+    y1 = min(max(box.y1, 0.0), float(h))
+    x2 = min(max(box.x2, 0.0), float(w))
+    y2 = min(max(box.y2, 0.0), float(h))
+    return BBox(x1, y1, x2, y2, box.class_id, box.class_name, box.score)
+
+
 def _inject_damage(img: np.ndarray, kind: str, rng: np.random.Generator) -> BBox:
     """Paint a dark damage region and return its ground-truth box.
 
@@ -73,32 +98,45 @@ def _inject_damage(img: np.ndarray, kind: str, rng: np.random.Generator) -> BBox
     cy = int(rng.integers(int(h * 0.15), int(h * 0.85)))
     dark = (10, 25, 30)  # see-through-to-deep-water dark
 
+    def _span(lo: int, hi: int, floor: int = 1) -> int:
+        """A positive integer size, whatever the frame dimensions are.
+
+        Every size here is a percentage of a dimension, and on a small frame two
+        such percentages collapse onto the same integer — `rng.integers(3, 3)`
+        raises "low >= high". Below 134 px wide that happened on roughly half of
+        all seeds, so the generator simply crashed rather than producing a small
+        image. Clamping keeps the sizes ordered and never returns a zero-radius
+        (that is, zero-area) region.
+        """
+        lo = max(floor, lo)
+        return int(rng.integers(lo, max(lo + 1, hi)))
+
     if kind == "hole":
-        rx = int(rng.integers(int(w * 0.04), int(w * 0.09)))
-        ry = int(rng.integers(int(h * 0.04), int(h * 0.09)))
+        rx = _span(int(w * 0.04), int(w * 0.09))
+        ry = _span(int(h * 0.04), int(h * 0.09))
         if cv2 is not None:
             cv2.ellipse(img, (cx, cy), (rx, ry), 0, 0, 360, dark, -1)
         else:
             yy, xx = np.mgrid[0:h, 0:w]
             mask = ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2 <= 1
             img[mask] = dark
-        return BBox(cx - rx, cy - ry, cx + rx, cy + ry, 1, "hole", 1.0)
+        return _clip(BBox(cx - rx, cy - ry, cx + rx, cy + ry, 1, "hole", 1.0), w, h)
 
     # tear: an elongated rotated rectangle.
-    length = int(rng.integers(int(w * 0.12), int(w * 0.22)))
-    width = int(rng.integers(max(3, int(w * 0.01)), int(w * 0.03)))
+    length = _span(int(w * 0.12), int(w * 0.22), floor=2)
+    width = _span(int(w * 0.01), int(w * 0.03), floor=2)
     angle = float(rng.uniform(0, 180))
     if cv2 is not None:
         box = cv2.boxPoints(((cx, cy), (length, width), angle)).astype(np.int32)
         cv2.fillPoly(img, [box], dark)
         xs, ys = box[:, 0], box[:, 1]
-        return BBox(float(xs.min()), float(ys.min()), float(xs.max()), float(ys.max()),
-                    2, "tear", 1.0)
+        return _clip(BBox(float(xs.min()), float(ys.min()),
+                          float(xs.max()), float(ys.max()), 2, "tear", 1.0), w, h)
     # NumPy fallback: axis-aligned streak.
     x1, x2 = cx - length // 2, cx + length // 2
     y1, y2 = cy - width // 2, cy + width // 2
     img[max(0, y1):y2, max(0, x1):x2] = dark
-    return BBox(float(x1), float(y1), float(x2), float(y2), 2, "tear", 1.0)
+    return _clip(BBox(float(x1), float(y1), float(x2), float(y2), 2, "tear", 1.0), w, h)
 
 
 def _add_distractors(img: np.ndarray, rng: np.random.Generator) -> None:
