@@ -579,3 +579,45 @@ def test_the_conf_threshold_actually_filters(monkeypatch):
     assert len(insp.predict(img, method="classical", conf=0.95).boxes) == 0
     kept = insp.predict(img, method="classical", conf=0.5).boxes
     assert all(b.score >= 0.5 for b in kept), [b.score for b in kept]
+
+
+def test_the_polarity_filter_is_opt_in_and_reachable_over_http(client):
+    """A filter nobody can switch on is half-delivered; one always on is a risk.
+
+    It is a geometric prior tuned against synthetic damage (dark by
+    construction), so it must be off unless a caller asks — and it must actually
+    be askable, or netinspect.polarity is a module with no users.
+    """
+    from PIL import Image
+
+    # A bright blob on a dark field: rope-like, exactly what the filter removes.
+    arr = np.full((64, 64, 3), 30, dtype=np.uint8)
+    arr[20:44, 20:44] = 250
+    buf = io.BytesIO()
+    Image.fromarray(arr).save(buf, format="PNG")
+    payload = buf.getvalue()
+
+    def post(**params):
+        q = "&".join(f"{k}={v}" for k, v in params.items())
+        return client.post(f"/api/analyze?{q}",
+                           files={"file": ("f.png", payload, "image/png")})
+
+    off = post(method="classical", conf=0.0, ood="false")
+    on = post(method="classical", conf=0.0, ood="false", polarity=10)
+    assert off.status_code == 200 and on.status_code == 200
+
+    # The filter may only ever remove detections, never invent them.
+    assert on.json()["count"] <= off.json()["count"], (
+        "the polarity filter added detections, which it cannot legitimately do")
+
+
+def test_polarity_defaults_to_off_on_every_upload_route(client):
+    """Absent the parameter, behaviour must be byte-identical to before it existed."""
+    import inspect as _inspect
+
+    for path in ("/predict", "/predict/overlay", "/api/analyze"):
+        route = next(r for r in client.app.routes if getattr(r, "path", None) == path)
+        sig = _inspect.signature(route.endpoint)
+        assert "polarity" in sig.parameters, f"{path} cannot opt in"
+        assert sig.parameters["polarity"].default.default is None, (
+            f"{path} enables the polarity filter by default")

@@ -18,6 +18,12 @@ Endpoints
 * ``POST /predict``           — multipart image upload -> JSON detections
 * ``POST /predict/overlay``   — multipart image upload -> overlay PNG
 * ``POST /api/analyze``       — drop an image -> overlay + detections + OOD, one call
+
+All three upload routes accept ``?polarity=<min_contrast>`` (default: off), which
+drops detections brighter than the net around them — see :mod:`netinspect.polarity`.
+On the measured clips ``polarity=10`` takes false alarms from 11.5% to 5.4% with no
+measured recall cost, but it is a geometric prior tuned against synthetic damage and
+is therefore opt-in.
 * ``POST /api/live/start``    — open a camera / RTSP / video source and start inferring
 * ``GET  /api/live/stream``   — annotated frames as multipart MJPEG
 * ``GET  /api/live/status``   — fps, latency, dropped frames, confirmed events
@@ -281,16 +287,33 @@ def build_app(inspector: NetInspector, security=None):
         from starlette.concurrency import run_in_threadpool
         return await run_in_threadpool(lambda: _predict(img, **kw))
 
-    def _predict(img, **kw):
+    def _predict(img, polarity: float | None = None, **kw):
         """Every inference goes through here, so the concurrency cap cannot be
-        bypassed by adding a route that forgets it."""
+        bypassed by adding a route that forgets it.
+
+        ``polarity`` is the opt-in false-alarm filter from
+        :mod:`netinspect.polarity`: drop detections whose interior is brighter
+        than the net around them, since a hole shows unlit water and is dark
+        while rigging is an object in front of the net and is bright. On the
+        measured clips it takes the overall false-alarm rate from 11.5% to 5.4%
+        at min_contrast=10 with no measured recall cost.
+
+        Off unless asked for, and applied HERE rather than inside NetInspector,
+        because it is a geometric prior tuned against synthetic damage — which is
+        dark by construction — and its transfer to real damage is unvalidated.
+        """
         if not inference_slots.acquire(timeout=30):
             raise HTTPException(503, "Server busy — too many concurrent inferences. "
                                      "Retry shortly.")
         try:
-            return inspector.predict(img, **kw)
+            result = inspector.predict(img, **kw)
         finally:
             inference_slots.release()
+
+        if polarity is not None and result.boxes:
+            from netinspect.polarity import filter_detections
+            result.boxes = filter_detections(img, result.boxes, min_contrast=polarity)
+        return result
 
     @app.middleware("http")
     async def _authenticate(request: Request, call_next):
@@ -503,10 +526,11 @@ def build_app(inspector: NetInspector, security=None):
 
     @app.post("/predict")
     async def predict(file: UploadFile = File(...), method: str = Query("classical"),
-                      conf: float = Query(0.25, ge=0.0, le=1.0)):
+                      conf: float = Query(0.25, ge=0.0, le=1.0),
+                      polarity: float | None = Query(None, description="opt-in: drop detections brighter than the surrounding net; try 10 (see netinspect.polarity)")):
         _validate_method(method)
         img = await _read_upload(file)
-        r = await _predict_async(img, method=method, conf=conf)
+        r = await _predict_async(img, method=method, conf=conf, polarity=polarity)
         metrics.inferences[method] += 1
         payload = r.to_dict()
         payload["disclaimer"] = "Prototype: proxy-trained model; human review required."
@@ -514,12 +538,13 @@ def build_app(inspector: NetInspector, security=None):
 
     @app.post("/predict/overlay")
     async def predict_overlay(file: UploadFile = File(...), method: str = Query("classical"),
-                              conf: float = Query(0.25, ge=0.0, le=1.0)):
+                              conf: float = Query(0.25, ge=0.0, le=1.0),
+                              polarity: float | None = Query(None, description="opt-in: drop detections brighter than the surrounding net (try 10) — see netinspect.polarity")):
         from PIL import Image
         from starlette.concurrency import run_in_threadpool
         _validate_method(method)
         img = await _read_upload(file)
-        r = await _predict_async(img, method=method, conf=conf)
+        r = await _predict_async(img, method=method, conf=conf, polarity=polarity)
         metrics.inferences[method] += 1
 
         # Inference was moved off the loop; the RENDER was not. Drawing the
@@ -541,11 +566,12 @@ def build_app(inspector: NetInspector, security=None):
     @app.post("/api/analyze")
     async def analyze(file: UploadFile = File(...), method: str = Query("yolo"),
                       conf: float = Query(0.25, ge=0.0, le=1.0),
-                      ood: bool = Query(True)):
+                      ood: bool = Query(True),
+                      polarity: float | None = Query(None, description="opt-in: drop detections brighter than the surrounding net (try 10) — see netinspect.polarity")):
         from starlette.concurrency import run_in_threadpool
         _validate_method(method)
         img = await _read_upload(file)
-        r = await _predict_async(img, method=method, conf=conf)
+        r = await _predict_async(img, method=method, conf=conf, polarity=polarity)
         metrics.inferences[method] += 1
 
         # Everything below the detector is still CPU work on the event loop if
