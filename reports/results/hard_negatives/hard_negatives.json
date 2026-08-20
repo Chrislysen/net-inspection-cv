@@ -1,0 +1,313 @@
+{
+  "config": {
+    "data": "data/processed/real_composite",
+    "hard": "data/processed/solaqua_bag3",
+    "epochs": 30,
+    "train_frac": 0.6,
+    "gap": 20,
+    "conf": 0.25,
+    "seeds": [
+      0,
+      1,
+      2
+    ],
+    "batch_size": 4,
+    "out": "reports/results/hard_negatives"
+  },
+  "damage_train_frames": 132,
+  "hard_negatives": 119,
+  "heldout_negatives": 60,
+  "epochs_per_arm": {
+    "baseline": 57,
+    "hard_negatives": 30
+  },
+  "optimizer_steps_per_arm": {
+    "baseline": 1881,
+    "hard_negatives": 1890
+  },
+  "runs": {
+    "baseline": [
+      {
+        "bag3_heldout": {
+          "frames": 60,
+          "alarming": 10,
+          "boxes": 25,
+          "rate": 0.16666666666666666
+        },
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 2,
+          "boxes": 2,
+          "rate": 0.01
+        },
+        "recall": 0.8333333333333334,
+        "damaged_frames": 24,
+        "overall": {
+          "frames": 418,
+          "alarming": 12,
+          "rate": 0.028708133971291867
+        },
+        "seed": 0
+      },
+      {
+        "bag3_heldout": {
+          "frames": 60,
+          "alarming": 18,
+          "boxes": 33,
+          "rate": 0.3
+        },
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "recall": 0.8333333333333334,
+        "damaged_frames": 24,
+        "overall": {
+          "frames": 418,
+          "alarming": 18,
+          "rate": 0.0430622009569378
+        },
+        "seed": 1
+      },
+      {
+        "bag3_heldout": {
+          "frames": 60,
+          "alarming": 15,
+          "boxes": 19,
+          "rate": 0.25
+        },
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "recall": 0.8333333333333334,
+        "damaged_frames": 24,
+        "overall": {
+          "frames": 418,
+          "alarming": 15,
+          "rate": 0.03588516746411483
+        },
+        "seed": 2
+      }
+    ],
+    "hard_negatives": [
+      {
+        "bag3_heldout": {
+          "frames": 60,
+          "alarming": 20,
+          "boxes": 29,
+          "rate": 0.3333333333333333
+        },
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "recall": 0.8333333333333334,
+        "damaged_frames": 24,
+        "overall": {
+          "frames": 418,
+          "alarming": 20,
+          "rate": 0.04784688995215311
+        },
+        "seed": 0
+      },
+      {
+        "bag3_heldout": {
+          "frames": 60,
+          "alarming": 25,
+          "boxes": 44,
+          "rate": 0.4166666666666667
+        },
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "recall": 0.875,
+        "damaged_frames": 24,
+        "overall": {
+          "frames": 418,
+          "alarming": 25,
+          "rate": 0.05980861244019139
+        },
+        "seed": 1
+      },
+      {
+        "bag3_heldout": {
+          "frames": 60,
+          "alarming": 32,
+          "boxes": 64,
+          "rate": 0.5333333333333333
+        },
+        "bag1": {
+          "frames": 38,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "bag2": {
+          "frames": 120,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "diffday": {
+          "frames": 200,
+          "alarming": 0,
+          "boxes": 0,
+          "rate": 0.0
+        },
+        "recall": 0.7916666666666666,
+        "damaged_frames": 24,
+        "overall": {
+          "frames": 418,
+          "alarming": 32,
+          "rate": 0.07655502392344497
+        },
+        "seed": 2
+      }
+    ]
+  },
+  "summary": {
+    "bag3_heldout": {
+      "baseline": [
+        0.2388888888888889,
+        0.16666666666666666,
+        0.3
+      ],
+      "hard_negatives": [
+        0.42777777777777776,
+        0.3333333333333333,
+        0.5333333333333333
+      ]
+    },
+    "bag1": {
+      "baseline": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hard_negatives": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "bag2": {
+      "baseline": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "hard_negatives": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "diffday": {
+      "baseline": [
+        0.0033333333333333335,
+        0.0,
+        0.01
+      ],
+      "hard_negatives": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "overall": {
+      "baseline": [
+        0.03588516746411483,
+        0.028708133971291867,
+        0.0430622009569378
+      ],
+      "hard_negatives": [
+        0.06140350877192982,
+        0.04784688995215311,
+        0.07655502392344497
+      ]
+    },
+    "recall": {
+      "baseline": [
+        0.8333333333333334,
+        0.8333333333333334,
+        0.8333333333333334
+      ],
+      "hard_negatives": [
+        0.8333333333333334,
+        0.7916666666666666,
+        0.875
+      ]
+    }
+  },
+  "verdict": "Hard negatives INCREASED false alarms on held-out frames of the mined clip"
+}

@@ -1,0 +1,241 @@
+{
+  "weights": "reports\\results\\hard_negatives\\permissive_baseline_seed1.pt",
+  "arch": "ssdlite320_mobilenet_v3_large",
+  "frames": 132,
+  "labelled_frames": 116,
+  "clean_frames": 16,
+  "epochs": 57,
+  "final_loss": 0.0766,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 6.1978
+    },
+    {
+      "epoch": 2,
+      "loss": 4.1541
+    },
+    {
+      "epoch": 3,
+      "loss": 3.2287
+    },
+    {
+      "epoch": 4,
+      "loss": 2.6664
+    },
+    {
+      "epoch": 5,
+      "loss": 2.314
+    },
+    {
+      "epoch": 6,
+      "loss": 1.8452
+    },
+    {
+      "epoch": 7,
+      "loss": 1.559
+    },
+    {
+      "epoch": 8,
+      "loss": 1.3683
+    },
+    {
+      "epoch": 9,
+      "loss": 1.0712
+    },
+    {
+      "epoch": 10,
+      "loss": 0.9516
+    },
+    {
+      "epoch": 11,
+      "loss": 0.7713
+    },
+    {
+      "epoch": 12,
+      "loss": 0.6833
+    },
+    {
+      "epoch": 13,
+      "loss": 0.5757
+    },
+    {
+      "epoch": 14,
+      "loss": 0.5323
+    },
+    {
+      "epoch": 15,
+      "loss": 0.4787
+    },
+    {
+      "epoch": 16,
+      "loss": 0.3771
+    },
+    {
+      "epoch": 17,
+      "loss": 0.3432
+    },
+    {
+      "epoch": 18,
+      "loss": 0.318
+    },
+    {
+      "epoch": 19,
+      "loss": 0.2801
+    },
+    {
+      "epoch": 20,
+      "loss": 0.2317
+    },
+    {
+      "epoch": 21,
+      "loss": 0.181
+    },
+    {
+      "epoch": 22,
+      "loss": 0.1832
+    },
+    {
+      "epoch": 23,
+      "loss": 0.1969
+    },
+    {
+      "epoch": 24,
+      "loss": 0.1686
+    },
+    {
+      "epoch": 25,
+      "loss": 0.1501
+    },
+    {
+      "epoch": 26,
+      "loss": 0.1338
+    },
+    {
+      "epoch": 27,
+      "loss": 0.1111
+    },
+    {
+      "epoch": 28,
+      "loss": 0.1086
+    },
+    {
+      "epoch": 29,
+      "loss": 0.1351
+    },
+    {
+      "epoch": 30,
+      "loss": 0.1401
+    },
+    {
+      "epoch": 31,
+      "loss": 0.1134
+    },
+    {
+      "epoch": 32,
+      "loss": 0.0988
+    },
+    {
+      "epoch": 33,
+      "loss": 0.0986
+    },
+    {
+      "epoch": 34,
+      "loss": 0.0824
+    },
+    {
+      "epoch": 35,
+      "loss": 0.1012
+    },
+    {
+      "epoch": 36,
+      "loss": 0.0978
+    },
+    {
+      "epoch": 37,
+      "loss": 0.1004
+    },
+    {
+      "epoch": 38,
+      "loss": 0.1255
+    },
+    {
+      "epoch": 39,
+      "loss": 0.0988
+    },
+    {
+      "epoch": 40,
+      "loss": 0.105
+    },
+    {
+      "epoch": 41,
+      "loss": 0.0964
+    },
+    {
+      "epoch": 42,
+      "loss": 0.0882
+    },
+    {
+      "epoch": 43,
+      "loss": 0.0825
+    },
+    {
+      "epoch": 44,
+      "loss": 0.0833
+    },
+    {
+      "epoch": 45,
+      "loss": 0.069
+    },
+    {
+      "epoch": 46,
+      "loss": 0.0584
+    },
+    {
+      "epoch": 47,
+      "loss": 0.0513
+    },
+    {
+      "epoch": 48,
+      "loss": 0.0434
+    },
+    {
+      "epoch": 49,
+      "loss": 0.0479
+    },
+    {
+      "epoch": 50,
+      "loss": 0.0746
+    },
+    {
+      "epoch": 51,
+      "loss": 0.0581
+    },
+    {
+      "epoch": 52,
+      "loss": 0.0552
+    },
+    {
+      "epoch": 53,
+      "loss": 0.0557
+    },
+    {
+      "epoch": 54,
+      "loss": 0.0679
+    },
+    {
+      "epoch": 55,
+      "loss": 0.0769
+    },
+    {
+      "epoch": 56,
+      "loss": 0.0737
+    },
+    {
+      "epoch": 57,
+      "loss": 0.0766
+    }
+  ],
+  "device": "cuda",
+  "licence": "torchvision (BSD-3-Clause) \u2014 no Ultralytics/AGPL code in the training or inference path. Note that weights fitted on CC BY-SA data inherit that data's terms."
+}

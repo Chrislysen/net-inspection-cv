@@ -1,0 +1,133 @@
+{
+  "weights": "reports\\results\\hard_negatives\\permissive_hard_negatives_seed2.pt",
+  "arch": "ssdlite320_mobilenet_v3_large",
+  "frames": 251,
+  "labelled_frames": 116,
+  "clean_frames": 135,
+  "epochs": 30,
+  "final_loss": 0.1531,
+  "history": [
+    {
+      "epoch": 1,
+      "loss": 4.8286
+    },
+    {
+      "epoch": 2,
+      "loss": 3.6179
+    },
+    {
+      "epoch": 3,
+      "loss": 2.9127
+    },
+    {
+      "epoch": 4,
+      "loss": 2.4347
+    },
+    {
+      "epoch": 5,
+      "loss": 2.0256
+    },
+    {
+      "epoch": 6,
+      "loss": 1.6539
+    },
+    {
+      "epoch": 7,
+      "loss": 1.2776
+    },
+    {
+      "epoch": 8,
+      "loss": 1.0458
+    },
+    {
+      "epoch": 9,
+      "loss": 0.8458
+    },
+    {
+      "epoch": 10,
+      "loss": 0.7292
+    },
+    {
+      "epoch": 11,
+      "loss": 0.6134
+    },
+    {
+      "epoch": 12,
+      "loss": 0.5166
+    },
+    {
+      "epoch": 13,
+      "loss": 0.4733
+    },
+    {
+      "epoch": 14,
+      "loss": 0.4403
+    },
+    {
+      "epoch": 15,
+      "loss": 0.4092
+    },
+    {
+      "epoch": 16,
+      "loss": 0.3143
+    },
+    {
+      "epoch": 17,
+      "loss": 0.3103
+    },
+    {
+      "epoch": 18,
+      "loss": 0.3333
+    },
+    {
+      "epoch": 19,
+      "loss": 0.3171
+    },
+    {
+      "epoch": 20,
+      "loss": 0.2789
+    },
+    {
+      "epoch": 21,
+      "loss": 0.2691
+    },
+    {
+      "epoch": 22,
+      "loss": 0.2862
+    },
+    {
+      "epoch": 23,
+      "loss": 0.1986
+    },
+    {
+      "epoch": 24,
+      "loss": 0.1868
+    },
+    {
+      "epoch": 25,
+      "loss": 0.1806
+    },
+    {
+      "epoch": 26,
+      "loss": 0.142
+    },
+    {
+      "epoch": 27,
+      "loss": 0.1272
+    },
+    {
+      "epoch": 28,
+      "loss": 0.1493
+    },
+    {
+      "epoch": 29,
+      "loss": 0.1559
+    },
+    {
+      "epoch": 30,
+      "loss": 0.1531
+    }
+  ],
+  "device": "cuda",
+  "licence": "torchvision (BSD-3-Clause) \u2014 no Ultralytics/AGPL code in the training or inference path. Note that weights fitted on CC BY-SA data inherit that data's terms."
+}

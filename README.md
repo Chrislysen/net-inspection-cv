@@ -409,11 +409,42 @@ false-alarm spread is a water-condition sensitivity.
 
 It is not. With 60% of frames degraded: worst clip unchanged at 10%, held-out day
 **0% → 2%**, recall flat at 88%. An earlier attempt with photometric jitter also
-failed to improve on it (17.5% → 18.5%). Two independent augmentation strategies missing means the gap
-is probably not a data-diversity problem — the mooring cords are genuinely in the
-training distribution and genuinely look like damage.
+failed to improve on it (17.5% → 18.5%).
 
-Both are kept and documented because a failed hypothesis that was actually
+### The third failure: hard-negative mining, which should have worked
+
+Both attempts above tried to make the detector robust to how a scene *looks*.
+Neither ever showed it the thing it actually fires on. So the obvious next lever
+— and one that **needs no damage labels at all**, because every frame in bag3 is
+undamaged net and every detection there is a false positive by construction — is
+to train on those frames as explicit negatives.
+
+It made things **worse**, reproducibly ([`eval_hard_negatives.py`](scripts/eval_hard_negatives.py)):
+
+| held-out bag3 frames | mean | range over 3 seeds |
+|---|---|---|
+| baseline | 23.9% | 16.7 – 30.0% |
+| **+ 119 hard negatives** | **42.8%** | 33.3 – 53.3% |
+
+Recall was unchanged at 83.3%, so this is not a precision/recall trade — it is
+strictly worse. Every treatment seed scored worse than every baseline seed, so
+the ranges do not overlap and this is not seed noise.
+
+Two controls make that readable. The negatives are split from the mined clip
+**temporally with a discarded buffer**, because adjacent video frames are
+near-duplicates and a random split would report memorisation as generalisation.
+And **optimizer steps are matched, not epochs** — adding 119 frames makes an
+epoch 1.9× longer, and the first version of this experiment made exactly that
+mistake, appearing to gain recall that was really just more training. That run
+was discarded rather than published.
+
+Three independent strategies have now failed to close this gap, one of them the
+strategy that most directly targets it. That is the strongest evidence in the
+repo that the between-clip spread is **not a data-diversity problem**, and that
+the next honest step is to understand *why* the mooring cords are learned as
+damage rather than to keep feeding the model more pixels.
+
+All three are kept and documented because a failed hypothesis that was actually
 measured is worth more than an untested one that sounds plausible.
 
 ## A negative result: underwater enhancement makes this worse
